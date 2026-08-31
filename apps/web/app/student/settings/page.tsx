@@ -12,9 +12,9 @@ export default function StudentSettingsPage() {
   const router = useRouter();
   const { student } = useAuthStore();
 
-  const [name, setName] = useState(student.name);
-  const [college, setCollege] = useState(student.college);
-  const [phone, setPhone] = useState(student.phone || '01012345678');
+  const [name, setName] = useState(student?.name || '');
+  const [college, setCollege] = useState(student?.college || COLLEGES[0]);
+  const [phone, setPhone] = useState(student?.phone || '01012345678');
   const [orderReadyAlerts, setOrderReadyAlerts] = useState(true);
   const [delayAlerts, setDelayAlerts] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
@@ -87,7 +87,7 @@ export default function StudentSettingsPage() {
 
           <Input
             label="البريد الجامعي (غير قابل للتعديل)"
-            value={student.email}
+            value={student?.email || ''}
             disabled
             className="opacity-70 bg-canvas cursor-not-allowed"
             icon={<Mail className="w-4 h-4" />}

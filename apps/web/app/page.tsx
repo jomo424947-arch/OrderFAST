@@ -6,12 +6,10 @@ import {
   ShoppingBag,
   Clock,
   CheckCircle2,
-  Store,
   ArrowLeft,
-  Sparkles,
   Zap,
-  Users,
-  ShieldCheck,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -55,18 +53,18 @@ export default function LandingPage() {
           منصة <strong className="text-ink font-bold">OrderFAST</strong> تخلصك من طوابير الأكشاك في الجامعة. تصفح المنيو، تابع دورك لحظة بلحظة، وروح استلم وادفع وقت ما يجهز بس.
         </p>
 
-        {/* Main Action Portals */}
+        {/* Main Action Portals — Login & Register */}
         <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-md mb-14">
-          <Link href="/student" className="w-full">
+          <Link href="/auth/login" className="w-full">
             <Button size="lg" variant="primary" className="w-full shadow-warm">
-              <ShoppingBag className="w-5 h-5 ml-2" />
-              <span>دخول كطالب (تجربة الطلب)</span>
+              <LogIn className="w-5 h-5 ml-2" />
+              <span>تسجيل الدخول</span>
             </Button>
           </Link>
-          <Link href="/kiosk" className="w-full">
+          <Link href="/auth/register" className="w-full">
             <Button size="lg" variant="ghost" className="w-full bg-surface">
-              <Store className="w-5 h-5 ml-2 text-accent" />
-              <span>لوحة تحكم الكاشير</span>
+              <UserPlus className="w-5 h-5 ml-2 text-accent" />
+              <span>إنشاء حساب جديد</span>
             </Button>
           </Link>
         </div>

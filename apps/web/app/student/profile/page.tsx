@@ -36,12 +36,12 @@ export default function StudentProfilePage() {
     <div className="max-w-md mx-auto space-y-6">
       {/* Profile Header matching visual reference */}
       <div className="flex flex-col items-center text-center pt-2">
-        <Avatar name={student.name} size="lg" className="mb-3" />
+        <Avatar name={student?.name || 'طالب'} size="lg" className="mb-3" />
         <h3 className="font-body font-bold text-lg text-ink mb-0.5">
-          {student.name}
+          {student?.name || 'حساب طالب'}
         </h3>
         <p className="font-body text-xs text-ink-soft mb-3">
-          {student.college}
+          {student?.college || 'جامعة سفنكس'}
         </p>
 
         {/* Status Badge matching reference (حالتك تمام / تحذير / مقيد) */}

@@ -4,70 +4,50 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@/components/branding/Logo';
-import { useOrderStore } from '@/stores/useOrderStore';
-import { useKioskStore } from '@/stores/useKioskStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useKioskStore } from '@/stores/useKioskStore';
 import {
   LayoutDashboard,
-  Inbox,
-  Clock,
-  UtensilsCrossed,
-  Settings,
-  Bell,
+  Store,
+  ClipboardCheck,
+  Users,
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export const CashierSidebar: React.FC = () => {
+export const AdminSidebar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { getKioskIncomingOrders, getKioskActiveOrders } = useOrderStore();
-  const { activeKioskId, kiosks } = useKioskStore();
-  const { logout } = useAuthStore();
+  const { logout, admin } = useAuthStore();
+  const { menuItems } = useKioskStore();
 
-  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0];
-  const incomingCount = getKioskIncomingOrders(activeKioskId).length;
-  const activeCount = getKioskActiveOrders(activeKioskId).length;
+  const underReviewCount = menuItems.filter((i) => i.isUnderReview).length;
 
   const navLinks = [
     {
-      href: '/kiosk',
+      href: '/admin',
       label: 'نظرة عامة',
       icon: LayoutDashboard,
-      isActive: pathname === '/kiosk',
+      isActive: pathname === '/admin',
     },
     {
-      href: '/kiosk/incoming',
-      label: 'الأوردرات الواردة',
-      icon: Inbox,
-      count: incomingCount,
-      isIncoming: true,
-      isActive: pathname === '/kiosk/incoming',
+      href: '/admin/kiosks',
+      label: 'الأكشاك والكاشيرات',
+      icon: Store,
+      isActive: pathname.startsWith('/admin/kiosks'),
     },
     {
-      href: '/kiosk/active',
-      label: 'الأوردرات النشطة',
-      icon: Clock,
-      count: activeCount,
-      isActive: pathname === '/kiosk/active',
+      href: '/admin/menu-review',
+      label: 'اعتماد الأصناف',
+      icon: ClipboardCheck,
+      count: underReviewCount,
+      isActive: pathname.startsWith('/admin/menu-review'),
     },
     {
-      href: '/kiosk/menu',
-      label: 'إدارة المنيو',
-      icon: UtensilsCrossed,
-      isActive: pathname === '/kiosk/menu',
-    },
-    {
-      href: '/kiosk/notifications',
-      label: 'التنبيهات',
-      icon: Bell,
-      isActive: pathname === '/kiosk/notifications',
-    },
-    {
-      href: '/kiosk/settings',
-      label: 'إعدادات الكشك',
-      icon: Settings,
-      isActive: pathname === '/kiosk/settings',
+      href: '/admin/students',
+      label: 'حسابات الطلاب',
+      icon: Users,
+      isActive: pathname.startsWith('/admin/students'),
     },
   ];
 
@@ -79,15 +59,15 @@ export const CashierSidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-surface border-l border-line flex flex-col justify-between p-4 h-screen sticky top-0 hidden lg:flex select-none">
       <div>
-        {/* Logo and Cashier Badge */}
+        {/* Logo and Admin Badge */}
         <div className="pb-6 border-b border-line mb-6">
-          <Logo variant="compact" href="/kiosk" />
+          <Logo variant="compact" href="/admin" />
           <div className="mt-3 flex items-center justify-between bg-canvas px-3 py-2 rounded-xl border border-line">
             <div>
-              <p className="font-display font-bold text-sm text-ink">{currentKiosk.name}</p>
-              <p className="font-body text-[11px] text-ink-soft">لوحة الكاشير</p>
+              <p className="font-display font-bold text-sm text-ink">{admin?.name || 'مدير النظام'}</p>
+              <p className="font-body text-[11px] text-ink-soft">لوحة الإدارة</p>
             </div>
-            <span className={cn('w-2.5 h-2.5 rounded-full', currentKiosk.isOpen ? 'bg-accent' : 'bg-danger')} />
+            <span className="w-2.5 h-2.5 rounded-full bg-accent" />
           </div>
         </div>
 
@@ -114,9 +94,7 @@ export const CashierSidebar: React.FC = () => {
                   <span
                     className={cn(
                       'px-2 py-0.5 rounded-full text-xs font-mono font-bold',
-                      item.isIncoming
-                        ? 'bg-danger text-white animate-pulse'
-                        : item.isActive
+                      item.isActive
                         ? 'bg-primary-ink/10 text-primary-ink'
                         : 'bg-primary-soft text-primary-ink'
                     )}
@@ -130,7 +108,7 @@ export const CashierSidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Bottom Actions: Logout only */}
+      {/* Bottom Actions: Logout */}
       <div className="pt-4 border-t border-line space-y-2">
         <button
           type="button"

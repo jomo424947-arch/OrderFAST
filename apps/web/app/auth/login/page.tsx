@@ -6,41 +6,53 @@ import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/branding/Logo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Eye, EyeOff, User, Store } from 'lucide-react';
+import { Eye, EyeOff, User, Store, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { UserRole } from '@/types';
+
+const ROLE_TABS: { key: UserRole; label: string; icon: React.ElementType; demoEmail: string }[] = [
+  { key: 'student', label: 'حساب طالب', icon: User, demoEmail: 'ahmed.karim@sphinx.edu.eg' },
+  { key: 'cashier', label: 'حساب كاشير', icon: Store, demoEmail: 'cashier.alhorria@kiosks.sphinx.edu.eg' },
+  { key: 'admin', label: 'أدمن', icon: ShieldCheck, demoEmail: 'admin@sphinx.edu.eg' },
+];
+
+const ROLE_REDIRECT: Record<UserRole, string> = {
+  student: '/student',
+  cashier: '/kiosk',
+  admin: '/admin',
+};
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, setRole } = useAuthStore();
+  const { login } = useAuthStore();
 
+  const [selectedRole, setSelectedRole] = useState<UserRole>('student');
   const [email, setEmail] = useState('ahmed.karim@sphinx.edu.eg');
   const [password, setPassword] = useState('••••••••');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<'student' | 'cashier'>('student');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleTabSwitch = (role: UserRole) => {
+    setSelectedRole(role);
+    const tab = ROLE_TABS.find((t) => t.key === role);
+    if (tab) setEmail(tab.demoEmail);
+    setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      login(selectedRole);
-      setIsLoading(false);
-      if (selectedRole === 'cashier') {
-        router.push('/kiosk');
-      } else {
-        router.push('/student');
-      }
-    }, 400);
-  };
+    setError(null);
 
-  const handleQuickStudent = () => {
-    setSelectedRole('student');
-    setEmail('ahmed.karim@sphinx.edu.eg');
-  };
+    const result = await login(email, password, selectedRole);
+    setIsLoading(false);
 
-  const handleQuickCashier = () => {
-    setSelectedRole('cashier');
-    setEmail('cashier.alhorria@kiosks.sphinx.edu.eg');
+    if (result.success) {
+      router.push(ROLE_REDIRECT[selectedRole]);
+    } else {
+      setError(result.error || 'حدث خطأ أثناء تسجيل الدخول');
+    }
   };
 
   return (
@@ -61,38 +73,40 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Quick Demo Switcher */}
-        <div className="grid grid-cols-2 gap-2 bg-canvas p-1 rounded-xl mb-5 border border-line">
-          <button
-            type="button"
-            onClick={handleQuickStudent}
-            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-body font-semibold transition-all ${
-              selectedRole === 'student'
-                ? 'bg-surface text-ink font-bold shadow-sm'
-                : 'text-ink-soft hover:text-ink'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>حساب طالب</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleQuickCashier}
-            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-body font-semibold transition-all ${
-              selectedRole === 'cashier'
-                ? 'bg-surface text-ink font-bold shadow-sm'
-                : 'text-ink-soft hover:text-ink'
-            }`}
-          >
-            <Store className="w-3.5 h-3.5 text-accent" />
-            <span>حساب كاشير</span>
-          </button>
+        {/* Quick Demo Switcher — 3 Tabs */}
+        <div className="grid grid-cols-3 gap-1.5 bg-canvas p-1 rounded-xl mb-5 border border-line">
+          {ROLE_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = selectedRole === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => handleTabSwitch(tab.key)}
+                className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] font-body font-semibold transition-all ${
+                  isActive
+                    ? 'bg-surface text-ink font-bold shadow-sm'
+                    : 'text-ink-soft hover:text-ink'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="bg-danger-soft border border-danger/30 text-danger rounded-xl p-3 text-xs font-body font-bold mb-4 animate-in fade-in duration-200">
+            {error}
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4 text-right">
           <Input
-            label="البريد الجامعي"
+            label="البريد الإلكتروني"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

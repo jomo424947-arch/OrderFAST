@@ -30,9 +30,9 @@ export default function CartPage() {
     setIsSubmitting(true);
     setTimeout(() => {
       const order = placeOrder({
-        studentId: student.id,
-        studentName: student.name,
-        studentCollege: student.college,
+        studentId: student?.id || 'std-001',
+        studentName: student?.name || 'طالب',
+        studentCollege: student?.college || 'كلية الحاسبات والمعلومات',
         kiosk,
         items,
       });

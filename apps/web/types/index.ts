@@ -120,3 +120,7 @@ export interface Cashier extends User {
   kioskId: string;
   kioskName: string;
 }
+
+export interface Admin extends User {
+  permissions?: string[];
+}

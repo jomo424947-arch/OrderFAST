@@ -4,70 +4,80 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Logo } from '@/components/branding/Logo';
+import { useCartStore } from '@/stores/useCartStore';
 import { useOrderStore } from '@/stores/useOrderStore';
-import { useKioskStore } from '@/stores/useKioskStore';
+import { useNotificationStore } from '@/stores/useNotificationStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import {
   LayoutDashboard,
-  Inbox,
+  Store,
+  ShoppingBag,
   Clock,
-  UtensilsCrossed,
-  Settings,
   Bell,
+  User,
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export const CashierSidebar: React.FC = () => {
+export const StudentSidebar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { getKioskIncomingOrders, getKioskActiveOrders } = useOrderStore();
-  const { activeKioskId, kiosks } = useKioskStore();
-  const { logout } = useAuthStore();
+  const { student, logout } = useAuthStore();
+  const { getTotalItems } = useCartStore();
+  const { orders } = useOrderStore();
+  const { getUnreadCount } = useNotificationStore();
 
-  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0];
-  const incomingCount = getKioskIncomingOrders(activeKioskId).length;
-  const activeCount = getKioskActiveOrders(activeKioskId).length;
+  const cartCount = getTotalItems();
+  const activeOrdersCount = orders.filter(
+    (o) =>
+      (student?.id ? o.studentId === student.id : true) &&
+      (o.status === 'placed' ||
+        o.status === 'pending_review' ||
+        o.status === 'accepted' ||
+        o.status === 'preparing' ||
+        o.status === 'ready_for_pickup')
+  ).length;
+  const unreadNotificationsCount = getUnreadCount('student');
 
   const navLinks = [
     {
-      href: '/kiosk',
-      label: 'نظرة عامة',
+      href: '/student',
+      label: 'الرئيسية',
       icon: LayoutDashboard,
-      isActive: pathname === '/kiosk',
+      isActive: pathname === '/student',
     },
     {
-      href: '/kiosk/incoming',
-      label: 'الأوردرات الواردة',
-      icon: Inbox,
-      count: incomingCount,
-      isIncoming: true,
-      isActive: pathname === '/kiosk/incoming',
+      href: '/student/kiosks',
+      label: 'الأكشاك',
+      icon: Store,
+      isActive: pathname.startsWith('/student/kiosks'),
     },
     {
-      href: '/kiosk/active',
-      label: 'الأوردرات النشطة',
+      href: '/student/cart',
+      label: 'السلة',
+      icon: ShoppingBag,
+      count: cartCount,
+      isActive: pathname === '/student/cart',
+    },
+    {
+      href: '/student/orders',
+      label: 'طلباتي',
       icon: Clock,
-      count: activeCount,
-      isActive: pathname === '/kiosk/active',
+      count: activeOrdersCount,
+      isActive: pathname.startsWith('/student/orders'),
     },
     {
-      href: '/kiosk/menu',
-      label: 'إدارة المنيو',
-      icon: UtensilsCrossed,
-      isActive: pathname === '/kiosk/menu',
-    },
-    {
-      href: '/kiosk/notifications',
-      label: 'التنبيهات',
+      href: '/student/notifications',
+      label: 'الإشعارات',
       icon: Bell,
-      isActive: pathname === '/kiosk/notifications',
+      count: unreadNotificationsCount,
+      isActive: pathname === '/student/notifications',
     },
     {
-      href: '/kiosk/settings',
-      label: 'إعدادات الكشك',
-      icon: Settings,
-      isActive: pathname === '/kiosk/settings',
+      href: '/student/profile',
+      label: 'حسابي',
+      icon: User,
+      isActive: pathname.startsWith('/student/profile') || pathname.startsWith('/student/settings'),
     },
   ];
 
@@ -79,15 +89,19 @@ export const CashierSidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-surface border-l border-line flex flex-col justify-between p-4 h-screen sticky top-0 hidden lg:flex select-none">
       <div>
-        {/* Logo and Cashier Badge */}
+        {/* Logo and Student Badge */}
         <div className="pb-6 border-b border-line mb-6">
-          <Logo variant="compact" href="/kiosk" />
+          <Logo variant="compact" href="/student" />
           <div className="mt-3 flex items-center justify-between bg-canvas px-3 py-2 rounded-xl border border-line">
-            <div>
-              <p className="font-display font-bold text-sm text-ink">{currentKiosk.name}</p>
-              <p className="font-body text-[11px] text-ink-soft">لوحة الكاشير</p>
+            <div className="truncate">
+              <p className="font-display font-bold text-sm text-ink truncate">
+                {student?.name || 'حساب الطالب'}
+              </p>
+              <p className="font-body text-[11px] text-ink-soft truncate">
+                {student?.college || 'جامعة سفنكس'}
+              </p>
             </div>
-            <span className={cn('w-2.5 h-2.5 rounded-full', currentKiosk.isOpen ? 'bg-accent' : 'bg-danger')} />
+            <span className="w-2.5 h-2.5 rounded-full bg-accent flex-shrink-0" />
           </div>
         </div>
 
@@ -114,9 +128,7 @@ export const CashierSidebar: React.FC = () => {
                   <span
                     className={cn(
                       'px-2 py-0.5 rounded-full text-xs font-mono font-bold',
-                      item.isIncoming
-                        ? 'bg-danger text-white animate-pulse'
-                        : item.isActive
+                      item.isActive
                         ? 'bg-primary-ink/10 text-primary-ink'
                         : 'bg-primary-soft text-primary-ink'
                     )}
@@ -130,7 +142,7 @@ export const CashierSidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Bottom Actions: Logout only */}
+      {/* Bottom Actions: Logout */}
       <div className="pt-4 border-t border-line space-y-2">
         <button
           type="button"
