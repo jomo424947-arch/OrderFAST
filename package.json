@@ -9,10 +9,13 @@
   ],
   "scripts": {
     "dev": "npm --workspace=apps/web run dev",
-    "build": "npm --workspace=apps/web run build",
-    "start": "npm --workspace=apps/web run start",
-    "lint": "npm --workspace=apps/web run lint",
-    "type-check": "npm --workspace=apps/web run type-check"
+    "dev:api": "npm --workspace=apps/api run dev",
+    "dev:all": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "db:generate": "npm --workspace=apps/api run db:generate",
+    "db:migrate": "npm --workspace=apps/api run db:migrate"
   },
   "keywords": [
     "orderfast",
