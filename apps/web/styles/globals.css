@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #FFFFFF;
+  --canvas: #F0EEE8;
+  --surface: #FAF8F3;
+  --ink: #241F1A;
+  --ink-soft: #6B6255;
+  --primary: #E8992A;
+  --primary-ink: #5C3B08;
+  --primary-soft: #FBEBD1;
+  --accent: #2F5233;
+  --accent-soft: #E3ECE1;
+  --danger: #B23A2E;
+  --line: #D8CFBE;
+  
+  --font-display: 'El Messiri', 'Segoe UI', Tahoma, sans-serif;
+  --font-body: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+.font-mono-nums {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
+/* Custom ticket perforated divider */
+.ticket-divider {
+  position: relative;
+  border-top: 2px dashed var(--line);
+}
+
+.ticket-divider::before,
+.ticket-divider::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--canvas);
+}
+
+.ticket-divider::before {
+  right: -24px;
+}
+
+.ticket-divider::after {
+  left: -24px;
+}
+
+/* Subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-soft);
+}
+
+/* Hide scrollbar for clean horizontal chip rows */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

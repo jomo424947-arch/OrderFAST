@@ -1,0 +1,27 @@
+{
+  "name": "orderfast-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OrderFAST — University Campus Kiosk Ordering Platform Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace=apps/web run dev",
+    "build": "npm --workspace=apps/web run build",
+    "start": "npm --workspace=apps/web run start",
+    "lint": "npm --workspace=apps/web run lint",
+    "type-check": "npm --workspace=apps/web run type-check"
+  },
+  "keywords": [
+    "orderfast",
+    "campus-ordering",
+    "kiosk",
+    "nextjs",
+    "arabic",
+    "rtl"
+  ],
+  "author": "OrderFAST Team",
+  "license": "UNLICENSED"
+}
