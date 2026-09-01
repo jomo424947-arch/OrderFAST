@@ -29,7 +29,12 @@ export const registerStaffSchema = z.object({
   password: z.string().min(6, { message: 'كلمة المرور يجب أن لا تقل عن 6 أحرف' }),
   fullName: z.string().min(2, { message: 'الاسم بالكامل مطلوب' }),
   phone: z.string().optional(),
-  kioskId: uuidSchema,
+  kioskId: uuidSchema.optional(),
+  role: z.enum(['owner', 'cashier']).default('cashier'),
+});
+
+export const assignKioskStaffSchema = z.object({
+  userId: uuidSchema,
   role: z.enum(['owner', 'cashier']).default('cashier'),
 });
 
@@ -153,10 +158,12 @@ export const batchRejectSchema = z.object({
 
 export type RegisterStudentInput = z.infer<typeof registerStudentSchema>;
 export type RegisterStaffInput = z.infer<typeof registerStaffSchema>;
+export type AssignKioskStaffInput = z.infer<typeof assignKioskStaffSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type AcceptOrderInput = z.infer<typeof acceptOrderSchema>;
 export type RejectOrderInput = z.infer<typeof rejectOrderSchema>;
 export type BatchActionInput = z.infer<typeof batchActionSchema>;
+export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;

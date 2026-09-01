@@ -22,10 +22,22 @@ export const CashierSidebar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { getKioskIncomingOrders, getKioskActiveOrders } = useOrderStore();
-  const { activeKioskId, kiosks } = useKioskStore();
-  const { logout } = useAuthStore();
+  const { activeKioskId, kiosks, fetchKiosks } = useKioskStore();
+  const { cashier, logout } = useAuthStore();
 
-  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0];
+  React.useEffect(() => {
+    if (kiosks.length === 0) {
+      fetchKiosks();
+    }
+  }, [kiosks.length, fetchKiosks]);
+
+  const currentKiosk =
+    kiosks.find((k) => k.id === activeKioskId) || {
+      id: cashier?.kioskId || activeKioskId,
+      name: cashier?.kioskName || 'الكشك',
+      isOpen: true,
+      collegeLocation: cashier?.college || '',
+    };
   const incomingCount = getKioskIncomingOrders(activeKioskId).length;
   const activeCount = getKioskActiveOrders(activeKioskId).length;
 

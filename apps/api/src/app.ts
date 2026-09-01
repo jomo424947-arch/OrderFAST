@@ -17,9 +17,31 @@ import { notificationRoutes } from './modules/notifications/notification.routes.
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: env.NODE_ENV !== 'test',
+    logger: false,
     genReqId: () => generateId(),
-    disableRequestLogging: false,
+    disableRequestLogging: true,
+  });
+
+  // Custom clean, colorized single-line HTTP logger
+  app.addHook('onResponse', async (request, reply) => {
+    const status = reply.statusCode;
+    let statusColor = '\x1b[32m'; // green 2xx
+    if (status >= 500) {
+      statusColor = '\x1b[31m'; // red 5xx
+    } else if (status >= 400) {
+      statusColor = '\x1b[33m'; // yellow 4xx
+    } else if (status >= 300) {
+      statusColor = '\x1b[36m'; // cyan 3xx
+    }
+
+    const reset = '\x1b[0m';
+    const cyan = '\x1b[36m';
+    const time = reply.elapsedTime ? reply.elapsedTime.toFixed(3) : '0.000';
+    const len = reply.getHeader('content-length') || '-';
+
+    console.log(
+      `${cyan}[server]${reset} ${request.method} ${request.url} ${statusColor}${status}${reset} ${time} ms - ${len}`
+    );
   });
 
   // 1. Register Core Plugins
@@ -35,9 +57,23 @@ export async function buildApp(): Promise<FastifyInstance> {
     timeWindow: '1 minute',
   });
 
+  // Handle empty or whitespace body with application/json header safely
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    try {
+      const text = typeof body === 'string' ? body.trim() : '';
+      const json = text.length > 0 ? JSON.parse(text) : {};
+      done(null, json);
+    } catch (err: any) {
+      err.statusCode = 400;
+      done(err, undefined);
+    }
+  });
+
   // 2. Global Error Handler
   app.setErrorHandler((error, request, reply) => {
-    request.log.error({ err: error, reqId: request.id }, 'Request failed');
+    if ((error.statusCode && error.statusCode >= 500) || !error.statusCode) {
+      console.error(`\x1b[31m[error]\x1b[0m ${request.method} ${request.url}:`, error.message);
+    }
 
     // Handle AppError
     if (error instanceof AppError) {

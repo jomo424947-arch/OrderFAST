@@ -9,36 +9,29 @@ export interface OrderTimelineProps {
 
 export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status }) => {
   const steps = [
-    { id: 'placed', label: 'تم استلام الأوردر' },
-    { id: 'pending_review', label: 'في انتظار موافقة الكشك' },
-    { id: 'accepted', label: 'تم قبول الأوردر' },
-    { id: 'preparing', label: 'جاري التجهيز' },
-    { id: 'ready_for_pickup', label: 'جاهز للاستلام' },
-    { id: 'picked_up', label: 'تم الاستلام' },
+    { id: 'PENDING_KIOSK', label: 'في انتظار موافقة الكشك' },
+    { id: 'PREPARING', label: 'تم قبول الأوردر وجاري التجهيز' },
+    { id: 'READY', label: 'جاهز للاستلام' },
+    { id: 'COMPLETED', label: 'تم الاستلام' },
   ];
 
-  const getStepIndex = (currentStatus: OrderStatus): number => {
+  const getStepState = (stepIndex: number, currentStatus: OrderStatus): { isCompleted: boolean; isCurrent: boolean } => {
     switch (currentStatus) {
-      case 'placed':
-        return 0;
-      case 'pending_review':
-        return 1;
-      case 'accepted':
-        return 2;
-      case 'preparing':
-        return 3;
-      case 'ready_for_pickup':
-        return 4;
-      case 'picked_up':
-        return 5;
+      case 'PENDING_KIOSK':
+        return { isCompleted: false, isCurrent: stepIndex === 0 };
+      case 'ACCEPTED':
+      case 'PREPARING':
+        return { isCompleted: stepIndex < 1, isCurrent: stepIndex === 1 };
+      case 'READY':
+        return { isCompleted: stepIndex < 2, isCurrent: stepIndex === 2 };
+      case 'COMPLETED':
+        return { isCompleted: true, isCurrent: false };
       default:
-        return -1;
+        return { isCompleted: false, isCurrent: false };
     }
   };
 
-  const currentIndex = getStepIndex(status);
-
-  if (status === 'rejected') {
+  if (status === 'REJECTED') {
     return (
       <div className="bg-danger-soft/60 border border-danger/30 rounded-2xl p-4 flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-danger text-white flex items-center justify-center flex-shrink-0">
@@ -54,7 +47,39 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status }) => {
     );
   }
 
-  if (status === 'no_show') {
+  if (status === 'CANCELLED') {
+    return (
+      <div className="bg-canvas border border-line rounded-2xl p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-ink-soft text-white flex items-center justify-center flex-shrink-0">
+          <XCircle className="w-5 h-5" />
+        </div>
+        <div>
+          <h4 className="font-body font-bold text-sm text-ink">تم إلغاء الأوردر</h4>
+          <p className="font-body text-xs text-ink-soft mt-0.5">
+            تم إلغاء هذا الطلب بنجاح.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'EXPIRED') {
+    return (
+      <div className="bg-canvas border border-line rounded-2xl p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-ink-soft text-white flex items-center justify-center flex-shrink-0">
+          <Clock className="w-5 h-5" />
+        </div>
+        <div>
+          <h4 className="font-body font-bold text-sm text-ink">انتهت صلاحية الأوردر</h4>
+          <p className="font-body text-xs text-ink-soft mt-0.5">
+            لم يستجب الكشك للطلب في الوقت المحدد وتم إلغاؤه تلقائياً.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'NO_SHOW') {
     return (
       <div className="bg-danger-soft/60 border border-danger/30 rounded-2xl p-4 flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-danger text-white flex items-center justify-center flex-shrink-0">
@@ -80,8 +105,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status }) => {
         <div className="absolute right-[11px] top-2 bottom-2 w-[2px] bg-line" />
 
         {steps.map((step, index) => {
-          const isCompleted = currentIndex > index;
-          const isCurrent = currentIndex === index;
+          const { isCompleted, isCurrent } = getStepState(index, status);
 
           return (
             <div key={step.id} className="relative flex items-center gap-3">
@@ -90,9 +114,9 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status }) => {
                 className={cn(
                   'w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold z-10 transition-all duration-300',
                   isCompleted
-                    ? 'bg-accent text-white'
+                    ? 'bg-accent text-white shadow-sm'
                     : isCurrent
-                    ? 'bg-primary text-primary-ink ring-4 ring-primary/20 scale-110'
+                    ? 'bg-primary text-primary-ink ring-4 ring-primary/20 scale-110 shadow-sm'
                     : 'bg-canvas border-2 border-line text-ink-soft'
                 )}
               >
@@ -113,7 +137,7 @@ export const OrderTimeline: React.FC<OrderTimelineProps> = ({ status }) => {
                     isCurrent
                       ? 'font-bold text-ink'
                       : isCompleted
-                      ? 'font-semibold text-ink-soft'
+                      ? 'font-semibold text-accent'
                       : 'text-ink-soft/60'
                   )}
                 >

@@ -7,20 +7,46 @@ import { Input } from '@/components/ui/Input';
 import { Save, Clock, Zap, Store, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export default function CashierSettingsPage() {
-  const { activeKioskId, kiosks, setWaitTime, toggleKioskOpen } = useKioskStore();
-  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0];
+  const { activeKioskId, kiosks, fetchKiosks, setWaitTime, toggleKioskOpen } = useKioskStore();
+
+  React.useEffect(() => {
+    if (kiosks.length === 0) {
+      fetchKiosks();
+    }
+  }, [kiosks.length, fetchKiosks]);
+
+  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0] || {
+    id: activeKioskId,
+    name: 'الكشك',
+    isOpen: true,
+    openingHours: '8:00 ص - 4:00 م',
+    estimatedWaitMins: 15,
+    isRushMode: false,
+    phone: '01123456780',
+  };
 
   const [waitTime, setLocalWaitTime] = useState(currentKiosk.estimatedWaitMins || 15);
   const [isRushMode, setIsRushMode] = useState(currentKiosk.isRushMode || false);
-  const [openingHours, setOpeningHours] = useState(currentKiosk.openingHours);
+  const [openingHours, setOpeningHours] = useState(currentKiosk.openingHours || '8:00 ص - 4:00 م');
   const [phone, setPhone] = useState(currentKiosk.phone || '01123456780');
   const [isSaved, setIsSaved] = useState(false);
 
+  React.useEffect(() => {
+    if (currentKiosk) {
+      setLocalWaitTime(currentKiosk.estimatedWaitMins || 15);
+      setIsRushMode(currentKiosk.isRushMode || false);
+      setOpeningHours(currentKiosk.openingHours || '8:00 ص - 4:00 م');
+      setPhone(currentKiosk.phone || '01123456780');
+    }
+  }, [currentKiosk.id, currentKiosk.estimatedWaitMins, currentKiosk.isRushMode, currentKiosk.openingHours, currentKiosk.phone]);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setWaitTime(currentKiosk.id, Number(waitTime));
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+    if (currentKiosk?.id) {
+      setWaitTime(currentKiosk.id, Number(waitTime));
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    }
   };
 
   return (

@@ -6,15 +6,9 @@ import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/branding/Logo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Eye, EyeOff, User, Store, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { UserRole } from '@/types';
-
-const ROLE_TABS: { key: UserRole; label: string; icon: React.ElementType; demoEmail: string }[] = [
-  { key: 'student', label: 'حساب طالب', icon: User, demoEmail: 'ahmed.karim@sphinx.edu.eg' },
-  { key: 'cashier', label: 'حساب كاشير', icon: Store, demoEmail: 'cashier.alhorria@kiosks.sphinx.edu.eg' },
-  { key: 'admin', label: 'أدمن', icon: ShieldCheck, demoEmail: 'admin@sphinx.edu.eg' },
-];
 
 const ROLE_REDIRECT: Record<UserRole, string> = {
   student: '/student',
@@ -26,32 +20,30 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuthStore();
 
-  const [selectedRole, setSelectedRole] = useState<UserRole>('student');
-  const [email, setEmail] = useState('ahmed.karim@sphinx.edu.eg');
-  const [password, setPassword] = useState('••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleTabSwitch = (role: UserRole) => {
-    setSelectedRole(role);
-    const tab = ROLE_TABS.find((t) => t.key === role);
-    if (tab) setEmail(tab.demoEmail);
-    setError(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setError('يرجى إدخال البريد الإلكتروني وكلمة المرور');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
-    const result = await login(email, password, selectedRole);
+    const result = await login(email.trim(), password, 'student');
     setIsLoading(false);
 
     if (result.success) {
-      router.push(ROLE_REDIRECT[selectedRole]);
+      const activeRole = useAuthStore.getState().role || 'student';
+      router.push(ROLE_REDIRECT[activeRole]);
     } else {
-      setError(result.error || 'حدث خطأ أثناء تسجيل الدخول');
+      setError(result.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
   };
 
@@ -69,31 +61,8 @@ export default function LoginPage() {
             تسجيل الدخول
           </h2>
           <p className="font-body text-xs text-ink-soft">
-            دخول لحسابك في الجامعة
+            دخول لحسابك في منصة OrderFAST
           </p>
-        </div>
-
-        {/* Quick Demo Switcher — 3 Tabs */}
-        <div className="grid grid-cols-3 gap-1.5 bg-canvas p-1 rounded-xl mb-5 border border-line">
-          {ROLE_TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = selectedRole === tab.key;
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => handleTabSwitch(tab.key)}
-                className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] font-body font-semibold transition-all ${
-                  isActive
-                    ? 'bg-surface text-ink font-bold shadow-sm'
-                    : 'text-ink-soft hover:text-ink'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
         </div>
 
         {/* Error message */}
@@ -112,6 +81,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@sphinx.edu.eg"
             required
+            autoComplete="email"
           />
 
           <div>
@@ -122,6 +92,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
+              autoComplete="current-password"
               icon={
                 <button
                   type="button"
@@ -152,7 +123,7 @@ export default function LoginPage() {
             variant="primary"
             size="lg"
             isLoading={isLoading}
-            className="w-full mt-2"
+            className="w-full mt-2 shadow-warm"
           >
             دخول
           </Button>
@@ -165,7 +136,7 @@ export default function LoginPage() {
             href="/auth/register"
             className="font-bold text-accent hover:underline"
           >
-            إنشاء حساب
+            إنشاء حساب جديد
           </Link>
         </p>
       </div>

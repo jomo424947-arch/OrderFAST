@@ -268,4 +268,33 @@ export async function orderRoutes(app: FastifyInstance) {
       });
     }
   );
+
+  // 15. Admin: Get All Campus Orders
+  app.get(
+    '/admin/all',
+    { preHandler: [authenticate, requireSystemRole(['admin'])] },
+    async (request, reply) => {
+      const query = request.query as { limit?: string; page?: string };
+      const limit = Number(query.limit) || 50;
+      const page = Number(query.page) || 1;
+      const data = await orderService.getAdminRecentOrders(limit, page);
+      return reply.status(200).send({
+        success: true,
+        data,
+      });
+    }
+  );
+
+  // 16. Admin: Get Campus Executive Stats
+  app.get(
+    '/admin/stats',
+    { preHandler: [authenticate, requireSystemRole(['admin'])] },
+    async (_request, reply) => {
+      const data = await orderService.getAdminCampusStats();
+      return reply.status(200).send({
+        success: true,
+        data,
+      });
+    }
+  );
 }

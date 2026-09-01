@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { CartItem, MenuItem, Kiosk } from '@/types';
-import { MOCK_KIOSKS } from '@/lib/mock/kiosks';
 
 interface CartState {
   items: CartItem[];
@@ -14,47 +13,12 @@ interface CartState {
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
-  items: [
-    // Pre-populate with items matching the design reference
-    {
-      menuItem: {
-        id: "item-01",
-        kioskId: "kiosk-01",
-        categoryId: "cat-hot-drinks",
-        name: "شاي بالنعناع",
-        price: 8,
-        isAvailable: true,
-      },
-      quantity: 1,
-    },
-    {
-      menuItem: {
-        id: "item-07",
-        kioskId: "kiosk-01",
-        categoryId: "cat-sandwiches",
-        name: "سندوتش جبنة رومي",
-        price: 20,
-        isAvailable: true,
-      },
-      quantity: 1,
-    },
-    {
-      menuItem: {
-        id: "item-04",
-        kioskId: "kiosk-01",
-        categoryId: "cat-cold-drinks",
-        name: "عصير مانجا",
-        price: 15,
-        isAvailable: true,
-      },
-      quantity: 1,
-    },
-  ],
-  kiosk: MOCK_KIOSKS[0], // كشك الحرية
+  items: [],
+  kiosk: null,
 
   addItem: (item: MenuItem, kiosk: Kiosk) => {
     const { items, kiosk: currentKiosk } = get();
-    
+
     // If from a different kiosk, reset cart to new kiosk
     let updatedItems = [...items];
     if (currentKiosk && currentKiosk.id !== kiosk.id) {

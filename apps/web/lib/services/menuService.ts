@@ -4,6 +4,7 @@ import { MOCK_CATEGORIES, MOCK_MENU_ITEMS } from "@/lib/mock/menu";
 export interface IMenuService {
   getCategories(kioskId: string): Promise<MenuCategory[]>;
   getMenuItems(kioskId: string): Promise<MenuItem[]>;
+  createCategory?(kioskId: string, name: string): Promise<MenuCategory>;
   toggleItemAvailability(itemId: string, isAvailable: boolean): Promise<MenuItem>;
   addMenuItem(itemData: Omit<MenuItem, "id">): Promise<MenuItem>;
   updateMenuItem(item: MenuItem): Promise<MenuItem>;
@@ -51,4 +52,7 @@ export class MockMenuService implements IMenuService {
   }
 }
 
-export const menuService = new MockMenuService();
+import { ApiMenuService } from "./api/apiMenuService";
+
+const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+export const menuService: IMenuService = useMock ? new MockMenuService() : new ApiMenuService();

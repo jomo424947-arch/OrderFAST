@@ -21,7 +21,7 @@ export const CashierIncomingOrderCard: React.FC<CashierIncomingOrderCardProps> =
       {/* Top Row: Order Number and Urgent Countdown Timer */}
       <div className="flex items-center justify-between mb-2.5">
         <span className="font-mono text-base font-bold text-ink font-mono-nums">
-          #{order.orderNumber}
+          {order.orderNumber}
         </span>
         <span className="flex items-center gap-1 font-mono text-xs font-bold text-danger font-mono-nums bg-danger-soft px-2.5 py-0.5 rounded-full">
           <Clock className="w-3.5 h-3.5" />

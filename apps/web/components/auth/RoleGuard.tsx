@@ -12,29 +12,28 @@ interface RoleGuardProps {
 
 export const RoleGuard: React.FC<RoleGuardProps> = ({ allowedRole, children }) => {
   const router = useRouter();
-  const { isAuthenticated, role } = useAuthStore();
-  const [isHydrated, setIsHydrated] = useState(false);
+  const { isAuthenticated, role, isAuthInitialized, initializeAuth } = useAuthStore();
 
-  // Wait for zustand persist rehydration before making decisions
+  // Sync auth state with backend token
   useEffect(() => {
-    setIsHydrated(true);
-  }, []);
+    initializeAuth();
+  }, [initializeAuth]);
 
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isAuthInitialized) return;
 
     if (!isAuthenticated || role !== allowedRole) {
       router.replace('/auth/login');
     }
-  }, [isHydrated, isAuthenticated, role, allowedRole, router]);
+  }, [isAuthInitialized, isAuthenticated, role, allowedRole, router]);
 
-  // Before hydration or while redirecting, show a minimal loading state
-  if (!isHydrated || !isAuthenticated || role !== allowedRole) {
+  // Before auth check completes or if unauthorized, show loading screen
+  if (!isAuthInitialized || !isAuthenticated || role !== allowedRole) {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="font-body text-xs text-ink-soft">جاري التحقق...</p>
+          <p className="font-body text-xs text-ink-soft">جاري التحقق من الصلاحيات...</p>
         </div>
       </div>
     );

@@ -7,7 +7,7 @@ import type {
   CreateMenuItemInput,
   UpdateMenuItemInput,
 } from '@orderfast/validation';
-import type { AuthenticatedUser } from '@orderfast/types';
+import type { AuthenticatedUser } from '../../shared/middleware/auth.js';
 
 export class CatalogService {
   /**
@@ -274,8 +274,13 @@ export class CatalogService {
         description: menuItems.description,
         price: menuItems.price,
         preparationTimeMins: menuItems.preparationTimeMins,
+        isAvailable: menuItems.isAvailable,
+        isUnderReview: menuItems.isUnderReview,
+        categoryId: menuItems.categoryId,
+        imageUrl: menuItems.imageUrl,
         kioskId: menuItems.kioskId,
         kioskName: kiosks.name,
+        collegeLocation: kiosks.collegeLocation,
         categoryName: menuCategories.name,
         createdAt: menuItems.createdAt,
       })

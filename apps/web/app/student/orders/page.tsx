@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useOrderStore } from '@/stores/useOrderStore';
@@ -14,26 +14,32 @@ import { Clock, Store, ChevronLeft, ArrowLeft, ShoppingBag, CheckCircle2, AlertC
 export default function StudentOrdersPage() {
   const router = useRouter();
   const { student } = useAuthStore();
-  const { orders } = useOrderStore();
+  const { orders, fetchStudentOrders } = useOrderStore();
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
+
+  useEffect(() => {
+    if (student?.id) {
+      fetchStudentOrders(student.id);
+    }
+  }, [student?.id, fetchStudentOrders]);
 
   const studentOrders = orders.filter((o) => (student?.id ? o.studentId === student.id : true) || !o.studentId);
 
   const activeOrders = studentOrders.filter(
     (o) =>
-      o.status === 'placed' ||
-      o.status === 'pending_review' ||
-      o.status === 'accepted' ||
-      o.status === 'preparing' ||
-      o.status === 'ready_for_pickup'
+      o.status === 'PENDING_KIOSK' ||
+      o.status === 'ACCEPTED' ||
+      o.status === 'PREPARING' ||
+      o.status === 'READY'
   );
 
   const pastOrders = studentOrders.filter(
     (o) =>
-      o.status === 'picked_up' ||
-      o.status === 'rejected' ||
-      o.status === 'no_show' ||
-      o.status === 'expired'
+      o.status === 'COMPLETED' ||
+      o.status === 'REJECTED' ||
+      o.status === 'CANCELLED' ||
+      o.status === 'NO_SHOW' ||
+      o.status === 'EXPIRED'
   );
 
   const displayedOrders = activeTab === 'active' ? activeOrders : pastOrders;
@@ -77,19 +83,6 @@ export default function StudentOrdersPage() {
       <div className="space-y-3 pt-1">
         {displayedOrders.length > 0 ? (
           displayedOrders.map((order) => {
-            const pillStatus =
-              order.status === 'preparing'
-                ? 'preparing'
-                : order.status === 'ready_for_pickup'
-                ? 'ready'
-                : order.status === 'picked_up'
-                ? 'picked_up'
-                : order.status === 'rejected'
-                ? 'rejected'
-                : order.status === 'no_show'
-                ? 'no_show'
-                : 'pending';
-
             return (
               <Link
                 key={order.id}
@@ -99,13 +92,13 @@ export default function StudentOrdersPage() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-base font-bold text-ink font-mono-nums">
-                      #{order.orderNumber}
+                      {order.orderNumber}
                     </span>
                     <span className="font-body text-xs text-ink-soft">
                       · {order.kioskName}
                     </span>
                   </div>
-                  <StatusPill status={pillStatus} />
+                  <StatusPill status={order.status} />
                 </div>
 
                 <p className="font-body text-xs text-ink-soft leading-relaxed line-clamp-1 mb-2">

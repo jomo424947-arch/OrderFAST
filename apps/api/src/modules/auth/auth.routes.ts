@@ -3,9 +3,10 @@ import {
   registerStudentSchema,
   registerStaffSchema,
   loginSchema,
+  updateStudentStatusSchema,
 } from '@orderfast/validation';
 import { authService } from './auth.service.js';
-import { authenticate } from '../../shared/middleware/auth.js';
+import { authenticate, requireSystemRole } from '../../shared/middleware/auth.js';
 
 export async function authRoutes(app: FastifyInstance) {
   // Register Student
@@ -40,6 +41,16 @@ export async function authRoutes(app: FastifyInstance) {
     });
   });
 
+  // Refresh Session
+  app.post('/refresh', async (request, reply) => {
+    const body = (request.body as { refreshToken?: string }) || {};
+    const result = await authService.refreshSession(body.refreshToken || '');
+    return reply.status(200).send({
+      success: true,
+      data: result,
+    });
+  });
+
   // Get Current Authenticated Profile
   app.get('/me', { preHandler: [authenticate] }, async (request, reply) => {
     const profile = await authService.getProfileById(request.user!.id);
@@ -48,4 +59,32 @@ export async function authRoutes(app: FastifyInstance) {
       data: profile,
     });
   });
+
+  // Admin Only: Get All Students
+  app.get(
+    '/students',
+    { preHandler: [authenticate, requireSystemRole(['admin'])] },
+    async (_request, reply) => {
+      const data = await authService.getAllStudents();
+      return reply.status(200).send({
+        success: true,
+        data,
+      });
+    }
+  );
+
+  // Admin Only: Update Student Status
+  app.patch<{ Params: { id: string } }>(
+    '/students/:id/status',
+    { preHandler: [authenticate, requireSystemRole(['admin'])] },
+    async (request, reply) => {
+      const input = updateStudentStatusSchema.parse(request.body);
+      const data = await authService.updateStudentStatus(request.params.id, input.accountStatus);
+      return reply.status(200).send({
+        success: true,
+        message: 'تم تحديث حالة حساب الطالب بنجاح',
+        data,
+      });
+    }
+  );
 }

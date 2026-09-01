@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -10,28 +10,52 @@ import {
   Plus,
   Store,
   User,
+  UserPlus,
+  UserMinus,
   Clock,
   MapPin,
   CheckCircle2,
   Phone,
   Star,
+  AlertCircle,
 } from 'lucide-react';
 
 export default function AdminKiosksPage() {
-  const { kiosks, cashiers, toggleKioskOpen, addKiosk, addCashier } = useKioskStore();
+  const {
+    kiosks,
+    kiosksWithStaff,
+    staffList,
+    toggleKioskOpen,
+    fetchKiosksWithStaff,
+    fetchStaffList,
+    createKiosk,
+    assignStaff,
+    removeStaff,
+  } = useKioskStore();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedKioskForAssign, setSelectedKioskForAssign] = useState<any>(null);
+  const [selectedStaffUserId, setSelectedStaffUserId] = useState<string>('');
+  const [selectedStaffRole, setSelectedStaffRole] = useState<'cashier' | 'owner'>('cashier');
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form State
+  useEffect(() => {
+    fetchKiosksWithStaff();
+    fetchStaffList();
+  }, [fetchKiosksWithStaff, fetchStaffList]);
+
+  const displayedKiosks = kiosksWithStaff.length > 0 ? kiosksWithStaff : kiosks;
+
+  // New Kiosk Form State
   const [kioskName, setKioskName] = useState('');
   const [collegeLocation, setCollegeLocation] = useState(COLLEGES[0]);
   const [campusZone, setCampusZone] = useState('');
   const [category, setCategory] = useState('مشروبات وسناكس');
   const [phone, setPhone] = useState('');
-  const [openingHours, setOpeningHours] = useState('مفتوح حتى 5:00 م');
-  const [cashierName, setCashierName] = useState('');
-  const [cashierEmail, setCashierEmail] = useState('');
+  const [openingHours, setOpeningHours] = useState('8:00 ص - 5:00 م');
 
   const handleOpenAddModal = () => {
     setKioskName('');
@@ -39,44 +63,74 @@ export default function AdminKiosksPage() {
     setCampusZone('');
     setCategory('مشروبات وسناكس');
     setPhone('');
-    setOpeningHours('مفتوح حتى 5:00 م');
-    setCashierName('');
-    setCashierEmail('');
-    setIsModalOpen(true);
+    setOpeningHours('8:00 ص - 5:00 م');
+    setIsAddModalOpen(true);
   };
 
-  const handleCreateKioskAndCashier = (e: React.FormEvent) => {
+  const handleCreateKiosk = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!kioskName.trim() || !cashierName.trim() || !cashierEmail.trim()) return;
+    if (!kioskName.trim()) return;
 
-    // 1. Add Kiosk
-    const newKiosk = addKiosk({
-      name: kioskName.trim(),
-      collegeLocation,
-      campusZone: campusZone.trim() || 'الساحة الرئيسية',
-      category,
-      isOpen: true,
-      openingHours: openingHours.trim() || 'مفتوح حتى 5:00 م',
-      estimatedWaitMins: 10,
-      ordersAheadCount: 0,
-      rating: 5.0,
-      acceptsOnlineOrders: true,
-      isRushMode: false,
-      phone: phone.trim() || undefined,
-    });
+    try {
+      setIsSubmitting(true);
+      const newKiosk = await createKiosk({
+        name: kioskName.trim(),
+        collegeLocation,
+        campusZone: campusZone.trim() || 'الساحة الرئيسية',
+        category,
+        openingHours: openingHours.trim() || '8:00 ص - 5:00 م',
+        phone: phone.trim() || undefined,
+      });
 
-    // 2. Add Cashier assigned to new Kiosk
-    addCashier({
-      name: cashierName.trim(),
-      email: cashierEmail.trim(),
-      role: 'cashier',
-      kioskId: newKiosk.id,
-      kioskName: newKiosk.name,
-    });
+      await fetchKiosksWithStaff();
+      setIsAddModalOpen(false);
+      setToastMessage(`تمت إضافة "${newKiosk.name}" بنجاح! يمكنك الآن تعيين كاشير له.`);
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'فشل إضافة الكشك');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    setIsModalOpen(false);
-    setToastMessage(`تمت إضافة "${newKiosk.name}" وتعيين الكاشير المسؤول بنجاح`);
-    setTimeout(() => setToastMessage(null), 3500);
+  const handleOpenAssignModal = (kiosk: any) => {
+    setSelectedKioskForAssign(kiosk);
+    if (staffList.length > 0) {
+      setSelectedStaffUserId(staffList[0].id);
+    } else {
+      setSelectedStaffUserId('');
+    }
+    setSelectedStaffRole('cashier');
+    setIsAssignModalOpen(true);
+  };
+
+  const handleAssignStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedKioskForAssign || !selectedStaffUserId) return;
+
+    try {
+      setIsSubmitting(true);
+      await assignStaff(selectedKioskForAssign.id, selectedStaffUserId, selectedStaffRole);
+      setIsAssignModalOpen(false);
+      setToastMessage(`تم تعيين الموظف بنجاح لكشك "${selectedKioskForAssign.name}"`);
+      setTimeout(() => setToastMessage(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'فشل تعيين الموظف');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRemoveStaff = async (kioskId: string, userId: string, staffName: string) => {
+    if (!confirm(`هل أنت متأكد من إلغاء تعيين الموظف "${staffName}" من هذا الكشك؟`)) return;
+
+    try {
+      await removeStaff(kioskId, userId);
+      setToastMessage(`تم إلغاء تعيين الموظف "${staffName}" بنجاح`);
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err: any) {
+      alert(err.message || 'فشل إلغاء تعيين الموظف');
+    }
   };
 
   return (
@@ -88,13 +142,13 @@ export default function AdminKiosksPage() {
             إدارة الأكشاك والكاشيرات
           </h2>
           <p className="font-body text-xs text-ink-soft mt-0.5">
-            إجمالي {kiosks.length} أكشاك جامعية · {cashiers.length} حساب كاشير نشط
+            إجمالي {displayedKiosks.length} أكشاك جامعية · {displayedKiosks.reduce((s, k) => s + (k.staff?.length || 0), 0)} موظف معين
           </p>
         </div>
 
         <Button variant="primary" size="sm" onClick={handleOpenAddModal}>
           <Plus className="w-4 h-4 ml-1.5" />
-          <span>إضافة كشك وكاشير جديد</span>
+          <span>إضافة كشك جديد</span>
         </Button>
       </div>
 
@@ -108,8 +162,8 @@ export default function AdminKiosksPage() {
 
       {/* Kiosks Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {kiosks.map((kiosk) => {
-          const assignedCashier = cashiers.find((c) => c.kioskId === kiosk.id);
+        {displayedKiosks.map((kiosk: any) => {
+          const staffMembers = kiosk.staff || [];
 
           return (
             <div
@@ -136,11 +190,10 @@ export default function AdminKiosksPage() {
                   <button
                     type="button"
                     onClick={() => toggleKioskOpen(kiosk.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-body font-bold border transition-all ${
-                      kiosk.isOpen
-                        ? 'bg-accent-soft text-accent border-accent/30 hover:bg-accent-soft/80'
-                        : 'bg-danger-soft text-danger border-danger/30 hover:bg-danger-soft/80'
-                    }`}
+                    className={`px-3 py-1.5 rounded-full text-xs font-body font-bold border transition-all ${kiosk.isOpen
+                      ? 'bg-accent-soft text-accent border-accent/30 hover:bg-accent-soft/80'
+                      : 'bg-danger-soft text-danger border-danger/30 hover:bg-danger-soft/80'
+                      }`}
                   >
                     {kiosk.isOpen ? 'مفتوح للطلب' : 'مغلق حالياً'}
                   </button>
@@ -159,7 +212,7 @@ export default function AdminKiosksPage() {
                   <div className="flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5 text-ink-soft flex-shrink-0" />
                     <span>
-                      {kiosk.openingHours} (متوسط انتظار {kiosk.estimatedWaitMins} د)
+                      {kiosk.openingHours}
                     </span>
                   </div>
 
@@ -172,51 +225,104 @@ export default function AdminKiosksPage() {
                 </div>
               </div>
 
-              {/* Assigned Cashier Box */}
-              <div className="bg-canvas border border-line rounded-2xl p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-surface border border-line flex items-center justify-center text-primary-ink">
-                    <User className="w-4 h-4" />
+              {/* Assigned Staff Box */}
+              <div className="bg-canvas border border-line rounded-2xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-primary-ink" />
+                    <span className="font-body font-bold text-xs text-ink">
+                      طاقم الكاشير المسؤول
+                    </span>
                   </div>
-                  <div>
-                    <p className="font-body font-bold text-xs text-ink">
-                      {assignedCashier?.name || 'لم يُحدد كاشير'}
-                    </p>
-                    <p className="font-body text-[10px] text-ink-soft">
-                      {assignedCashier?.email || 'لا يوجد بريد مسجل'}
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAssignModal(kiosk)}
+                    className="inline-flex items-center gap-1 text-[11px] font-body font-bold text-accent hover:underline"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>تعيين موظف</span>
+                  </button>
                 </div>
 
-                <div className="flex items-center gap-1 text-[11px] font-mono font-bold text-ink-soft">
-                  <Star className="w-3.5 h-3.5 fill-primary text-primary" />
-                  <span>{kiosk.rating}</span>
-                </div>
+                {staffMembers.length > 0 ? (
+                  <div className="space-y-2">
+                    {staffMembers.map((member: any) => (
+                      <div
+                        key={member.id || member.userId}
+                        className="bg-surface border border-line/60 rounded-xl p-2.5 flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-body font-bold text-xs text-ink truncate">
+                              {member.name || member.fullName || 'موظف بدون اسم'}
+                            </p>
+                            <span className="text-[10px] font-body font-semibold px-2 py-0.5 rounded-full bg-accent-soft text-accent">
+                              {member.role === 'owner' ? 'مالك الكشك' : 'كاشير'}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[11px] font-mono text-ink-soft">
+                            {member.email && <span>{member.email}</span>}
+                            {member.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-ink-soft" />
+                                {member.phone}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRemoveStaff(
+                              kiosk.id,
+                              member.userId,
+                              member.name || member.fullName || 'الموظف'
+                            )
+                          }
+                          title="إلغاء التعيين"
+                          className="p-1.5 rounded-lg text-danger hover:bg-danger-soft transition-colors flex-shrink-0"
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-2">
+                    <p className="font-body text-xs text-ink-soft mb-2">
+                      لا يوجد كاشير معين لهذا الكشك بعد
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenAssignModal(kiosk)}
+                      className="w-full text-xs"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 ml-1.5 text-accent" />
+                      <span>تعيين كاشير الآن</span>
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Add Kiosk + Cashier Modal */}
+      {/* 1. Add Kiosk Modal */}
       <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="إضافة كشك جديد وكاشير مسؤول"
-        description="أنشئ حساب كشك وكاشير جديد لإضافته لمنظومة الحرم الجامعي فوراً."
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="إضافة كشك / كافيه جديد"
+        description="أنشئ كشك جديد في الحرم الجامعي، ويمكنك لاحقاً تعيين كاشيرات له."
       >
-        <form onSubmit={handleCreateKioskAndCashier} className="space-y-4 text-right">
-          <div className="border-b border-line/60 pb-2">
-            <h4 className="font-body font-bold text-xs text-ink mb-1">
-              ١. بيانات الكشك
-            </h4>
-          </div>
-
+        <form onSubmit={handleCreateKiosk} className="space-y-4 text-right">
           <Input
-            label="اسم الكشك"
+            label="اسم الكشك أو الكافيه"
             value={kioskName}
             onChange={(e) => setKioskName(e.target.value)}
-            placeholder="مثال: كافيه الصيدلة"
+            placeholder="مثال: كافيه الهندسة"
             required
           />
 
@@ -237,73 +343,163 @@ export default function AdminKiosksPage() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="المنطقة / المكان بالتفصيل"
-              value={campusZone}
-              onChange={(e) => setCampusZone(e.target.value)}
-              placeholder="مثال: الدور الأرضي مبنى أ"
-            />
-            <Input
-              label="تصنيف الكشك"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="مشروبات وساندوتشات"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="مواعيد العمل"
-              value={openingHours}
-              onChange={(e) => setOpeningHours(e.target.value)}
-              placeholder="مفتوح حتى 4:00 م"
-            />
-            <Input
-              label="رقم الهاتف للتواصل"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="01012345678"
-            />
-          </div>
-
-          <div className="border-b border-line/60 pb-2 pt-2">
-            <h4 className="font-body font-bold text-xs text-ink mb-1">
-              ٢. بيانات الكاشير المسؤول
-            </h4>
-          </div>
-
           <Input
-            label="اسم الكاشير"
-            value={cashierName}
-            onChange={(e) => setCashierName(e.target.value)}
-            placeholder="اسم مسؤول الكشك"
-            required
+            label="المنطقة داخل الكلية (اختياري)"
+            value={campusZone}
+            onChange={(e) => setCampusZone(e.target.value)}
+            placeholder="مثال: بجوار مبنى الورش - الساحة الرئيسية"
           />
 
           <Input
-            label="البريد الإلكتروني للكاشير"
-            type="email"
-            value={cashierEmail}
-            onChange={(e) => setCashierEmail(e.target.value)}
-            placeholder="cashier.pharmacy@kiosks.sphinx.edu.eg"
-            required
+            label="التصنيف"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="مثال: مشروبات ساخنة وسناكس"
+          />
+
+          <Input
+            label="مواعيد العمل"
+            value={openingHours}
+            onChange={(e) => setOpeningHours(e.target.value)}
+            placeholder="8:00 ص - 5:00 م"
+          />
+
+          <Input
+            label="رقم هاتف الكشك للتواصل (اختياري)"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="01012345678"
+            dir="ltr"
           />
 
           <div className="flex items-center gap-3 pt-3 border-t border-line/60">
-            <Button type="submit" variant="primary" size="md" className="flex-1">
-              إنشاء الكشك والكاشير
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              isLoading={isSubmitting}
+              className="flex-1"
+            >
+              إنشاء الكشك
             </Button>
             <Button
               type="button"
               variant="ghost"
               size="md"
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => setIsAddModalOpen(false)}
               className="flex-1"
             >
               إلغاء
             </Button>
           </div>
+        </form>
+      </Modal>
+
+      {/* 2. Assign Staff Modal */}
+      <Modal
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        title={`تعيين موظف لكشك: ${selectedKioskForAssign?.name || ''}`}
+        description="اختر أحد موظفي الكاشير المسجلين في المنصة لربطه بهذا الكشك."
+      >
+        <form onSubmit={handleAssignStaffSubmit} className="space-y-4 text-right">
+          {staffList.length > 0 ? (
+            <>
+              <div className="w-full text-right">
+                <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+                  اختر الموظف / الكاشير
+                </label>
+                <select
+                  value={selectedStaffUserId}
+                  onChange={(e) => setSelectedStaffUserId(e.target.value)}
+                  className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer"
+                  required
+                >
+                  <option value="" disabled>
+                    -- اختر موظفاً من القائمة --
+                  </option>
+                  {staffList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.fullName} ({s.email || 'بدون بريد'}) {s.phone ? `· هاتف: ${s.phone}` : ''}{' '}
+                      {s.assignment ? `[معين حالياً لـ ${s.assignment.kioskName}]` : '[غير معين]'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="w-full text-right">
+                <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+                  الدور داخل الكشك
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStaffRole('cashier')}
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-body font-bold transition-all ${
+                      selectedStaffRole === 'cashier'
+                        ? 'bg-accent text-white border-accent shadow-sm'
+                        : 'bg-canvas text-ink border-line hover:border-accent'
+                    }`}
+                  >
+                    كاشير (Cashier)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStaffRole('owner')}
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-body font-bold transition-all ${
+                      selectedStaffRole === 'owner'
+                        ? 'bg-accent text-white border-accent shadow-sm'
+                        : 'bg-canvas text-ink border-line hover:border-accent'
+                    }`}
+                  >
+                    مالك الكشك (Owner)
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-line/60">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  isLoading={isSubmitting}
+                  disabled={!selectedStaffUserId}
+                  className="flex-1"
+                >
+                  تأكيد التعيين
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="md"
+                  onClick={() => setIsAssignModalOpen(false)}
+                  className="flex-1"
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="bg-canvas border border-line rounded-2xl p-4 text-center space-y-2">
+              <AlertCircle className="w-8 h-8 text-primary-ink mx-auto" />
+              <p className="font-body font-bold text-xs text-ink">
+                لا يوجد موظفون مسجلون في النظام حالياً
+              </p>
+              <p className="font-body text-[11px] text-ink-soft leading-relaxed">
+                اطلب من الكاشير إنشاء حسابه أولاً من صفحة التسجيل <code>/auth/register</code> باختيار تبويب "كاشير"، وسيظهر في هذه القائمة فوراً لتعيينه.
+              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAssignModalOpen(false)}
+                className="mt-2"
+              >
+                إغلاق
+              </Button>
+            </div>
+          )}
         </form>
       </Modal>
     </div>

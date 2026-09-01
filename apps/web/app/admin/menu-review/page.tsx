@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -17,9 +17,22 @@ import {
 } from 'lucide-react';
 
 export default function AdminMenuReviewPage() {
-  const { menuItems, kiosks, categories, approveMenuItem, rejectMenuItem } = useKioskStore();
+  const {
+    menuItems,
+    kiosks,
+    categories,
+    fetchUnderReviewItems,
+    fetchKiosks,
+    approveMenuItem,
+    rejectMenuItem,
+  } = useKioskStore();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchKiosks();
+    fetchUnderReviewItems();
+  }, [fetchKiosks, fetchUnderReviewItems]);
 
   const underReviewItems = menuItems.filter((i) => i.isUnderReview);
 
@@ -84,7 +97,10 @@ export default function AdminMenuReviewPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {underReviewItems.map((item) => {
             const kiosk = kiosks.find((k) => k.id === item.kioskId);
+            const kioskName = kiosk?.name || (item as any).kioskName || 'كشك مخصص';
+            const collegeLocation = kiosk?.collegeLocation || (item as any).collegeLocation || 'الجامعة';
             const category = categories.find((c) => c.id === item.categoryId);
+            const categoryName = category?.name || (item as any).categoryName;
 
             return (
               <div
@@ -96,8 +112,8 @@ export default function AdminMenuReviewPage() {
                   <div className="flex items-center justify-between pb-3 border-b border-line/60">
                     <div className="flex items-center gap-2 text-xs font-body text-ink-soft">
                       <Store className="w-3.5 h-3.5 text-accent" />
-                      <span className="font-bold text-ink">{kiosk?.name || 'كشك غير محدد'}</span>
-                      <span>({kiosk?.collegeLocation || 'الحرم الرئيسي'})</span>
+                      <span className="font-bold text-ink">{kioskName}</span>
+                      <span>({collegeLocation})</span>
                     </div>
 
                     <span className="bg-primary-soft text-primary-ink text-[11px] font-body font-bold px-2.5 py-0.5 rounded-full">

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useOrderStore } from '@/stores/useOrderStore';
+import { useKioskStore } from '@/stores/useKioskStore';
 import { useCartStore } from '@/stores/useCartStore';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -25,10 +26,18 @@ import {
 
 export default function StudentDashboardPage() {
   const { student, studentStatus } = useAuthStore();
-  const { orders } = useOrderStore();
+  const { orders, fetchStudentOrders } = useOrderStore();
+  const { fetchKiosks } = useKioskStore();
   const { getTotalItems } = useCartStore();
 
   const cartCount = getTotalItems();
+
+  useEffect(() => {
+    fetchKiosks();
+    if (student?.id) {
+      fetchStudentOrders(student.id);
+    }
+  }, [student?.id, fetchKiosks, fetchStudentOrders]);
 
   // Filter orders for the current student
   const studentOrders = useMemo(() => {
@@ -41,17 +50,16 @@ export default function StudentDashboardPage() {
   const activeOrder = useMemo(() => {
     return studentOrders.find(
       (o) =>
-        o.status === 'placed' ||
-        o.status === 'pending_review' ||
-        o.status === 'accepted' ||
-        o.status === 'preparing' ||
-        o.status === 'ready_for_pickup'
+        o.status === 'PENDING_KIOSK' ||
+        o.status === 'ACCEPTED' ||
+        o.status === 'PREPARING' ||
+        o.status === 'READY'
     );
   }, [studentOrders]);
 
   // Calculate statistics
   const completedOrders = useMemo(() => {
-    return studentOrders.filter((o) => o.status === 'picked_up');
+    return studentOrders.filter((o) => o.status === 'COMPLETED');
   }, [studentOrders]);
 
   const totalSpent = useMemo(() => {
@@ -125,17 +133,17 @@ export default function StudentDashboardPage() {
                   </span>
                   <StatusPill
                     status={
-                      activeOrder.status === 'ready_for_pickup'
-                        ? 'ready'
-                        : activeOrder.status === 'preparing'
-                        ? 'preparing'
-                        : 'pending'
+                      activeOrder.status === 'READY'
+                        ? 'READY'
+                        : activeOrder.status === 'PREPARING'
+                        ? 'PREPARING'
+                        : 'PENDING_KIOSK'
                     }
                   />
                 </div>
                 <p className="font-body text-xs text-ink-soft mt-0.5">
                   {activeOrder.kioskName} ·{' '}
-                  {activeOrder.status === 'ready_for_pickup'
+                  {activeOrder.status === 'READY'
                     ? 'جاهز للاستلام الآن من الكشك!'
                     : 'جاري تحضير طلبك بعناية'}
                 </p>
@@ -260,19 +268,6 @@ export default function StudentDashboardPage() {
           {recentOrders.length > 0 ? (
             <div className="space-y-3">
               {recentOrders.map((order) => {
-                const pillStatus =
-                  order.status === 'preparing'
-                    ? 'preparing'
-                    : order.status === 'ready_for_pickup'
-                    ? 'ready'
-                    : order.status === 'picked_up'
-                    ? 'picked_up'
-                    : order.status === 'rejected'
-                    ? 'rejected'
-                    : order.status === 'no_show'
-                    ? 'no_show'
-                    : 'pending';
-
                 return (
                   <Link
                     key={order.id}
@@ -288,7 +283,7 @@ export default function StudentDashboardPage() {
                           · {order.kioskName}
                         </span>
                       </div>
-                      <StatusPill status={pillStatus} />
+                      <StatusPill status={order.status} />
                     </div>
 
                     <p className="font-body text-xs text-ink-soft line-clamp-1 mb-2">

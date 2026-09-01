@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { MenuItem, MenuCategory } from '@/types';
 import { Button } from '@/components/ui/Button';
@@ -26,13 +26,30 @@ export default function CashierMenuManagementPage() {
     kiosks,
     menuItems,
     categories,
+    fetchKiosks,
+    fetchMenu,
     toggleItemAvailability,
+    createCategory,
     addMenuItem,
     updateMenuItem,
     deleteMenuItem,
   } = useKioskStore();
 
-  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0];
+  useEffect(() => {
+    fetchKiosks();
+  }, [fetchKiosks]);
+
+  useEffect(() => {
+    if (activeKioskId) {
+      fetchMenu(activeKioskId, true);
+    }
+  }, [activeKioskId, fetchMenu]);
+
+  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0] || {
+    id: activeKioskId,
+    name: 'الكشك',
+    isOpen: true,
+  };
 
   const kioskItems = useMemo(() => {
     return menuItems.filter((i) => i.kioskId === currentKiosk.id || !i.kioskId);
@@ -40,19 +57,27 @@ export default function CashierMenuManagementPage() {
 
   const underReviewCount = kioskItems.filter((i) => i.isUnderReview).length;
 
+  const POPULAR_CATEGORIES = ['ساندوتشات وسناكس', 'مشروبات ساخنة', 'مشروبات باردة', 'حلويات', 'وجبات سريعة'];
+
   // Add / Edit Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [formName, setFormName] = useState('');
-  const [formCategory, setFormCategory] = useState(categories[0]?.id || 'cat-hot-drinks');
+  const [formCategory, setFormCategory] = useState(categories[0]?.id || '__NEW__');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
   const [formPrice, setFormPrice] = useState('15');
   const [formPrepTime, setFormPrepTime] = useState('5');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOpenAdd = () => {
     setEditingItem(null);
     setFormName('');
-    setFormCategory(categories[0]?.id || 'cat-hot-drinks');
+    const hasCategories = categories.length > 0;
+    setIsCreatingNewCategory(!hasCategories);
+    setFormCategory(hasCategories ? categories[0].id : '__NEW__');
+    setNewCategoryName(hasCategories ? '' : 'ساندوتشات وسناكس');
     setFormPrice('15');
     setFormPrepTime('5');
     setIsModalOpen(true);
@@ -61,39 +86,80 @@ export default function CashierMenuManagementPage() {
   const handleOpenEdit = (item: MenuItem) => {
     setEditingItem(item);
     setFormName(item.name);
+    setIsCreatingNewCategory(false);
     setFormCategory(item.categoryId);
+    setNewCategoryName('');
     setFormPrice(item.price.toString());
     setFormPrepTime(item.preparationTimeMins?.toString() || '5');
     setIsModalOpen(true);
   };
 
-  const handleSaveItem = (e: React.FormEvent) => {
+  const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) return;
 
-    if (editingItem) {
-      updateMenuItem({
-        ...editingItem,
-        name: formName.trim(),
-        categoryId: formCategory,
-        price: Number(formPrice) || 10,
-        preparationTimeMins: Number(formPrepTime) || 5,
-      });
-      setToastMessage('تم تحديث بيانات الصنف بنجاح');
-    } else {
-      addMenuItem({
-        kioskId: currentKiosk.id,
-        categoryId: formCategory,
-        name: formName.trim(),
-        price: Number(formPrice) || 10,
-        isAvailable: true,
-        preparationTimeMins: Number(formPrepTime) || 5,
-      });
-      setToastMessage('تمت إضافة الصنف بنجاح وحالته الآن قيد المراجعة');
-    }
+    try {
+      setIsSubmitting(true);
+      let targetCategoryId = formCategory;
 
-    setIsModalOpen(false);
-    setTimeout(() => setToastMessage(null), 3000);
+      // If user is adding a new category
+      if (isCreatingNewCategory || formCategory === '__NEW__' || categories.length === 0) {
+        const catName = newCategoryName.trim();
+        if (!catName) {
+          alert('يرجى كتابة أو اختيار اسم التصنيف');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Check if category name already exists in current categories
+        const existingCat = categories.find(
+          (c) => c.name.trim().toLowerCase() === catName.toLowerCase()
+        );
+
+        if (existingCat) {
+          targetCategoryId = existingCat.id;
+        } else {
+          const createdCat = await createCategory(currentKiosk.id, catName);
+          targetCategoryId = createdCat.id;
+        }
+      }
+
+      if (!targetCategoryId) {
+        alert('يجب تحديد تصنيف للصنف');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (editingItem) {
+        await updateMenuItem({
+          ...editingItem,
+          name: formName.trim(),
+          categoryId: targetCategoryId,
+          price: Number(formPrice) || 10,
+          preparationTimeMins: Number(formPrepTime) || 5,
+        });
+        setToastMessage('تم تحديث بيانات الصنف بنجاح');
+      } else {
+        await addMenuItem({
+          kioskId: currentKiosk.id,
+          name: formName.trim(),
+          categoryId: targetCategoryId,
+          price: Number(formPrice) || 10,
+          preparationTimeMins: Number(formPrepTime) || 5,
+          isAvailable: true,
+          isUnderReview: true,
+        });
+        setToastMessage('تمت إضافة الصنف وإرساله للمراجعة بنجاح');
+      }
+
+      await fetchMenu(currentKiosk.id, true);
+      setIsModalOpen(false);
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'فشل حفظ الصنف');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = (itemId: string, name: string) => {
@@ -251,21 +317,78 @@ export default function CashierMenuManagementPage() {
             required
           />
 
-          <div className="w-full text-right">
-            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
-              التصنيف
-            </label>
-            <select
-              value={formCategory}
-              onChange={(e) => setFormCategory(e.target.value)}
-              className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer"
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+          {/* Category Selector / Creator */}
+          <div className="w-full text-right space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block font-body text-xs font-medium text-ink-soft">
+                التصنيف
+              </label>
+              {categories.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreatingNewCategory(!isCreatingNewCategory);
+                    if (!isCreatingNewCategory) {
+                      setFormCategory('__NEW__');
+                      setNewCategoryName('');
+                    } else {
+                      setFormCategory(categories[0]?.id || '');
+                    }
+                  }}
+                  className="text-[11px] font-body font-bold text-accent hover:underline"
+                >
+                  {isCreatingNewCategory ? '← اختر من التصنيفات الحالية' : '+ تصنيف جديد'}
+                </button>
+              )}
+            </div>
+
+            {isCreatingNewCategory || categories.length === 0 ? (
+              <div className="space-y-2">
+                <Input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="اكتب اسم التصنيف (مثال: ساندوتشات أو مشروبات)"
+                  required
+                />
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] font-body text-ink-soft ml-1">اقتراحات سريعة:</span>
+                  {POPULAR_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setNewCategoryName(cat)}
+                      className={`text-[11px] font-body px-2.5 py-1 rounded-full border transition-all ${
+                        newCategoryName === cat
+                          ? 'bg-accent text-white border-accent font-bold'
+                          : 'bg-canvas text-ink-soft border-line hover:border-accent hover:text-ink'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <select
+                value={formCategory}
+                onChange={(e) => {
+                  if (e.target.value === '__NEW__') {
+                    setIsCreatingNewCategory(true);
+                    setFormCategory('__NEW__');
+                  } else {
+                    setFormCategory(e.target.value);
+                  }
+                }}
+                className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+                <option value="__NEW__">+ إضافة تصنيف جديد...</option>
+              </select>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

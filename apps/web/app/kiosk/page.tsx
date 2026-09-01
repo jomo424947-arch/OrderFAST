@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useKioskStore } from '@/stores/useKioskStore';
@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { StatusPill } from '@/components/ui/StatusPill';
 import { formatEGP } from '@/lib/formatters';
 import {
   Inbox,
@@ -23,16 +24,24 @@ import {
   Settings,
   Sparkles,
   Zap,
+  ChefHat,
+  PackageCheck,
+  CheckCheck,
 } from 'lucide-react';
 
+import { useAuthStore } from '@/stores/useAuthStore';
+
 export default function CashierDashboardPage() {
-  const { activeKioskId, kiosks, menuItems } = useKioskStore();
+  const { cashier, logout } = useAuthStore();
+  const { activeKioskId, kiosks, menuItems, kioskStats, fetchKiosks, fetchMenu, fetchKioskStats } = useKioskStore();
   const {
     getKioskIncomingOrders,
     getKioskActiveOrders,
     orders,
+    fetchKioskOrders,
     acceptOrder,
     rejectOrder,
+    setOrderStatus,
   } = useOrderStore();
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -40,7 +49,30 @@ export default function CashierDashboardPage() {
   const [rejectReason, setRejectReason] = useState('نفاد بعض المكونات المطلوبة');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
-  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0];
+  const isUnassigned = cashier && !cashier.kioskId && (!activeKioskId || !kiosks.some((k) => k.id === activeKioskId));
+
+  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0] || {
+    id: activeKioskId,
+    name: 'الكشك',
+    collegeLocation: 'كلية الهندسة',
+    openingHours: '8:00 ص - 4:00 م',
+    isOpen: true,
+    category: 'مشروبات وسناكس',
+    rating: 4.8,
+    estimatedWaitMins: 15,
+  };
+
+  useEffect(() => {
+    fetchKiosks();
+  }, [fetchKiosks]);
+
+  useEffect(() => {
+    if (activeKioskId) {
+      fetchKioskOrders(activeKioskId);
+      fetchMenu(activeKioskId, true);
+      fetchKioskStats(activeKioskId);
+    }
+  }, [activeKioskId, fetchKioskOrders, fetchMenu, fetchKioskStats]);
 
   const incomingOrders = getKioskIncomingOrders(activeKioskId);
   const activeOrders = getKioskActiveOrders(activeKioskId);
@@ -52,21 +84,28 @@ export default function CashierDashboardPage() {
 
   const unavailableItemsCount = kioskMenuItems.filter((i) => !i.isAvailable).length;
 
+  const currentKioskDbStats = kioskStats[activeKioskId];
+
   // Today's total sales for this kiosk
   const todayKioskOrders = useMemo(() => {
     return orders.filter(
       (o) =>
         o.kioskId === activeKioskId &&
-        (o.status === 'picked_up' ||
-          o.status === 'ready_for_pickup' ||
-          o.status === 'preparing' ||
-          o.status === 'accepted')
+        (o.status === 'COMPLETED' ||
+          o.status === 'READY' ||
+          o.status === 'PREPARING' ||
+          o.status === 'ACCEPTED')
     );
   }, [orders, activeKioskId]);
 
   const todaySales = useMemo(() => {
+    if (currentKioskDbStats?.todaySalesPiasters !== undefined) {
+      return currentKioskDbStats.todaySalesPiasters / 100;
+    }
     return todayKioskOrders.reduce((sum, o) => sum + o.total, 0);
-  }, [todayKioskOrders]);
+  }, [todayKioskOrders, currentKioskDbStats]);
+
+  const todayCompletedCount = currentKioskDbStats?.todayCompletedCount ?? todayKioskOrders.length;
 
   // Urgent 2 incoming orders preview
   const urgentIncomingOrders = incomingOrders.slice(0, 2);
@@ -91,6 +130,29 @@ export default function CashierDashboardPage() {
       setTimeout(() => setActionFeedback(null), 3000);
     }
   };
+
+  if (isUnassigned) {
+    return (
+      <div className="max-w-md mx-auto my-12 bg-surface border border-line rounded-3xl p-8 text-center space-y-4 shadow-floating animate-in fade-in duration-300">
+        <div className="w-14 h-14 rounded-2xl bg-accent-soft text-accent flex items-center justify-center mx-auto">
+          <Store className="w-7 h-7" />
+        </div>
+        <h2 className="font-display font-bold text-xl text-ink">
+          مرحباً بك {cashier?.name}! 👋
+        </h2>
+        <div className="bg-canvas border border-line rounded-2xl p-4 text-xs font-body text-ink-soft leading-relaxed text-right">
+          <p className="font-bold text-ink mb-1 flex items-center gap-1.5">
+            <span>⏳</span>
+            <span>حسابك بانتظار التعيين لكشك</span>
+          </p>
+          تم إنشاء حسابك كموظف كاشير بنجاح! يرجى التواصل مع مدير النظام (الأدمن) لتعيينك للكشك أو الكافيه التابع لك من لوحة التحكم، لتتمكن من استقبال الطلبات وإدارة المنيو فوراً.
+        </div>
+        <Button variant="outline" size="sm" onClick={logout} className="w-full mt-2">
+          تسجيل الخروج
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -218,7 +280,7 @@ export default function CashierDashboardPage() {
             {formatEGP(todaySales)}
           </p>
           <p className="font-body text-xs text-ink-soft mt-1">
-            إجمالي مبيعات اليوم ({todayKioskOrders.length} طلب)
+            إجمالي مبيعات اليوم ({todayCompletedCount} طلب)
           </p>
         </Card>
 
@@ -346,16 +408,32 @@ export default function CashierDashboardPage() {
                       {order.items.map((i) => `${i.name} × ${i.quantity}`).join('، ')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs font-body font-bold px-2.5 py-1 rounded-xl ${
-                        order.status === 'ready_for_pickup'
-                          ? 'bg-accent-soft text-accent'
-                          : 'bg-primary-soft text-primary-ink'
-                      }`}
-                    >
-                      {order.status === 'ready_for_pickup' ? 'جاهز للاستلام' : 'جاري التحضير'}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-1.5 flex-shrink-0">
+                    <StatusPill status={order.status} />
+
+                    {(order.status === 'ACCEPTED' || order.status === 'PREPARING') && (
+                      <Button
+                        variant="accent"
+                        size="sm"
+                        onClick={() => setOrderStatus(order.id, 'READY')}
+                        className="text-[11px] py-1 px-2.5 h-auto shadow-sm"
+                      >
+                        <PackageCheck className="w-3.5 h-3.5 ml-1" />
+                        <span>جاهز للاستلام</span>
+                      </Button>
+                    )}
+
+                    {order.status === 'READY' && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setOrderStatus(order.id, 'COMPLETED')}
+                        className="text-[11px] py-1 px-2.5 h-auto shadow-sm"
+                      >
+                        <CheckCheck className="w-3.5 h-3.5 ml-1" />
+                        <span>تسليم الطلب</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

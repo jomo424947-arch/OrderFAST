@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { KioskCard } from '@/components/kiosk/KioskCard';
@@ -8,9 +8,13 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { COLLEGES } from '@/lib/constants';
 
 export default function KiosksListPage() {
-  const { kiosks } = useKioskStore();
+  const { kiosks, fetchKiosks } = useKioskStore();
   const [search, setSearch] = useState('');
   const [selectedCollege, setSelectedCollege] = useState('all');
+
+  useEffect(() => {
+    fetchKiosks();
+  }, [fetchKiosks]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

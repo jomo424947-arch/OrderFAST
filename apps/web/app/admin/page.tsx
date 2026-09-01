@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { useOrderStore } from '@/stores/useOrderStore';
@@ -22,13 +22,25 @@ import {
 import { formatEGP } from '@/lib/formatters';
 
 export default function AdminDashboardPage() {
-  const { kiosks, cashiers, menuItems, approveMenuItem } = useKioskStore();
-  const { orders } = useOrderStore();
-  const { students } = useStudentStore();
+  const { kiosks, kiosksWithStaff, menuItems, fetchKiosksWithStaff, fetchUnderReviewItems, approveMenuItem } = useKioskStore();
+  const { adminOrders, adminStats, fetchAdminOrders, fetchAdminStats } = useOrderStore();
+  const { students, fetchStudents } = useStudentStore();
 
-  const openKiosksCount = kiosks.filter((k) => k.isOpen).length;
+  useEffect(() => {
+    fetchKiosksWithStaff();
+    fetchStudents();
+    fetchAdminOrders();
+    fetchAdminStats();
+    fetchUnderReviewItems();
+  }, [fetchKiosksWithStaff, fetchStudents, fetchAdminOrders, fetchAdminStats, fetchUnderReviewItems]);
+
+  const displayedKiosks = kiosksWithStaff.length > 0 ? kiosksWithStaff : kiosks;
+  const openKiosksCount = displayedKiosks.filter((k) => k.isOpen).length;
   const underReviewItems = menuItems.filter((i) => i.isUnderReview);
-  const recentOrders = orders.slice(0, 5);
+  const recentOrders = adminOrders.slice(0, 5);
+
+  const totalTodayOrders = adminStats?.todayOrdersCount ?? adminOrders.length;
+  const totalStaffCount = displayedKiosks.reduce((sum, k) => sum + (k.staff?.length || 1), 0);
 
   return (
     <div className="space-y-8 pb-16">
@@ -56,10 +68,10 @@ export default function AdminDashboardPage() {
               </span>
             </div>
             <p className="font-display font-black text-2xl text-ink">
-              {kiosks.length}
+              {displayedKiosks.length}
             </p>
             <p className="font-body text-xs text-ink-soft mt-1">
-              إجمالي الأكشاك ({cashiers.length} كاشير)
+              إجمالي الأكشاك ({totalStaffCount} كاشير)
             </p>
           </Card>
         </Link>
@@ -95,7 +107,7 @@ export default function AdminDashboardPage() {
             </span>
           </div>
           <p className="font-display font-black text-2xl text-ink">
-            {orders.length}
+            {totalTodayOrders}
           </p>
           <p className="font-body text-xs text-ink-soft mt-1">
             إجمالي الطلبات المنفذة
@@ -217,7 +229,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="divide-y divide-line/60">
-            {kiosks.map((kiosk) => (
+            {displayedKiosks.map((kiosk) => (
               <div
                 key={kiosk.id}
                 className="py-3 flex items-center justify-between gap-3 first:pt-0 last:pb-0"

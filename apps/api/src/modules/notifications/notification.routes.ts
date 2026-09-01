@@ -20,6 +20,19 @@ export async function notificationRoutes(app: FastifyInstance) {
     });
   });
 
+  // Mark all as read (MUST be registered BEFORE /:id/read to avoid route shadowing)
+  app.patch(
+    '/read-all',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      await notificationService.markAllAsRead(request.user!.id);
+      return reply.status(200).send({
+        success: true,
+        message: 'تم تعيين جميع الإشعارات كمقروءة',
+      });
+    }
+  );
+
   // Mark single notification as read
   app.patch<{ Params: { id: string } }>(
     '/:id/read',
@@ -32,19 +45,6 @@ export async function notificationRoutes(app: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         data,
-      });
-    }
-  );
-
-  // Mark all as read
-  app.patch(
-    '/read-all',
-    { preHandler: [authenticate] },
-    async (request, reply) => {
-      await notificationService.markAllAsRead(request.user!.id);
-      return reply.status(200).send({
-        success: true,
-        message: 'تم تعيين جميع الإشعارات كمقروءة',
       });
     }
   );

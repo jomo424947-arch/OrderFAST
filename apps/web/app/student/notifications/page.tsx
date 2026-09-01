@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useNotificationStore } from '@/stores/useNotificationStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatArabicTime } from '@/lib/formatters';
@@ -11,10 +12,17 @@ import { useRouter } from 'next/navigation';
 
 export default function StudentNotificationsPage() {
   const router = useRouter();
-  const { notifications, markAsRead, markAllAsRead } = useNotificationStore();
+  const { student } = useAuthStore();
+  const { notifications, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
+
+  React.useEffect(() => {
+    if (student?.id) {
+      fetchNotifications(student.id, 'student');
+    }
+  }, [student?.id, fetchNotifications]);
 
   const studentNotifs = notifications.filter(
-    (n) => n.userRole === 'student' || !n.userRole
+    (n) => (student?.id ? n.userId === student.id : true) || n.userRole === 'student'
   );
 
   return (
@@ -43,7 +51,7 @@ export default function StudentNotificationsPage() {
         {studentNotifs.length > 0 && (
           <button
             type="button"
-            onClick={markAllAsRead}
+            onClick={() => markAllAsRead()}
             className="flex items-center gap-1 text-xs font-body font-semibold text-accent hover:underline"
           >
             <CheckCheck className="w-3.5 h-3.5" />

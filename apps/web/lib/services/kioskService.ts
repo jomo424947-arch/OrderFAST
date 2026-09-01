@@ -5,8 +5,9 @@ export interface IKioskService {
   getAllKiosks(): Promise<Kiosk[]>;
   getKioskById(id: string): Promise<Kiosk | null>;
   searchKiosks(query: string, category?: string): Promise<Kiosk[]>;
-  updateKioskStatus(kioskId: string, isOpen: boolean): Promise<Kiosk>;
+  updateKioskStatus(kioskId: string, isOpen: boolean, isRushMode?: boolean): Promise<Kiosk>;
   updateEstimatedWaitTime(kioskId: string, mins: number): Promise<Kiosk>;
+  getKioskStats?(kioskId: string): Promise<any>;
 }
 
 export class MockKioskService implements IKioskService {
@@ -56,4 +57,7 @@ export class MockKioskService implements IKioskService {
   }
 }
 
-export const kioskService = new MockKioskService();
+import { ApiKioskService } from "./api/apiKioskService";
+
+const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+export const kioskService: IKioskService = useMock ? new MockKioskService() : new ApiKioskService();

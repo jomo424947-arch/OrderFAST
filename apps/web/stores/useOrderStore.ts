@@ -1,20 +1,42 @@
 import { create } from 'zustand';
 import { Order, OrderStatus, CartItem, Kiosk } from '@/types';
-import { MOCK_ORDERS } from '@/lib/mock/orders';
-import { generateOrderNumber } from '@/lib/utils';
+import { orderService } from '@/lib/services/orderService';
+import { ApiOrderService } from '@/lib/services/api/apiOrderService';
+import { isValidUUID } from '@/lib/utils';
+import { playNewOrderChime } from '@/lib/utils/sound';
 
 interface OrderState {
   orders: Order[];
+  adminOrders: Order[];
+  adminStats: { totalOrders: number; todayOrdersCount: number; todaySalesPiasters: number; activeKitchenCount: number } | null;
+  isLoading: boolean;
+  error: string | null;
+  lastPolledAt: number | null;
+
+  fetchStudentOrders: (studentId?: string, silent?: boolean) => Promise<Order[]>;
+  fetchKioskOrders: (kioskId: string, silent?: boolean) => Promise<Order[]>;
+  fetchAdminOrders: () => Promise<Order[]>;
+  fetchAdminStats: () => Promise<any>;
+  fetchOrderById: (orderId: string, silent?: boolean) => Promise<Order | null>;
+
+  startKioskPolling: (kioskId: string, intervalMs?: number) => () => void;
+  startStudentTrackingPolling: (orderId: string, intervalMs?: number) => () => void;
+  startStudentOrdersPolling: (studentId?: string, intervalMs?: number) => () => void;
+
   placeOrder: (params: {
     studentId: string;
     studentName: string;
     studentCollege: string;
     kiosk: Kiosk;
     items: CartItem[];
-  }) => Order;
-  acceptOrder: (orderId: string) => void;
-  rejectOrder: (orderId: string, reason?: string) => void;
-  setOrderStatus: (orderId: string, status: OrderStatus) => void;
+    paymentMethod?: 'cash' | 'digital_wallet';
+  }) => Promise<Order>;
+
+  acceptOrder: (orderId: string, customPrepTimeMins?: number) => Promise<void>;
+  rejectOrder: (orderId: string, reason?: string) => Promise<void>;
+  setOrderStatus: (orderId: string, status: OrderStatus, reason?: string) => Promise<void>;
+  cancelOrder: (orderId: string, reason?: string) => Promise<void>;
+
   getOrderById: (orderId: string) => Order | undefined;
   getStudentOrders: (studentId: string) => Order[];
   getKioskIncomingOrders: (kioskId: string) => Order[];
@@ -23,102 +45,272 @@ interface OrderState {
 }
 
 export const useOrderStore = create<OrderState>((set, get) => ({
-  orders: [...MOCK_ORDERS],
+  orders: [],
+  adminOrders: [],
+  adminStats: null,
+  isLoading: false,
+  error: null,
+  lastPolledAt: null,
 
-  placeOrder: ({ studentId, studentName, studentCollege, kiosk, items }) => {
-    const orderNumber = generateOrderNumber();
-    const orderItems = items.map((ci, idx) => ({
-      id: `oi-${Date.now()}-${idx}`,
-      menuItemId: ci.menuItem.id,
-      name: ci.menuItem.name,
-      price: ci.menuItem.price,
-      quantity: ci.quantity,
-    }));
-
-    const total = orderItems.reduce((acc, it) => acc + it.price * it.quantity, 0);
-
-    const newOrder: Order = {
-      id: `ord-${orderNumber}`,
-      orderNumber,
-      studentId,
-      studentName,
-      studentCollege,
-      kioskId: kiosk.id,
-      kioskName: kiosk.name,
-      items: orderItems,
-      subtotal: total,
-      total,
-      status: 'pending_review',
-      estimatedWaitMins: kiosk.estimatedWaitMins || 15,
-      approximateOrdersAhead: kiosk.ordersAheadCount || 2,
-      reviewTimeRemainingSeconds: 240, // 4 mins initial review countdown
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    set((state) => ({
-      orders: [newOrder, ...state.orders],
-    }));
-
-    return newOrder;
+  fetchStudentOrders: async (studentId?: string, silent = false) => {
+    try {
+      if (!silent) set({ isLoading: true, error: null });
+      const studentOrders = await orderService.getOrdersByStudent(studentId || '');
+      set((state) => {
+        const otherOrders = state.orders.filter((o) => studentId && o.studentId !== studentId);
+        return {
+          orders: [...studentOrders, ...otherOrders],
+          isLoading: false,
+          lastPolledAt: Date.now(),
+        };
+      });
+      return studentOrders;
+    } catch (err: any) {
+      if (!silent) set({ isLoading: false, error: err.message || 'فشل جلب الطلبات' });
+      return [];
+    }
   },
 
-  acceptOrder: (orderId: string) => {
-    set((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: 'preparing' as OrderStatus,
-              updatedAt: new Date().toISOString(),
-            }
-          : o
-      ),
-    }));
+  fetchKioskOrders: async (kioskId: string, silent = false) => {
+    if (!isValidUUID(kioskId)) {
+      return [];
+    }
+    try {
+      if (!silent) set({ isLoading: true, error: null });
+      const kioskOrders = await orderService.getOrdersByKiosk(kioskId);
+      set((state) => {
+        const otherOrders = state.orders.filter((o) => o.kioskId !== kioskId);
+        return {
+          orders: [...kioskOrders, ...otherOrders],
+          isLoading: false,
+          lastPolledAt: Date.now(),
+        };
+      });
+      return kioskOrders;
+    } catch (err: any) {
+      if (!silent) set({ isLoading: false, error: err.message || 'فشل جلب طلبات الكشك' });
+      return [];
+    }
   },
 
-  rejectOrder: (orderId: string, reason?: string) => {
-    set((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: 'rejected' as OrderStatus,
-              rejectionReason: reason || 'الكشك غير قادر على استلام طلبات جديدة حالياً',
-              updatedAt: new Date().toISOString(),
-            }
-          : o
-      ),
-    }));
+  fetchAdminOrders: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      if (orderService instanceof ApiOrderService) {
+        const adminOrders = await (orderService as ApiOrderService).getAdminRecentOrders(50, 1);
+        set({ adminOrders, isLoading: false, lastPolledAt: Date.now() });
+        return adminOrders;
+      }
+      const all = await orderService.getOrdersByStudent();
+      set({ adminOrders: all, isLoading: false });
+      return all;
+    } catch (err: any) {
+      set({ isLoading: false, error: err.message || 'فشل جلب أوردرات الحرم الجامعي' });
+      return [];
+    }
   },
 
-  setOrderStatus: (orderId: string, status: OrderStatus) => {
-    set((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status,
-              updatedAt: new Date().toISOString(),
-            }
-          : o
-      ),
-    }));
+  fetchAdminStats: async () => {
+    try {
+      if (orderService instanceof ApiOrderService) {
+        const stats = await (orderService as ApiOrderService).getAdminCampusStats();
+        set({ adminStats: stats });
+        return stats;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  fetchOrderById: async (orderId: string, silent = false) => {
+    try {
+      if (!silent) set({ isLoading: true });
+      const order = await orderService.getOrderById(orderId);
+      if (order) {
+        set((state) => ({
+          orders: [
+            order,
+            ...state.orders.filter(
+              (o) => o.id !== order.id && o.orderNumber !== order.orderNumber
+            ),
+          ],
+          isLoading: false,
+          lastPolledAt: Date.now(),
+        }));
+      } else if (!silent) {
+        set({ isLoading: false });
+      }
+      return order;
+    } catch {
+      if (!silent) set({ isLoading: false });
+      return null;
+    }
+  },
+
+  startKioskPolling: (kioskId: string, intervalMs = 3000) => {
+    if (!isValidUUID(kioskId)) return () => {};
+
+    // Initial load
+    get().fetchKioskOrders(kioskId, false);
+
+    const intervalId = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+
+      const previousPendingIds = new Set(
+        get()
+          .orders.filter((o) => o.kioskId === kioskId && o.status === 'PENDING_KIOSK')
+          .map((o) => o.id)
+      );
+
+      const latestOrders = await get().fetchKioskOrders(kioskId, true);
+
+      // Trigger bell chime if new incoming orders arrived
+      const hasNewIncoming = latestOrders.some(
+        (o) => o.status === 'PENDING_KIOSK' && !previousPendingIds.has(o.id)
+      );
+
+      if (hasNewIncoming && previousPendingIds.size > 0) {
+        playNewOrderChime();
+      }
+    }, intervalMs);
+
+    return () => clearInterval(intervalId);
+  },
+
+  startStudentTrackingPolling: (orderId: string, intervalMs = 3000) => {
+    if (!orderId) return () => {};
+
+    get().fetchOrderById(orderId, false);
+
+    const intervalId = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+
+      const order = await get().fetchOrderById(orderId, true);
+      if (
+        order &&
+        (order.status === 'COMPLETED' ||
+          order.status === 'REJECTED' ||
+          order.status === 'CANCELLED' ||
+          order.status === 'NO_SHOW' ||
+          order.status === 'EXPIRED')
+      ) {
+        clearInterval(intervalId);
+      }
+    }, intervalMs);
+
+    return () => clearInterval(intervalId);
+  },
+
+  startStudentOrdersPolling: (studentId?: string, intervalMs = 5000) => {
+    get().fetchStudentOrders(studentId, false);
+
+    const intervalId = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      await get().fetchStudentOrders(studentId, true);
+    }, intervalMs);
+
+    return () => clearInterval(intervalId);
+  },
+
+  placeOrder: async ({ kiosk, items, paymentMethod }) => {
+    set({ isLoading: true, error: null });
+    try {
+      const newOrder = await (orderService as any).createOrder({
+        kioskId: kiosk.id,
+        items: items.map((ci) => ({
+          menuItemId: ci.menuItem.id,
+          quantity: ci.quantity,
+          specialInstructions: ci.specialInstructions,
+        })),
+        paymentMethod: paymentMethod || 'cash',
+      });
+
+      set((state) => ({
+        orders: [newOrder, ...state.orders.filter((o) => o.id !== newOrder.id)],
+        isLoading: false,
+      }));
+
+      return newOrder;
+    } catch (err: any) {
+      const msg = err.message || '';
+      const friendlyMsg = msg.includes('الصلاحية المطلوبة')
+        ? 'حسابك الحالي ليس حساب طالب (مسجل ككاشير أو أدمن). يرجى تسجيل الدخول بحساب طالب لتأكيد الأوردر.'
+        : msg || 'فشل إنشاء الطلب';
+      set({ isLoading: false, error: friendlyMsg });
+      throw new Error(friendlyMsg);
+    }
+  },
+
+  acceptOrder: async (orderId: string, customPrepTimeMins?: number) => {
+    try {
+      if (orderService instanceof ApiOrderService) {
+        const updated = await orderService.acceptOrder(orderId, customPrepTimeMins);
+        set((state) => ({
+          orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+        }));
+      } else {
+        const updated = await orderService.updateOrderStatus(orderId, 'ACCEPTED');
+        set((state) => ({
+          orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+        }));
+      }
+    } catch (err: any) {
+      set({ error: err.message || 'فشل قبول الطلب' });
+      throw err;
+    }
+  },
+
+  rejectOrder: async (orderId: string, reason?: string) => {
+    try {
+      const rejectionReason = reason || 'الكشك غير قادر على استلام طلبات جديدة حالياً';
+      const updated = await orderService.updateOrderStatus(orderId, 'REJECTED', rejectionReason);
+      set((state) => ({
+        orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+      }));
+    } catch (err: any) {
+      set({ error: err.message || 'فشل رفض الطلب' });
+      throw err;
+    }
+  },
+
+  cancelOrder: async (orderId: string, reason?: string) => {
+    try {
+      const updated = await orderService.updateOrderStatus(orderId, 'CANCELLED', reason);
+      set((state) => ({
+        orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+      }));
+    } catch (err: any) {
+      set({ error: err.message || 'فشل إلغاء الطلب' });
+      throw err;
+    }
+  },
+
+  setOrderStatus: async (orderId: string, status: OrderStatus, reason?: string) => {
+    try {
+      const updated = await orderService.updateOrderStatus(orderId, status, reason);
+      set((state) => ({
+        orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+      }));
+    } catch (err: any) {
+      set({ error: err.message || 'فشل تحديث حالة الطلب' });
+      throw err;
+    }
   },
 
   getOrderById: (orderId: string) => {
     return get().orders.find(
-      (o) => o.id === orderId || o.orderNumber === orderId
+      (o) => o.id === orderId || o.orderNumber === orderId || o.orderNumber === `#${orderId}`
     );
   },
 
   getStudentOrders: (studentId: string) => {
-    return get().orders.filter((o) => o.studentId === studentId);
+    return get().orders.filter((o) => !studentId || o.studentId === studentId);
   },
 
   getKioskIncomingOrders: (kioskId: string) => {
     return get().orders.filter(
-      (o) => o.kioskId === kioskId && o.status === 'pending_review'
+      (o) => o.kioskId === kioskId && o.status === 'PENDING_KIOSK'
     );
   },
 
@@ -126,7 +318,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     return get().orders.filter(
       (o) =>
         o.kioskId === kioskId &&
-        (o.status === 'accepted' || o.status === 'preparing' || o.status === 'ready_for_pickup')
+        (o.status === 'ACCEPTED' || o.status === 'PREPARING' || o.status === 'READY')
     );
   },
 
@@ -134,7 +326,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     set((state) => ({
       orders: state.orders.map((o) => {
         if (
-          o.status === 'pending_review' &&
+          o.status === 'PENDING_KIOSK' &&
           o.reviewTimeRemainingSeconds &&
           o.reviewTimeRemainingSeconds > 0
         ) {

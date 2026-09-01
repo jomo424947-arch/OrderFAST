@@ -34,6 +34,8 @@ export interface Kiosk {
   imageUrl?: string;
   acceptsOnlineOrders: boolean;
   isRushMode: boolean;
+  defaultPrepTimeMins?: number;
+  acceptanceTimeoutSecs?: number;
   phone?: string;
 }
 
@@ -64,22 +66,23 @@ export interface CartItem {
 }
 
 export type OrderStatus =
-  | 'placed'
-  | 'pending_review'
-  | 'accepted'
-  | 'preparing'
-  | 'ready_for_pickup'
-  | 'picked_up'
-  | 'rejected'
-  | 'no_show'
-  | 'expired';
+  | 'PENDING_KIOSK'
+  | 'ACCEPTED'
+  | 'PREPARING'
+  | 'READY'
+  | 'COMPLETED'
+  | 'REJECTED'
+  | 'EXPIRED'
+  | 'CANCELLED'
+  | 'NO_SHOW';
 
 export interface OrderItem {
   id: string;
-  menuItemId: string;
+  menuItemId?: string;
   name: string;
-  price: number;
+  price: number; // in EGP
   quantity: number;
+  specialInstructions?: string;
 }
 
 export interface Order {
@@ -91,12 +94,19 @@ export interface Order {
   kioskId: string;
   kioskName: string;
   items: OrderItem[];
-  subtotal: number;
-  total: number;
+  subtotal: number; // in EGP
+  discount?: number; // in EGP
+  fees?: number; // in EGP
+  total: number; // in EGP
   status: OrderStatus;
+  paymentMethod?: 'cash' | 'digital_wallet';
+  paymentStatus?: 'pending_at_pickup' | 'paid' | 'waived';
   estimatedWaitMins: number;
   approximateOrdersAhead: number;
   rejectionReason?: string;
+  cancellationReason?: string;
+  expiresAt?: string;
+  estimatedReadyAt?: string;
   createdAt: string;
   updatedAt: string;
   reviewTimeRemainingSeconds?: number;
@@ -116,9 +126,19 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface KioskAssignment {
+  id: string;
+  kioskId: string;
+  role: string;
+  kioskName: string;
+  kioskLocation: string;
+  kioskIsOpen: boolean;
+}
+
 export interface Cashier extends User {
   kioskId: string;
   kioskName: string;
+  staffAssignments?: KioskAssignment[];
 }
 
 export interface Admin extends User {

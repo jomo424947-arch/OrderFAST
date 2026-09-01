@@ -7,16 +7,13 @@ import { Logo } from '@/components/branding/Logo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { COLLEGES } from '@/lib/constants';
-import { Eye, EyeOff, User, Store, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, User, Store, Phone as PhoneIcon } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { useKioskStore } from '@/stores/useKioskStore';
 import { UserRole } from '@/types';
-import { Cashier } from '@/types';
 
 const ROLE_TABS: { key: UserRole; label: string; icon: React.ElementType }[] = [
   { key: 'student', label: 'طالب', icon: User },
   { key: 'cashier', label: 'كاشير', icon: Store },
-  { key: 'admin', label: 'أدمن', icon: ShieldCheck },
 ];
 
 const ROLE_REDIRECT: Record<UserRole, string> = {
@@ -28,20 +25,16 @@ const ROLE_REDIRECT: Record<UserRole, string> = {
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuthStore();
-  const { addKiosk } = useKioskStore();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [college, setCollege] = useState(COLLEGES[1]);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Cashier-specific
-  const [kioskName, setKioskName] = useState('');
-  const [kioskLocation, setKioskLocation] = useState(COLLEGES[0]);
 
   const handleTabSwitch = (role: UserRole) => {
     setSelectedRole(role);
@@ -55,38 +48,16 @@ export default function RegisterPage() {
 
     const result = await register(
       {
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim() || undefined,
         password,
         college: selectedRole === 'student' ? college : undefined,
-        kioskName: selectedRole === 'cashier' ? kioskName : undefined,
-        collegeLocation: selectedRole === 'cashier' ? kioskLocation : undefined,
       },
       selectedRole
     );
 
     if (result.success) {
-      // If cashier, also create the associated kiosk
-      if (selectedRole === 'cashier') {
-        const authState = useAuthStore.getState();
-        const cashierData = authState.cashier as Cashier;
-        if (cashierData) {
-          addKiosk({
-            name: kioskName || 'كشك جديد',
-            collegeLocation: kioskLocation,
-            campusZone: '',
-            category: 'عامة',
-            isOpen: false,
-            openingHours: 'غير محدد',
-            estimatedWaitMins: 15,
-            ordersAheadCount: 0,
-            rating: 0,
-            acceptsOnlineOrders: true,
-            isRushMode: false,
-          });
-        }
-      }
-
       setIsLoading(false);
       router.push(ROLE_REDIRECT[selectedRole]);
     } else {
@@ -113,8 +84,8 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        {/* 3-Tab Role Selector */}
-        <div className="grid grid-cols-3 gap-1.5 bg-canvas p-1 rounded-xl mb-5 border border-line">
+        {/* 2-Tab Role Selector */}
+        <div className="grid grid-cols-2 gap-1.5 bg-canvas p-1 rounded-xl mb-5 border border-line">
           {ROLE_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = selectedRole === tab.key;
@@ -123,7 +94,7 @@ export default function RegisterPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => handleTabSwitch(tab.key)}
-                className={`flex items-center justify-center gap-1 py-2 rounded-lg text-[11px] font-body font-semibold transition-all ${
+                className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-body font-semibold transition-all ${
                   isActive
                     ? 'bg-surface text-ink font-bold shadow-sm'
                     : 'text-ink-soft hover:text-ink'
@@ -150,7 +121,7 @@ export default function RegisterPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="اسمك"
+            placeholder={selectedRole === 'cashier' ? 'مثال: عمر الكاشير' : 'اسمك بالكامل'}
             required
           />
 
@@ -159,8 +130,19 @@ export default function RegisterPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@sphinx.edu.eg"
+            placeholder="name@example.com"
             required
+          />
+
+          <Input
+            label="رقم الهاتف المحمول"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="01012345678"
+            required
+            icon={<PhoneIcon className="w-4 h-4 text-ink-soft" />}
+            iconPosition="left"
           />
 
           {/* Student-specific: College */}
@@ -183,34 +165,11 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Cashier-specific: Kiosk Name + Location */}
+          {/* Cashier Helper Note */}
           {selectedRole === 'cashier' && (
-            <>
-              <Input
-                label="اسم الكشك الجديد"
-                type="text"
-                value={kioskName}
-                onChange={(e) => setKioskName(e.target.value)}
-                placeholder="مثال: كشك المشروبات"
-                required
-              />
-              <div className="w-full text-right">
-                <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
-                  الموقع / الكلية
-                </label>
-                <select
-                  value={kioskLocation}
-                  onChange={(e) => setKioskLocation(e.target.value)}
-                  className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer"
-                >
-                  {COLLEGES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
+            <div className="bg-canvas border border-line/80 rounded-2xl p-3 text-[11px] font-body text-ink-soft leading-relaxed">
+              💡 <span className="font-bold text-ink">ملاحظة:</span> بعد إنشاء حسابك، سيقوم مدير النظام بتعيينك للكشك أو الكافيه المطلوب لتتمكن من استقبال الطلبات.
+            </div>
           )}
 
           <Input

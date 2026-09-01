@@ -7,10 +7,14 @@ import { formatArabicTime } from '@/lib/formatters';
 import { Bell, CheckCheck, Inbox, AlertTriangle } from 'lucide-react';
 
 export default function CashierNotificationsPage() {
-  const { notifications, markAsRead, markAllAsRead } = useNotificationStore();
+  const { notifications, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
+
+  React.useEffect(() => {
+    fetchNotifications('', 'cashier');
+  }, [fetchNotifications]);
 
   const cashierNotifs = notifications.filter(
-    (n) => n.userRole === 'cashier' || !n.userRole
+    (n) => n.userRole === 'cashier' || n.userRole === 'student'
   );
 
   return (
@@ -29,7 +33,7 @@ export default function CashierNotificationsPage() {
         {cashierNotifs.length > 0 && (
           <button
             type="button"
-            onClick={markAllAsRead}
+            onClick={() => markAllAsRead()}
             className="flex items-center gap-1 text-xs font-body font-semibold text-accent hover:underline"
           >
             <CheckCheck className="w-3.5 h-3.5" />

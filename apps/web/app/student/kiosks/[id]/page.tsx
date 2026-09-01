@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useKioskStore } from '@/stores/useKioskStore';
@@ -28,7 +28,7 @@ export default function KioskDetailPage() {
   const router = useRouter();
   const kioskId = params.id as string;
 
-  const { kiosks, menuItems, categories } = useKioskStore();
+  const { kiosks, menuItems, categories, fetchKioskById, fetchMenu } = useKioskStore();
   const {
     addItem,
     items: cartItems,
@@ -42,7 +42,22 @@ export default function KioskDetailPage() {
 
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
 
-  const kiosk = kiosks.find((k) => k.id === kioskId) || kiosks[0];
+  useEffect(() => {
+    if (kioskId) {
+      fetchKioskById(kioskId);
+      fetchMenu(kioskId, false);
+    }
+  }, [kioskId, fetchKioskById, fetchMenu]);
+
+  const kiosk = kiosks.find((k) => k.id === kioskId) || kiosks[0] || {
+    id: kioskId,
+    name: 'الكشك',
+    collegeLocation: '',
+    category: '',
+    isOpen: true,
+    openingHours: '',
+    estimatedWaitMins: 15,
+  };
 
   // Group items by category for this kiosk (exclude items under review)
   const kioskItems = useMemo(() => {

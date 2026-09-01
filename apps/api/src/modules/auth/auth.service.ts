@@ -23,6 +23,7 @@ export class AuthService {
       email_confirm: true,
       user_metadata: {
         full_name: input.fullName,
+        phone: input.phone || undefined,
         system_role: 'student',
       },
     });
@@ -62,6 +63,7 @@ export class AuthService {
         id: userId,
         email: input.email,
         fullName: input.fullName,
+        phone: input.phone || null,
         systemRole: 'student' as const,
         universityId: input.universityId,
         college: input.college,
@@ -83,15 +85,18 @@ export class AuthService {
   async registerStaff(input: RegisterStaffInput) {
     const supabaseAdmin = getSupabaseAdmin();
 
-    // 1. Verify target kiosk exists
-    const [targetKiosk] = await db
-      .select({ id: kiosks.id, name: kiosks.name })
-      .from(kiosks)
-      .where(eq(kiosks.id, input.kioskId))
-      .limit(1);
+    let targetKiosk: { id: string; name: string } | undefined;
+    if (input.kioskId) {
+      const [kiosk] = await db
+        .select({ id: kiosks.id, name: kiosks.name })
+        .from(kiosks)
+        .where(eq(kiosks.id, input.kioskId))
+        .limit(1);
 
-    if (!targetKiosk) {
-      throw AppError.notFound('الكشك المحدد غير موجود');
+      if (!kiosk) {
+        throw AppError.notFound('الكشك المحدد غير موجود');
+      }
+      targetKiosk = kiosk;
     }
 
     // 2. Create auth user in Supabase
@@ -101,6 +106,7 @@ export class AuthService {
       email_confirm: true,
       user_metadata: {
         full_name: input.fullName,
+        phone: input.phone || undefined,
         system_role: 'staff',
       },
     });
@@ -114,7 +120,7 @@ export class AuthService {
 
     const userId = authData.user.id;
 
-    // 3. Insert profile & kiosk_staff inside transaction
+    // 3. Insert profile & kiosk_staff (if kioskId provided) inside transaction
     try {
       await db.transaction(async (tx) => {
         await tx.insert(profiles).values({
@@ -125,22 +131,25 @@ export class AuthService {
           isActive: true,
         });
 
-        await tx.insert(kioskStaff).values({
-          kioskId: input.kioskId,
-          userId,
-          role: input.role,
-          isActive: true,
-        });
+        if (input.kioskId) {
+          await tx.insert(kioskStaff).values({
+            kioskId: input.kioskId,
+            userId,
+            role: input.role || 'cashier',
+            isActive: true,
+          });
+        }
       });
 
       return {
         id: userId,
         email: input.email,
         fullName: input.fullName,
+        phone: input.phone || null,
         systemRole: 'staff' as const,
-        kioskId: input.kioskId,
-        kioskName: targetKiosk.name,
-        kioskRole: input.role,
+        kioskId: input.kioskId || null,
+        kioskName: targetKiosk?.name || null,
+        kioskRole: input.role || 'cashier',
       };
     } catch (error) {
       await supabaseAdmin.auth.admin.deleteUser(userId);
@@ -167,6 +176,35 @@ export class AuthService {
 
     // Fetch complete user profile from database
     const profileData = await this.getProfileById(userId);
+
+    return {
+      session: {
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+        expiresIn: data.session.expires_in,
+      },
+      user: profileData,
+    };
+  }
+
+  /**
+   * Refreshes user session using a valid refresh token
+   */
+  async refreshSession(refreshToken: string) {
+    if (!refreshToken) {
+      throw AppError.unauthorized('رمز التجديد غير متوفر');
+    }
+
+    const supabase = getSupabase();
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error || !data.user || !data.session) {
+      throw AppError.unauthorized('رمز التجديد غير صالح أو منتهي الصلاحية');
+    }
+
+    const profileData = await this.getProfileById(data.user.id);
 
     return {
       session: {
@@ -235,6 +273,59 @@ export class AuthService {
     // Admin profile
     return profile;
   }
+
+  /**
+   * Admin Only: Retrieves all registered students with their profile and status
+   */
+  async getAllStudents() {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const userEmailMap = new Map(authUsers?.users?.map((u) => [u.id, u.email]) || []);
+
+    const studentList = await db
+      .select({
+        id: profiles.id,
+        name: profiles.fullName,
+        phone: profiles.phone,
+        avatarUrl: profiles.avatarUrl,
+        isActive: profiles.isActive,
+        createdAt: profiles.createdAt,
+        universityId: students.universityId,
+        college: students.college,
+        status: students.accountStatus,
+        noShowCount: students.noShowCount,
+      })
+      .from(profiles)
+      .innerJoin(students, eq(profiles.id, students.id))
+      .where(eq(profiles.systemRole, 'student'));
+
+    return studentList.map((std) => ({
+      ...std,
+      email: userEmailMap.get(std.id) || '',
+      role: 'student' as const,
+    }));
+  }
+
+  /**
+   * Admin Only: Updates student account status (active | warning | restricted)
+   */
+  async updateStudentStatus(studentId: string, accountStatus: 'active' | 'warning' | 'restricted') {
+    const [updated] = await db
+      .update(students)
+      .set({
+        accountStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(students.id, studentId))
+      .returning();
+
+    if (!updated) {
+      throw AppError.notFound('الطالب غير موجود');
+    }
+
+    return updated;
+  }
 }
 
 export const authService = new AuthService();
+

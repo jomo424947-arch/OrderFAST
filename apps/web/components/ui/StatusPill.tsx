@@ -2,7 +2,25 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface StatusPillProps {
-  status: 'open' | 'closed' | 'preparing' | 'ready' | 'pending' | 'accepted' | 'rejected' | 'picked_up' | 'no_show';
+  status:
+    | 'open'
+    | 'closed'
+    | 'preparing'
+    | 'ready'
+    | 'pending'
+    | 'accepted'
+    | 'rejected'
+    | 'picked_up'
+    | 'no_show'
+    | 'PENDING_KIOSK'
+    | 'ACCEPTED'
+    | 'PREPARING'
+    | 'READY'
+    | 'COMPLETED'
+    | 'REJECTED'
+    | 'CANCELLED'
+    | 'EXPIRED'
+    | 'NO_SHOW';
   customLabel?: string;
   className?: string;
 }
@@ -12,7 +30,7 @@ export const StatusPill: React.FC<StatusPillProps> = ({
   customLabel,
   className,
 }) => {
-  const configs = {
+  const configs: Record<string, { label: string; classes: string }> = {
     open: {
       label: 'مفتوح',
       classes: 'bg-accent-soft text-accent',
@@ -25,7 +43,15 @@ export const StatusPill: React.FC<StatusPillProps> = ({
       label: 'جاهز للاستلام',
       classes: 'bg-accent text-white font-bold',
     },
+    READY: {
+      label: 'جاهز للاستلام',
+      classes: 'bg-accent text-white font-bold',
+    },
     preparing: {
+      label: 'جاري التجهيز',
+      classes: 'bg-primary-soft text-primary-ink font-bold',
+    },
+    PREPARING: {
       label: 'جاري التجهيز',
       classes: 'bg-primary-soft text-primary-ink font-bold',
     },
@@ -33,11 +59,23 @@ export const StatusPill: React.FC<StatusPillProps> = ({
       label: 'في الانتظار',
       classes: 'bg-primary-soft text-primary-ink',
     },
+    PENDING_KIOSK: {
+      label: 'في انتظار الموافقة',
+      classes: 'bg-primary-soft text-primary-ink',
+    },
     accepted: {
-      label: 'مقبول',
-      classes: 'bg-accent-soft text-accent',
+      label: 'جاري التجهيز',
+      classes: 'bg-primary-soft text-primary-ink font-bold',
+    },
+    ACCEPTED: {
+      label: 'جاري التجهيز',
+      classes: 'bg-primary-soft text-primary-ink font-bold',
     },
     rejected: {
+      label: 'مرفوض',
+      classes: 'bg-danger-soft text-danger',
+    },
+    REJECTED: {
       label: 'مرفوض',
       classes: 'bg-danger-soft text-danger',
     },
@@ -45,7 +83,23 @@ export const StatusPill: React.FC<StatusPillProps> = ({
       label: 'تم الاستلام',
       classes: 'bg-accent-soft text-accent',
     },
+    COMPLETED: {
+      label: 'تم الاستلام',
+      classes: 'bg-accent-soft text-accent',
+    },
+    CANCELLED: {
+      label: 'ملغي',
+      classes: 'bg-canvas border border-line text-ink-soft',
+    },
+    EXPIRED: {
+      label: 'منتهي',
+      classes: 'bg-canvas border border-line text-ink-soft',
+    },
     no_show: {
+      label: 'لم يحضر',
+      classes: 'bg-danger-soft text-danger',
+    },
+    NO_SHOW: {
       label: 'لم يحضر',
       classes: 'bg-danger-soft text-danger',
     },

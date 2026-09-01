@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatEGP } from '@/lib/formatters';
-import { ChevronRight, Plus, Minus, Trash2, ShoppingBag, Store, ShieldAlert } from 'lucide-react';
+import { ChevronRight, Plus, Minus, Trash2, ShoppingBag, Store, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 export default function CartPage() {
   const router = useRouter();
@@ -17,29 +17,40 @@ export default function CartPage() {
   const { items, kiosk, updateQuantity, removeItem, clearCart, getSubtotal } = useCartStore();
   const { placeOrder } = useOrderStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const subtotal = getSubtotal();
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
     if (items.length === 0 || !kiosk) return;
+    if (!student) {
+      setError('يرجى تسجيل الدخول بحساب طالب أولاً لتأكيد طلبك');
+      router.push('/auth/login');
+      return;
+    }
     if (studentStatus === 'restricted') {
       alert('حسابك مقيد مؤقتاً لعدم استلام أوردر سابق. يرجى مراجعة إدارة الكشك.');
       return;
     }
 
-    setIsSubmitting(true);
-    setTimeout(() => {
-      const order = placeOrder({
-        studentId: student?.id || 'std-001',
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      const order = await placeOrder({
+        studentId: student?.id || '',
         studentName: student?.name || 'طالب',
         studentCollege: student?.college || 'كلية الحاسبات والمعلومات',
         kiosk,
         items,
+        paymentMethod: 'cash',
       });
       clearCart();
       setIsSubmitting(false);
       router.push(`/student/orders/${order.id}`);
-    }, 450);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setError(err.message || 'حدث خطأ أثناء إرسال الطلب');
+    }
   };
 
   if (items.length === 0) {
@@ -78,11 +89,23 @@ export default function CartPage() {
         </div>
       </div>
 
+      {/* Account warning if on 1st No-Show warning */}
+      {studentStatus === 'warning' && (
+        <div className="bg-primary-soft border border-primary/40 rounded-2xl p-3 text-xs font-body text-primary-ink flex items-start gap-2 shadow-sm">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>
+            <strong>تنبيه:</strong> لديك تحذير مسبق بسبب عدم استلام طلب سابق. نرجو الالتزام باستلام هذا الطلب حيث سيتم تقييد الحساب ومنع الطلب فوراً في حال عدم الحضور.
+          </span>
+        </div>
+      )}
+
       {/* Account restriction warning if restricted */}
       {studentStatus === 'restricted' && (
-        <div className="bg-danger-soft border border-danger/30 rounded-2xl p-3 text-xs font-body text-danger flex items-center gap-2">
-          <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-          <span>تنبيه: حسابك مقيد مؤقتاً بسبب عدم الحضور لاستلام أوردر سابق.</span>
+        <div className="bg-danger-soft border border-danger/30 rounded-2xl p-3 text-xs font-body text-danger flex items-start gap-2 shadow-sm">
+          <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>
+            <strong>حساب مقيد:</strong> تم إيقاف إمكانية إرسال طلبات جديدة نظراً لتكرار عدم الحضور لاستلام الطلبات السابقة. يرجى التواصل مع إدارة النظام لفك الحظر.
+          </span>
         </div>
       )}
 
@@ -161,6 +184,21 @@ export default function CartPage() {
           تدفع كاش أو محفظة إلكترونية وقت ما تستلم الأوردر من الكشك مباشرة
         </p>
       </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="bg-danger-soft border border-danger/30 text-danger rounded-xl p-3 text-xs font-body font-bold animate-in fade-in duration-200 flex flex-col gap-2">
+          <span>{error}</span>
+          {error.includes('طالب') && (
+            <Link
+              href="/auth/login"
+              className="inline-flex items-center justify-center bg-danger text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-danger/90 transition-colors w-fit"
+            >
+              تسجيل الدخول بحساب طالب الآن
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Confirm Order Button */}
       <Button

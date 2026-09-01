@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { eq, and } from 'drizzle-orm';
 import { getSupabaseAdmin } from '../supabase/index.js';
 import { AppError } from '../errors/index.js';
+import { generateId } from '../id/index.js';
 import { db } from '../../db/client.js';
 import { profiles, kioskStaff, students } from '../../db/schema.js';
 import type { SystemRole, KioskRole, AccountStatus } from '@orderfast/types';
@@ -133,7 +134,7 @@ export function requireKioskStaff(allowedKioskRoles?: KioskRole[]) {
     }
 
     if (allowedKioskRoles && !allowedKioskRoles.includes(assignment.role)) {
-      throw AppError.forbidden('مستوى الصلاحية الحالي لا يسمح بهذا الإجراء (مطلوب: مالك الكشك)');
+      throw AppError.forbidden('ليس لديك الصلاحية الكافية لهذا الإجراء في هذا الكشك');
     }
   };
 }

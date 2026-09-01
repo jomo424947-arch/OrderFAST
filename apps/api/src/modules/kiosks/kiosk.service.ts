@@ -1,8 +1,10 @@
 import { eq, and, sql, desc, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { kiosks, orders, menuItems } from '../../db/schema.js';
+import { kiosks, orders, menuItems, kioskStaff, profiles } from '../../db/schema.js';
 import { cacheService } from '../../shared/cache/index.js';
 import { AppError } from '../../shared/errors/index.js';
+import { generateId } from '../../shared/id/index.js';
+import { getSupabaseAdmin } from '../../shared/supabase/index.js';
 import type { KioskDashboardStats } from '@orderfast/types';
 
 export class KioskService {
@@ -225,6 +227,210 @@ export class KioskService {
       totalMenuItemsCount: menuStats?.total || 0,
     };
   }
+
+  /**
+   * Admin: Get all kiosks with assigned cashiers and menu item counts
+   */
+  async getAdminKiosksWithStaff() {
+    const kioskList = await db
+      .select()
+      .from(kiosks)
+      .orderBy(desc(kiosks.createdAt));
+
+    const populated = await Promise.all(
+      kioskList.map(async (k) => {
+        // Staff assigned
+        const staffMembers = await db
+          .select({
+            id: kioskStaff.id,
+            userId: kioskStaff.userId,
+            name: profiles.fullName,
+            phone: profiles.phone,
+            role: kioskStaff.role,
+            isActive: kioskStaff.isActive,
+          })
+          .from(kioskStaff)
+          .innerJoin(profiles, eq(kioskStaff.userId, profiles.id))
+          .where(and(eq(kioskStaff.kioskId, k.id), eq(kioskStaff.isActive, true)));
+
+        // Items count
+        const [itemsCount] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(menuItems)
+          .where(and(eq(menuItems.kioskId, k.id), eq(menuItems.isDeleted, false)));
+
+        return {
+          ...k,
+          rating: Number(k.rating),
+          staff: staffMembers,
+          menuItemsCount: itemsCount?.count || 0,
+        };
+      })
+    );
+
+    return populated;
+  }
+
+  /**
+   * Admin: Create New Kiosk
+   */
+  async createKiosk(data: {
+    name: string;
+    collegeLocation: string;
+    campusZone?: string;
+    category?: string;
+    phone?: string;
+    openingHours?: string;
+    defaultPrepTimeMins?: number;
+  }) {
+    const kioskId = generateId();
+
+    const [newKiosk] = await db
+      .insert(kiosks)
+      .values({
+        id: kioskId,
+        name: data.name,
+        collegeLocation: data.collegeLocation,
+        campusZone: data.campusZone || 'الساحة الرئيسية',
+        category: data.category || 'عام',
+        isOpen: true,
+        acceptsOnlineOrders: true,
+        isRushMode: false,
+        openingHours: data.openingHours || '8:00 ص - 4:00 م',
+        phone: data.phone,
+        defaultPrepTimeMins: data.defaultPrepTimeMins || 15,
+        acceptanceTimeoutSecs: 300,
+        rating: '5.00',
+      })
+      .returning();
+
+    await cacheService.del('kiosks:all');
+    return newKiosk;
+  }
+
+  /**
+   * Admin: Get all staff users available to be assigned to kiosks
+   */
+  async getStaffList() {
+    const staffProfiles = await db
+      .select({
+        id: profiles.id,
+        fullName: profiles.fullName,
+        phone: profiles.phone,
+        isActive: profiles.isActive,
+        createdAt: profiles.createdAt,
+      })
+      .from(profiles)
+      .where(eq(profiles.systemRole, 'staff'))
+      .orderBy(desc(profiles.createdAt));
+
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const userEmailMap = new Map((authUsers?.users || []).map((u) => [u.id, u.email]));
+
+    // Fetch active assignments
+    const assignments = await db
+      .select({
+        userId: kioskStaff.userId,
+        kioskId: kioskStaff.kioskId,
+        kioskName: kiosks.name,
+        role: kioskStaff.role,
+        isActive: kioskStaff.isActive,
+      })
+      .from(kioskStaff)
+      .innerJoin(kiosks, eq(kioskStaff.kioskId, kiosks.id))
+      .where(eq(kioskStaff.isActive, true));
+
+    const assignmentMap = new Map(assignments.map((a) => [a.userId, a]));
+
+    return staffProfiles.map((p) => ({
+      ...p,
+      email: userEmailMap.get(p.id) || '',
+      assignment: assignmentMap.get(p.id) || null,
+    }));
+  }
+
+  /**
+   * Admin: Assign staff user to a specific kiosk
+   */
+  async assignStaffToKiosk(kioskId: string, userId: string, role: 'owner' | 'cashier' = 'cashier') {
+    const [targetKiosk] = await db
+      .select({ id: kiosks.id, name: kiosks.name })
+      .from(kiosks)
+      .where(eq(kiosks.id, kioskId))
+      .limit(1);
+
+    if (!targetKiosk) {
+      throw AppError.notFound('الكشك غير موجود');
+    }
+
+    const [userProfile] = await db
+      .select({ id: profiles.id, fullName: profiles.fullName, systemRole: profiles.systemRole })
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1);
+
+    if (!userProfile) {
+      throw AppError.notFound('المستخدم غير موجود');
+    }
+
+    // Ensure system_role is staff
+    if (userProfile.systemRole !== 'staff') {
+      await db
+        .update(profiles)
+        .set({ systemRole: 'staff', updatedAt: new Date() })
+        .where(eq(profiles.id, userId));
+    }
+
+    // Insert or update kiosk_staff
+    const existing = await db
+      .select({ id: kioskStaff.id })
+      .from(kioskStaff)
+      .where(and(eq(kioskStaff.kioskId, kioskId), eq(kioskStaff.userId, userId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(kioskStaff)
+        .set({ role, isActive: true })
+        .where(eq(kioskStaff.id, existing[0].id));
+    } else {
+      await db.insert(kioskStaff).values({
+        id: generateId(),
+        kioskId,
+        userId,
+        role,
+        isActive: true,
+      });
+    }
+
+    await cacheService.del('kiosks:all');
+
+    return {
+      success: true,
+      message: `تم تعيين الموظف "${userProfile.fullName}" لكشك "${targetKiosk.name}" بنجاح`,
+      kioskId,
+      userId,
+      role,
+    };
+  }
+
+  /**
+   * Admin: Remove/Unassign staff user from a kiosk
+   */
+  async removeStaffFromKiosk(kioskId: string, userId: string) {
+    await db
+      .delete(kioskStaff)
+      .where(and(eq(kioskStaff.kioskId, kioskId), eq(kioskStaff.userId, userId)));
+
+    await cacheService.del('kiosks:all');
+
+    return {
+      success: true,
+      message: 'تم إلغاء تعيين الموظف من الكشك بنجاح',
+    };
+  }
 }
 
 export const kioskService = new KioskService();
+

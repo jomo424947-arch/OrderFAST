@@ -7,6 +7,7 @@ export interface RegisterPayload {
   name: string;
   email: string;
   password: string;
+  phone?: string;
   /** Student-only */
   college?: string;
   universityId?: string;
@@ -116,4 +117,7 @@ export class MockAuthService implements IAuthService {
   }
 }
 
-export const authService = new MockAuthService();
+import { ApiAuthService } from "./api/apiAuthService";
+
+const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+export const authService: IAuthService = useMock ? new MockAuthService() : new ApiAuthService();

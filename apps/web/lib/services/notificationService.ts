@@ -28,4 +28,7 @@ export class MockNotificationService implements INotificationService {
   }
 }
 
-export const notificationService = new MockNotificationService();
+import { ApiNotificationService } from "./api/apiNotificationService";
+
+const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+export const notificationService: INotificationService = useMock ? new MockNotificationService() : new ApiNotificationService();

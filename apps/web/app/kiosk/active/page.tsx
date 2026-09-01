@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { Button } from '@/components/ui/Button';
@@ -12,14 +12,21 @@ import { OrderStatus } from '@/types';
 
 export default function CashierActiveOrdersPage() {
   const { activeKioskId } = useKioskStore();
-  const { getKioskActiveOrders, setOrderStatus } = useOrderStore();
+  const { getKioskActiveOrders, fetchKioskOrders, setOrderStatus } = useOrderStore();
+
+  useEffect(() => {
+    if (activeKioskId) {
+      fetchKioskOrders(activeKioskId);
+    }
+  }, [activeKioskId, fetchKioskOrders]);
+
   const activeOrders = getKioskActiveOrders(activeKioskId);
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'preparing' | 'ready'>('all');
 
   const filteredOrders = activeOrders.filter((o) => {
-    if (activeFilter === 'preparing') return o.status === 'preparing' || o.status === 'accepted';
-    if (activeFilter === 'ready') return o.status === 'ready_for_pickup';
+    if (activeFilter === 'preparing') return o.status === 'ACCEPTED' || o.status === 'PREPARING';
+    if (activeFilter === 'ready') return o.status === 'READY';
     return true;
   });
 
@@ -37,7 +44,7 @@ export default function CashierActiveOrdersPage() {
         </div>
 
         {/* Filter Pills */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setActiveFilter('all')}
@@ -58,7 +65,7 @@ export default function CashierActiveOrdersPage() {
                 : 'bg-surface text-ink-soft border-line hover:bg-canvas'
             }`}
           >
-            جاري التجهيز
+            جاري التجهيز ({activeOrders.filter((o) => o.status === 'ACCEPTED' || o.status === 'PREPARING').length})
           </button>
           <button
             type="button"
@@ -69,7 +76,7 @@ export default function CashierActiveOrdersPage() {
                 : 'bg-surface text-ink-soft border-line hover:bg-canvas'
             }`}
           >
-            جاهز للاستلام
+            جاهز للاستلام ({activeOrders.filter((o) => o.status === 'READY').length})
           </button>
         </div>
       </div>
@@ -78,77 +85,79 @@ export default function CashierActiveOrdersPage() {
       {filteredOrders.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredOrders.map((order) => {
-            const isReady = order.status === 'ready_for_pickup';
-
             return (
               <div
                 key={order.id}
-                className="bg-surface rounded-2xl p-5 border border-line/80 shadow-warm space-y-3.5"
+                className="bg-surface rounded-2xl p-5 border border-line/80 shadow-warm space-y-3.5 flex flex-col justify-between"
               >
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-lg font-black text-ink font-mono-nums">
-                      #{order.orderNumber}
-                    </span>
-                    <span className="font-body text-xs text-ink-soft">
-                      ({order.studentName} - {order.studentCollege})
-                    </span>
-                  </div>
-                  <StatusPill status={isReady ? 'ready' : 'preparing'} />
-                </div>
-
-                {/* Items */}
-                <div className="bg-canvas/60 rounded-xl p-3 text-xs font-body text-ink space-y-1 border border-line/50">
-                  {order.items.map((it) => (
-                    <div key={it.id} className="flex justify-between">
-                      <span>{it.name}</span>
-                      <span className="font-mono font-bold">× {it.quantity}</span>
+                <div className="space-y-3.5">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-lg font-black text-ink font-mono-nums">
+                        {order.orderNumber}
+                      </span>
+                      <span className="font-body text-xs text-ink-soft">
+                        ({order.studentName} - {order.studentCollege})
+                      </span>
                     </div>
-                  ))}
-                  <div className="pt-2 mt-2 border-t border-line/60 flex justify-between font-bold text-ink">
-                    <span>المطلوب تحصيله كاش / محفظة:</span>
-                    <span className="font-mono text-primary-ink">{formatEGP(order.total)}</span>
+                    <StatusPill status={order.status} />
+                  </div>
+
+                  {/* Items */}
+                  <div className="bg-canvas/60 rounded-xl p-3 text-xs font-body text-ink space-y-1 border border-line/50">
+                    {order.items.map((it) => (
+                      <div key={it.id} className="flex justify-between">
+                        <span>{it.name}</span>
+                        <span className="font-mono font-bold">× {it.quantity}</span>
+                      </div>
+                    ))}
+                    <div className="pt-2 mt-2 border-t border-line/60 flex justify-between font-bold text-ink">
+                      <span>المطلوب تحصيله كاش / محفظة:</span>
+                      <span className="font-mono text-primary-ink">{formatEGP(order.total)}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Operations Action Buttons */}
-                <div className="flex items-center gap-2 pt-1">
-                  {!isReady ? (
+                <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-line/60">
+                  {(order.status === 'ACCEPTED' || order.status === 'PREPARING') && (
                     <Button
                       variant="accent"
                       size="sm"
-                      onClick={() => setOrderStatus(order.id, 'ready_for_pickup')}
-                      className="flex-1"
+                      onClick={() => setOrderStatus(order.id, 'READY')}
+                      className="flex-1 shadow-sm"
                     >
-                      <PackageCheck className="w-4 h-4 ml-1" />
+                      <PackageCheck className="w-4 h-4 ml-1.5" />
                       <span>جاهز للاستلام</span>
                     </Button>
-                  ) : (
+                  )}
+
+                  {order.status === 'READY' && (
                     <Button
                       variant="primary"
                       size="sm"
-                      onClick={() => setOrderStatus(order.id, 'picked_up')}
-                      className="flex-1"
+                      onClick={() => setOrderStatus(order.id, 'COMPLETED')}
+                      className="flex-1 shadow-sm"
                     >
-                      <CheckCheck className="w-4 h-4 ml-1" />
+                      <CheckCheck className="w-4 h-4 ml-1.5" />
                       <span>تم تسليم الطلب وتحصيل المبلغ</span>
                     </Button>
                   )}
 
                   {/* No-show Button */}
                   <Button
-                    variant="danger"
+                    variant="ghost"
                     size="sm"
                     onClick={() => {
                       if (confirm('هل أنت متأكد من تسجيل عدم حضور الطالب لهذا الطلب؟')) {
-                        setOrderStatus(order.id, 'no_show');
+                        setOrderStatus(order.id, 'NO_SHOW');
                       }
                     }}
-                    className="px-3"
+                    className="text-danger hover:bg-danger-soft px-3"
                     title="تسجيل عدم الحضور"
                   >
-                    <AlertTriangle className="w-4 h-4" />
+                    <AlertTriangle className="w-4 h-4 ml-1 text-danger" />
                     <span className="hidden sm:inline">لم يحضر</span>
                   </Button>
                 </div>

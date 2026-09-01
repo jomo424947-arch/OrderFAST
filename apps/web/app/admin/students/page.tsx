@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudentStore } from '@/stores/useStudentStore';
 import { AccountStatus } from '@/types';
 import { ACCOUNT_STATUS_DETAILS } from '@/lib/constants';
@@ -17,9 +17,13 @@ import {
 } from 'lucide-react';
 
 export default function AdminStudentsPage() {
-  const { students, updateStudentStatus } = useStudentStore();
+  const { students, isLoading, fetchStudents, updateStudentStatus } = useStudentStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const filteredStudents = students.filter((s) => {
     const q = searchQuery.trim().toLowerCase();
@@ -164,6 +168,18 @@ export default function AdminStudentsPage() {
             </div>
           );
         })}
+
+        {filteredStudents.length === 0 && (
+          <div className="bg-surface border border-line rounded-3xl p-10 text-center space-y-2 shadow-warm">
+            <Users className="w-10 h-10 text-ink-soft mx-auto opacity-40" />
+            <h3 className="font-display font-bold text-base text-ink">
+              لا توجد حسابات طلاب مسجلة حالياً
+            </h3>
+            <p className="font-body text-xs text-ink-soft">
+              عندما يسجل أي طالب حسابه من صفحة التسجيل، سيظهر هنا مع بياناته ورقم هاتفه وحالة نشاطه.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

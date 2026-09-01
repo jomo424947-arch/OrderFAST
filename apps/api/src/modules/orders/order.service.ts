@@ -24,8 +24,8 @@ import type {
 import type {
   OrderStatus,
   BatchActionResponse,
-  AuthenticatedUser,
 } from '@orderfast/types';
+import type { AuthenticatedUser } from '../../shared/middleware/auth.js';
 
 export class OrderService {
   /**
@@ -838,19 +838,24 @@ export class OrderService {
         );
       }
 
-      // Increment student no-show count & adjust account status
+      // Increment student no-show count & adjust account status:
+      // 1 No-Show -> 'warning'
+      // 2 or more No-Shows -> 'restricted' (banned from ordering)
       const [student] = await tx
         .update(students)
         .set({
           noShowCount: sql`${students.noShowCount} + 1`,
           accountStatus: sql`CASE 
-            WHEN ${students.noShowCount} + 1 >= 3 THEN 'restricted'::account_status_enum
-            ELSE 'warning'::account_status_enum
+            WHEN ${students.noShowCount} + 1 >= 2 THEN 'restricted'::account_status_enum
+            WHEN ${students.noShowCount} + 1 = 1 THEN 'warning'::account_status_enum
+            ELSE 'active'::account_status_enum
           END`,
           updatedAt: new Date(),
         })
         .where(eq(students.id, updatedOrder.studentId))
         .returning();
+
+      const isRestrictedNow = student?.accountStatus === 'restricted';
 
       await tx.insert(orderEvents).values({
         id: generateId(),
@@ -860,16 +865,21 @@ export class OrderService {
         toStatus: 'NO_SHOW',
         actorId: requestingUser.id,
         actorType: 'staff',
-        metadata: { newNoShowCount: student?.noShowCount },
+        metadata: {
+          newNoShowCount: student?.noShowCount,
+          newStatus: student?.accountStatus,
+        },
       });
 
       await tx.insert(notifications).values({
         id: generateId(),
         userId: updatedOrder.studentId,
         orderId,
-        type: 'warning',
-        title: 'تنبيه: عدم استلام الطلب',
-        body: `تم تسجيل عدم الحضور لاستلام الأوردر رقم ${updatedOrder.orderNumber}. نرجو الالتزام بمواعيد الاستلام لتجنب تقييد الحساب.`,
+        type: isRestrictedNow ? 'system' : 'warning',
+        title: isRestrictedNow ? 'تم تقييد وحظر حسابك 🚫' : 'تحذير: عدم استلام الأوردر ⚠️',
+        body: isRestrictedNow
+          ? `نظراً لتكرار عدم الحضور لاستلام الطلبات (الطلب رقم #${updatedOrder.orderNumber})، تم تقييد حسابك وحظرك من إرسال طلبات جديدة. يرجى مراجعة إدارة النظام لفك الحظر.`
+          : `تم تسجيل عدم الحضور لاستلام الأوردر رقم #${updatedOrder.orderNumber}. تم توجيه تحذير لحسابك، ونرجو الالتزام بالاستلام حيث سيتم حظر الحساب وتقييده مباشرة في حال عدم استلام الطلب القادم.`,
       });
 
       return updatedOrder;
@@ -1102,6 +1112,76 @@ export class OrderService {
 
     return expiredOrders.length;
   }
+
+  /**
+   * 16. ADMIN: Get Recent Orders Across All Kiosks
+   */
+  async getAdminRecentOrders(limit = 50, page = 1) {
+    const offset = (page - 1) * limit;
+
+    const allOrders = await db
+      .select()
+      .from(orders)
+      .orderBy(desc(orders.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const populated = await Promise.all(
+      allOrders.map(async (o) => {
+        const items = await db
+          .select()
+          .from(orderItems)
+          .where(eq(orderItems.orderId, o.id));
+        return {
+          ...o,
+          items,
+        };
+      })
+    );
+
+    return populated;
+  }
+
+  /**
+   * 17. ADMIN: Get Campus-wide Executive Statistics
+   */
+  async getAdminCampusStats() {
+    // Total orders count
+    const [ordersCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders);
+
+    // Total orders today
+    const [todayCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(sql`${orders.orderDate} = CURRENT_DATE`);
+
+    // Total today completed / active sales (Piasters)
+    const [salesSum] = await db
+      .select({ totalSales: sql<number>`coalesce(sum(${orders.total}), 0)::int` })
+      .from(orders)
+      .where(
+        and(
+          sql`${orders.orderDate} = CURRENT_DATE`,
+          inArray(orders.status, ['ACCEPTED', 'PREPARING', 'READY', 'COMPLETED'])
+        )
+      );
+
+    // Total active orders in kitchen
+    const [activeCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(inArray(orders.status, ['PENDING_KIOSK', 'ACCEPTED', 'PREPARING', 'READY']));
+
+    return {
+      totalOrders: ordersCount?.count || 0,
+      todayOrdersCount: todayCount?.count || 0,
+      todaySalesPiasters: salesSum?.totalSales || 0,
+      activeKitchenCount: activeCount?.count || 0,
+    };
+  }
 }
 
 export const orderService = new OrderService();
+

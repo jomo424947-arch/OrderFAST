@@ -31,11 +31,10 @@ export const StudentSidebar: React.FC = () => {
   const activeOrdersCount = orders.filter(
     (o) =>
       (student?.id ? o.studentId === student.id : true) &&
-      (o.status === 'placed' ||
-        o.status === 'pending_review' ||
-        o.status === 'accepted' ||
-        o.status === 'preparing' ||
-        o.status === 'ready_for_pickup')
+      (o.status === 'PENDING_KIOSK' ||
+        o.status === 'ACCEPTED' ||
+        o.status === 'PREPARING' ||
+        o.status === 'READY')
   ).length;
   const unreadNotificationsCount = getUnreadCount('student');
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { CashierIncomingOrderCard } from '@/components/orders/CashierIncomingOrderCard';
@@ -11,15 +11,27 @@ import { Inbox, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 
 export default function CashierIncomingOrdersPage() {
   const { activeKioskId, kiosks } = useKioskStore();
-  const { getKioskIncomingOrders, acceptOrder, rejectOrder } = useOrderStore();
+  const { getKioskIncomingOrders, fetchKioskOrders, acceptOrder, rejectOrder } = useOrderStore();
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [targetOrderId, setTargetOrderId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('نفاد بعض المكونات المطلوبة');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (activeKioskId) {
+      fetchKioskOrders(activeKioskId);
+    }
+  }, [activeKioskId, fetchKioskOrders]);
+
   const incomingOrders = getKioskIncomingOrders(activeKioskId);
-  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0];
+  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0] || {
+    id: activeKioskId,
+    name: 'الكشك',
+    collegeLocation: 'كلية الهندسة',
+    openingHours: '8:00 ص - 4:00 م',
+    isOpen: true,
+  };
 
   const handleAccept = (orderId: string) => {
     acceptOrder(orderId);
@@ -47,9 +59,15 @@ export default function CashierIncomingOrdersPage() {
       {/* Top Banner / Heading */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-line/60">
         <div>
-          <h2 className="font-display font-bold text-2xl text-ink">
-            الأوردرات الواردة
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-display font-bold text-2xl text-ink">
+              الأوردرات الواردة
+            </h2>
+            <span className="flex items-center gap-1 bg-accent/10 text-accent px-2 py-0.5 rounded-full text-[10px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              تزامن مباشر
+            </span>
+          </div>
           <p className="font-body text-xs text-ink-soft">
             {currentKiosk.name} · الرد السريع خلال دقيقتين يحسن تقييم الكشك
           </p>
