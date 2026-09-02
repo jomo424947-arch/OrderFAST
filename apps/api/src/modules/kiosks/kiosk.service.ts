@@ -24,35 +24,32 @@ export class KioskService {
       .from(kiosks)
       .orderBy(desc(kiosks.isOpen), desc(kiosks.rating));
 
-    // Calculate approximate active orders for each open kiosk
-    const kiosksWithQueue = await Promise.all(
-      kioskList.map(async (kiosk) => {
-        let activeOrdersCount = 0;
-        if (kiosk.isOpen) {
-          const [countResult] = await db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(orders)
-            .where(
-              and(
-                eq(orders.kioskId, kiosk.id),
-                inArray(orders.status, ['ACCEPTED', 'PREPARING'])
-              )
-            );
-          activeOrdersCount = countResult?.count || 0;
-        }
-
-        // Effective wait time calculation including rush mode
-        const estimatedWaitMins =
-          kiosk.defaultPrepTimeMins + (kiosk.isRushMode ? 5 : 0);
-
-        return {
-          ...kiosk,
-          rating: Number(kiosk.rating),
-          estimatedWaitMins,
-          ordersAheadCount: activeOrdersCount,
-        };
+    // Calculate approximate active orders for all kiosks in 1 aggregated query
+    const activeCounts = await db
+      .select({
+        kioskId: orders.kioskId,
+        count: sql<number>`count(*)::int`,
       })
+      .from(orders)
+      .where(inArray(orders.status, ['ACCEPTED', 'PREPARING']))
+      .groupBy(orders.kioskId);
+
+    const countsMap = new Map<string, number>(
+      activeCounts.map((c) => [c.kioskId, c.count])
     );
+
+    const kiosksWithQueue = kioskList.map((kiosk) => {
+      const activeOrdersCount = kiosk.isOpen ? countsMap.get(kiosk.id) || 0 : 0;
+      const estimatedWaitMins =
+        kiosk.defaultPrepTimeMins + (kiosk.isRushMode ? 5 : 0);
+
+      return {
+        ...kiosk,
+        rating: Number(kiosk.rating),
+        estimatedWaitMins,
+        ordersAheadCount: activeOrdersCount,
+      };
+    });
 
     // Cache for 30 seconds
     await cacheService.set(cacheKey, kiosksWithQueue, 30);

@@ -14,13 +14,13 @@ export default function StudentLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { student } = useAuthStore();
-  const { startStudentOrdersPolling } = useOrderStore();
-  const { startNotificationsPolling } = useNotificationStore();
+  const student = useAuthStore((s) => s.student);
+  const startStudentOrdersPolling = useOrderStore((s) => s.startStudentOrdersPolling);
+  const startNotificationsPolling = useNotificationStore((s) => s.startNotificationsPolling);
 
   useEffect(() => {
-    const cleanupOrders = startStudentOrdersPolling(student?.id, 5000);
-    const cleanupNotifs = startNotificationsPolling(student?.id, 'student', 8000);
+    const cleanupOrders = startStudentOrdersPolling(student?.id, 6000);
+    const cleanupNotifs = startNotificationsPolling(student?.id, 'student', 30000);
 
     return () => {
       cleanupOrders();

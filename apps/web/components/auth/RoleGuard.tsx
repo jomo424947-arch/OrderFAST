@@ -14,10 +14,12 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ allowedRole, children }) =
   const router = useRouter();
   const { isAuthenticated, role, isAuthInitialized, initializeAuth } = useAuthStore();
 
-  // Sync auth state with backend token
+  // Sync auth state with backend token on first load only
   useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
+    if (!isAuthInitialized) {
+      initializeAuth();
+    }
+  }, [isAuthInitialized, initializeAuth]);
 
   useEffect(() => {
     if (!isAuthInitialized) return;

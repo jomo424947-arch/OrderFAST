@@ -202,15 +202,44 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     return () => clearInterval(intervalId);
   },
 
-  startStudentOrdersPolling: (studentId?: string, intervalMs = 5000) => {
+  startStudentOrdersPolling: (studentId?: string, intervalMs = 6000) => {
     get().fetchStudentOrders(studentId, false);
 
     const intervalId = setInterval(async () => {
       if (typeof document !== 'undefined' && document.hidden) return;
+
+      // Smart check: Only poll if student has active orders needing live tracking
+      const hasActiveOrders = get().orders.some(
+        (o) =>
+          (!studentId || o.studentId === studentId) &&
+          (o.status === 'PENDING_KIOSK' ||
+            o.status === 'ACCEPTED' ||
+            o.status === 'PREPARING' ||
+            o.status === 'READY')
+      );
+
+      if (!hasActiveOrders) return;
+
       await get().fetchStudentOrders(studentId, true);
     }, intervalMs);
 
-    return () => clearInterval(intervalId);
+    // Re-fetch on window focus
+    const onFocus = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        get().fetchStudentOrders(studentId, true);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus);
+    }
+
+    return () => {
+      clearInterval(intervalId);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus);
+      }
+    };
   },
 
   placeOrder: async ({ kiosk, items, paymentMethod }) => {

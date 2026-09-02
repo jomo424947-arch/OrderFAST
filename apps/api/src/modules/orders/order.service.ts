@@ -377,7 +377,35 @@ export class OrderService {
   }
 
   /**
-   * 3. GET STUDENT ORDER HISTORY (Paginated)
+   * Helper: Batched Order Items Populator (Eliminates N+1 DB Queries)
+   * Fetches all items for a list of orders in 1 single batched database query.
+   */
+  private async populateOrderItems<T extends { id: string }>(ordersList: T[]): Promise<Array<T & { items: any[] }>> {
+    if (!ordersList || ordersList.length === 0) {
+      return [];
+    }
+
+    const orderIds = ordersList.map((o) => o.id);
+    const allItems = await db
+      .select()
+      .from(orderItems)
+      .where(inArray(orderItems.orderId, orderIds));
+
+    const itemsMap = new Map<string, typeof allItems>();
+    for (const item of allItems) {
+      const list = itemsMap.get(item.orderId) || [];
+      list.push(item);
+      itemsMap.set(item.orderId, list);
+    }
+
+    return ordersList.map((o) => ({
+      ...o,
+      items: itemsMap.get(o.id) || [],
+    }));
+  }
+
+  /**
+   * 3. GET STUDENT ORDER HISTORY (Paginated - Batched Single DB Query)
    */
   async getStudentOrders(studentId: string, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
@@ -390,25 +418,11 @@ export class OrderService {
       .limit(limit)
       .offset(offset);
 
-    // Attach items for each order
-    const populated = await Promise.all(
-      studentOrders.map(async (o) => {
-        const items = await db
-          .select()
-          .from(orderItems)
-          .where(eq(orderItems.orderId, o.id));
-        return {
-          ...o,
-          items,
-        };
-      })
-    );
-
-    return populated;
+    return this.populateOrderItems(studentOrders);
   }
 
   /**
-   * 4. GET KIOSK INCOMING ORDERS (Pending Review)
+   * 4. GET KIOSK INCOMING ORDERS (Pending Review - Batched Single DB Query)
    */
   async getKioskIncomingOrders(kioskId: string) {
     const pendingOrders = await db
@@ -419,19 +433,11 @@ export class OrderService {
       )
       .orderBy(asc(orders.createdAt));
 
-    return Promise.all(
-      pendingOrders.map(async (o) => {
-        const items = await db
-          .select()
-          .from(orderItems)
-          .where(eq(orderItems.orderId, o.id));
-        return { ...o, items };
-      })
-    );
+    return this.populateOrderItems(pendingOrders);
   }
 
   /**
-   * 5. GET KIOSK ACTIVE KITCHEN ORDERS (Accepted, Preparing, Ready)
+   * 5. GET KIOSK ACTIVE KITCHEN ORDERS (Accepted, Preparing, Ready - Batched Single DB Query)
    */
   async getKioskActiveOrders(kioskId: string) {
     const activeOrders = await db
@@ -445,15 +451,7 @@ export class OrderService {
       )
       .orderBy(asc(orders.createdAt));
 
-    return Promise.all(
-      activeOrders.map(async (o) => {
-        const items = await db
-          .select()
-          .from(orderItems)
-          .where(eq(orderItems.orderId, o.id));
-        return { ...o, items };
-      })
-    );
+    return this.populateOrderItems(activeOrders);
   }
 
   /**
@@ -1126,20 +1124,7 @@ export class OrderService {
       .limit(limit)
       .offset(offset);
 
-    const populated = await Promise.all(
-      allOrders.map(async (o) => {
-        const items = await db
-          .select()
-          .from(orderItems)
-          .where(eq(orderItems.orderId, o.id));
-        return {
-          ...o,
-          items,
-        };
-      })
-    );
-
-    return populated;
+    return this.populateOrderItems(allOrders);
   }
 
   /**

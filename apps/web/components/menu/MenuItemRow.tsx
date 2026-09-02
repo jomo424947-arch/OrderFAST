@@ -10,7 +10,7 @@ export interface MenuItemRowProps {
   disabled?: boolean;
 }
 
-export const MenuItemRow: React.FC<MenuItemRowProps> = ({
+export const MenuItemRow: React.FC<MenuItemRowProps> = React.memo(({
   item,
   onAdd,
   disabled = false,
@@ -75,4 +75,4 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = ({
       )}
     </div>
   );
-};
+});

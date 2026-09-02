@@ -9,7 +9,7 @@ export interface KioskCardProps {
   kiosk: Kiosk;
 }
 
-export const KioskCard: React.FC<KioskCardProps> = ({ kiosk }) => {
+export const KioskCard: React.FC<KioskCardProps> = React.memo(({ kiosk }) => {
   return (
     <Link
       href={`/student/kiosks/${kiosk.id}`}
@@ -44,4 +44,4 @@ export const KioskCard: React.FC<KioskCardProps> = ({ kiosk }) => {
       </div>
     </Link>
   );
-};
+});

@@ -53,8 +53,16 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(sensible);
 
   await app.register(rateLimit, {
-    max: 100,
+    max: 300,
     timeWindow: '1 minute',
+    keyGenerator: (request) => {
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // Key by user's unique token signature to prevent university NAT/Wi-Fi collision
+        return authHeader.substring(7, 45);
+      }
+      return request.ip;
+    },
   });
 
   // Handle empty or whitespace body with application/json header safely

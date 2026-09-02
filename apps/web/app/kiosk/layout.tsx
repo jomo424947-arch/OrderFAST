@@ -42,14 +42,6 @@ export default function CashierLayout({
     };
   }, [activeKioskId, cashier?.id, startKioskPolling, startNotificationsPolling]);
 
-  // Ticker for incoming order countdowns (every 1 second)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      decrementTimers();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [decrementTimers]);
-
   // If cashier is not assigned to any kiosk yet
   if (cashier && !cashier.kioskId) {
     return (
