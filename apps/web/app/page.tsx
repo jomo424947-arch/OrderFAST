@@ -11,10 +11,13 @@ import {
   LogIn,
   UserPlus,
 } from 'lucide-react';
+import { AuthRedirectHandler } from '@/components/auth/AuthRedirectHandler';
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-canvas text-ink">
+      <AuthRedirectHandler />
+
       {/* Top Navbar */}
       <header className="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-line/70 px-4 sm:px-8 py-3.5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -50,7 +53,7 @@ export default function LandingPage() {
 
         {/* Subtitle */}
         <p className="font-body text-sm sm:text-lg text-ink-soft max-w-2xl leading-relaxed mb-8">
-          منصة <strong className="text-ink font-bold">OrderFAST</strong> تخلصك من طوابير الأكشاك في الجامعة. تصفح المنيو، تابع دورك لحظة بلحظة، وروح استلم وادفع وقت ما يجهز بس.
+          منصة <strong className="text-ink font-bold">FastOrder</strong> تخلصك من طوابير الأكشاك في الجامعة. تصفح المنيو، تابع دورك لحظة بلحظة، وروح استلم وادفع وقت ما يجهز بس.
         </p>
 
         {/* Main Action Portals — Login & Register */}
@@ -145,7 +148,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="bg-surface border-t border-line py-6 px-4 text-center text-xs font-body text-ink-soft">
         <p className="mb-1">
-          <strong className="text-ink font-semibold">OrderFAST</strong> — منصة تنظيم طوابير وأوردرات الأكشاك الجامعية
+          <strong className="text-ink font-semibold">FastOrder</strong> — منصة تنظيم طوابير وأوردرات الأكشاك الجامعية
         </p>
         <p className="font-mono text-[11px] opacity-75">ORDER • WAIT • ENJOY</p>
       </footer>

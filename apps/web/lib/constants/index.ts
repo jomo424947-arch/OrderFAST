@@ -1,18 +1,19 @@
 import { OrderStatus, AccountStatus } from "@/types";
 
-export const APP_NAME = "OrderFAST";
+export const APP_NAME = "FastOrder";
 export const APP_TAGLINE = "ORDER • WAIT • ENJOY";
 export const APP_TAGLINE_AR = "اطلب • استنى • استمتع";
 
 export const COLLEGES = [
-  "كلية الهندسة",
-  "كلية الحاسبات والمعلومات",
-  "كلية التجارة وإدارة الأعمال",
-  "كلية الصيدلة",
   "كلية طب الفم والأسنان",
-  "كلية الفنون التطبيقية",
-  "كلية الألسن واللغات",
-  "كل الكليات (الحرم المركزي)"
+  "كلية الصيدلة",
+  "كلية الطب البيطري",
+  "كلية العلاج الطبيعي",
+  "كلية الهندسة",
+  "كلية الحاسبات والذكاء الاصطناعي",
+  "كلية تكنولوجيا العلوم الصحية",
+  "كلية التمريض",
+
 ];
 
 export const CATEGORIES = [

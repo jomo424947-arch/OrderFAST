@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/branding/Logo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { UserRole } from '@/types';
 
@@ -25,6 +25,22 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash;
+      if (
+        urlParams.get('verified') === 'true' ||
+        hash.includes('type=signup') ||
+        hash.includes('access_token')
+      ) {
+        setSuccessMessage('تم تأكيد وتفعيل بريدك الإلكتروني بنجاح! 🎉 يمكنك الآن تسجيل الدخول.');
+        window.history.replaceState(null, '', '/auth/login');
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,9 +77,17 @@ export default function LoginPage() {
             تسجيل الدخول
           </h2>
           <p className="font-body text-xs text-ink-soft">
-            دخول لحسابك في منصة OrderFAST
+            دخول لحسابك في منصة FastOrder
           </p>
         </div>
+
+        {/* Success message on email confirmation */}
+        {successMessage && (
+          <div className="bg-accent-soft border border-accent/30 text-accent rounded-2xl p-3.5 text-xs font-body font-bold mb-4 flex items-center gap-2.5 animate-in fade-in duration-200">
+            <CheckCircle2 className="w-5 h-5 shrink-0 text-accent" />
+            <span className="leading-relaxed">{successMessage}</span>
+          </div>
+        )}
 
         {/* Error message */}
         {error && (

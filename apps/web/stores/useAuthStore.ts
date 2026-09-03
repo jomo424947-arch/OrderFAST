@@ -26,7 +26,7 @@ interface AuthState {
   register: (
     data: RegisterPayload,
     role: UserRole
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; requiresConfirmation?: boolean }>;
 
   initializeAuth: () => Promise<void>;
   logout: () => void;
@@ -205,11 +205,20 @@ export const useAuthStore = create<AuthState>()(
             });
           }
 
-          return { success: true };
+          return { success: true, requiresConfirmation: false };
         } catch (err: unknown) {
           set({ isLoading: false });
           const message =
             err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
+
+          if (
+            message === 'EMAIL_CONFIRMATION_REQUIRED' ||
+            message.includes('غير مفعّل') ||
+            message.toLowerCase().includes('not confirmed')
+          ) {
+            return { success: true, requiresConfirmation: true };
+          }
+
           return { success: false, error: message };
         }
       },

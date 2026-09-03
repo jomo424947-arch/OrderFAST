@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'OrderFAST — ORDER • WAIT • ENJOY',
+  title: 'FastOrder — ORDER • WAIT • ENJOY',
   description: 'منصة طلب وتتبع أوردرات أكشاك الحرم الجامعي — اطلب من مكانك واعرف دورك قبل ما تنزل.',
-  keywords: ['OrderFAST', 'جامعة', 'كشك', 'أوردر', 'طابور', 'حرم جامعي'],
+  keywords: ['FastOrder', 'جامعة', 'كشك', 'أوردر', 'طابور', 'حرم جامعي'],
 };
 
 export default function RootLayout({

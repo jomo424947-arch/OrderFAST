@@ -118,8 +118,19 @@ export class ApiAuthService implements IAuthService {
         { skipAuth: true }
       );
 
-      // Automatically log in after registration
-      return this.login(data.email, data.password, 'student');
+      // Automatically log in after registration if already confirmed
+      try {
+        return await this.login(data.email, data.password, 'student');
+      } catch (err: any) {
+        if (
+          err.message?.includes('غير مفعّل') ||
+          err.message?.toLowerCase().includes('not confirmed') ||
+          err.message?.toLowerCase().includes('confirmation')
+        ) {
+          throw new Error('EMAIL_CONFIRMATION_REQUIRED');
+        }
+        throw err;
+      }
     }
 
     if (role === 'cashier') {
@@ -135,7 +146,18 @@ export class ApiAuthService implements IAuthService {
         { skipAuth: true }
       );
 
-      return this.login(data.email, data.password, 'cashier');
+      try {
+        return await this.login(data.email, data.password, 'cashier');
+      } catch (err: any) {
+        if (
+          err.message?.includes('غير مفعّل') ||
+          err.message?.toLowerCase().includes('not confirmed') ||
+          err.message?.toLowerCase().includes('confirmation')
+        ) {
+          throw new Error('EMAIL_CONFIRMATION_REQUIRED');
+        }
+        throw err;
+      }
     }
 
     throw new Error('تسجيل حساب المسؤول غير متاح ذاتياً');
