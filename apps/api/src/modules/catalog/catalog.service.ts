@@ -158,6 +158,10 @@ export class CatalogService {
         name: input.name,
         description: input.description || null,
         price: input.price, // in piasters
+        originalPrice: input.originalPrice || null,
+        offerTag: input.offerTag || null,
+        isCombo: !!input.isCombo,
+        comboItems: input.comboItems || null,
         preparationTimeMins: input.preparationTimeMins || 5,
         imageUrl: input.imageUrl || null,
         isAvailable: true,

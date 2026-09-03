@@ -49,6 +49,8 @@ export interface ApiOrderRaw {
   cancelledAt?: string | null;
   expiredAt?: string | null;
   noShowAt?: string | null;
+  rating?: number | null;
+  ratedAt?: string | null;
   createdAt: string;
   updatedAt?: string;
   items?: ApiOrderItemRaw[];
@@ -108,5 +110,7 @@ export function adaptOrderFromApi(raw: ApiOrderRaw): Order {
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt || raw.createdAt,
     reviewTimeRemainingSeconds,
+    rating: raw.rating ?? null,
+    ratedAt: raw.ratedAt || undefined,
   };
 }

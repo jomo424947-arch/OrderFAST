@@ -18,6 +18,13 @@ import {
   Utensils,
   CheckCircle2,
   AlertCircle,
+  Tag,
+  Flame,
+  Sparkles,
+  Package,
+  Layers,
+  Percent,
+  Minus,
 } from 'lucide-react';
 
 export default function CashierMenuManagementPage() {
@@ -68,8 +75,145 @@ export default function CashierMenuManagementPage() {
   const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
   const [formPrice, setFormPrice] = useState('15');
   const [formPrepTime, setFormPrepTime] = useState('5');
+  const [formHasOffer, setFormHasOffer] = useState(false);
+  const [formOriginalPrice, setFormOriginalPrice] = useState('');
+  const [formOfferTag, setFormOfferTag] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Combo Deal Modal State
+  const [isComboModalOpen, setIsComboModalOpen] = useState(false);
+  const [editingCombo, setEditingCombo] = useState<MenuItem | null>(null);
+  const [comboName, setComboName] = useState('');
+  const [comboCategory, setComboCategory] = useState(categories[0]?.id || '');
+  const [selectedComboItems, setSelectedComboItems] = useState<
+    { itemId: string; name: string; price: number; quantity: number }[]
+  >([]);
+  const [comboSellingPrice, setComboSellingPrice] = useState('');
+  const [comboOfferTag, setComboOfferTag] = useState('');
+  const [comboPrepTime, setComboPrepTime] = useState('8');
+
+  const comboOriginalPrice = useMemo(() => {
+    return selectedComboItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
+  }, [selectedComboItems]);
+
+  const handleOpenAddCombo = () => {
+    setEditingCombo(null);
+    setComboName('');
+    setComboCategory(categories[0]?.id || '');
+    setSelectedComboItems([]);
+    setComboSellingPrice('');
+    setComboOfferTag('كومبو توفير');
+    setComboPrepTime('8');
+    setIsComboModalOpen(true);
+  };
+
+  const handleOpenEditCombo = (item: MenuItem) => {
+    setEditingCombo(item);
+    setComboName(item.name);
+    setComboCategory(item.categoryId);
+    const existing = (item.comboItems || []).map((ci) => {
+      const foundItem = kioskItems.find((k) => k.id === ci.itemId);
+      return {
+        itemId: ci.itemId,
+        name: ci.name,
+        price: foundItem?.price || 15,
+        quantity: ci.quantity,
+      };
+    });
+    setSelectedComboItems(existing);
+    setComboSellingPrice(item.price.toString());
+    setComboOfferTag(item.offerTag || 'كومبو توفير');
+    setComboPrepTime(item.preparationTimeMins?.toString() || '8');
+    setIsComboModalOpen(true);
+  };
+
+  const handleAddItemToCombo = (itemId: string) => {
+    if (!itemId) return;
+    const found = kioskItems.find((i) => i.id === itemId && !i.isCombo);
+    if (!found) return;
+
+    setSelectedComboItems((prev) => {
+      const existing = prev.find((p) => p.itemId === itemId);
+      if (existing) {
+        return prev.map((p) =>
+          p.itemId === itemId ? { ...p, quantity: p.quantity + 1 } : p
+        );
+      }
+      return [...prev, { itemId: found.id, name: found.name, price: found.price, quantity: 1 }];
+    });
+  };
+
+  const handleUpdateComboItemQuantity = (itemId: string, qty: number) => {
+    if (qty <= 0) {
+      setSelectedComboItems((prev) => prev.filter((p) => p.itemId !== itemId));
+    } else {
+      setSelectedComboItems((prev) =>
+        prev.map((p) => (p.itemId === itemId ? { ...p, quantity: qty } : p))
+      );
+    }
+  };
+
+  const handleSaveCombo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!comboName.trim()) return;
+    if (selectedComboItems.length === 0) {
+      alert('يرجى اختيار صنف واحد على الأقل في العرض');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const sellPrice = Number(comboSellingPrice) || 20;
+      const targetCatId = comboCategory || categories[0]?.id || '__NEW__';
+
+      if (editingCombo) {
+        await updateMenuItem({
+          ...editingCombo,
+          name: comboName.trim(),
+          categoryId: targetCatId,
+          price: sellPrice,
+          originalPrice: comboOriginalPrice > sellPrice ? comboOriginalPrice : undefined,
+          offerTag: comboOfferTag.trim() || (comboOriginalPrice > sellPrice ? `وفر ${comboOriginalPrice - sellPrice} ج.م` : 'عرض كومبو'),
+          isCombo: true,
+          comboItems: selectedComboItems.map((it) => ({
+            itemId: it.itemId,
+            name: it.name,
+            quantity: it.quantity,
+          })),
+          preparationTimeMins: Number(comboPrepTime) || 8,
+        });
+        setToastMessage('تم تحديث عرض الكومبو بنجاح');
+      } else {
+        await addMenuItem({
+          kioskId: currentKiosk.id,
+          name: comboName.trim(),
+          categoryId: targetCatId,
+          price: sellPrice,
+          originalPrice: comboOriginalPrice > sellPrice ? comboOriginalPrice : undefined,
+          offerTag: comboOfferTag.trim() || (comboOriginalPrice > sellPrice ? `وفر ${comboOriginalPrice - sellPrice} ج.م` : 'عرض كومبو'),
+          isCombo: true,
+          comboItems: selectedComboItems.map((it) => ({
+            itemId: it.itemId,
+            name: it.name,
+            quantity: it.quantity,
+          })),
+          preparationTimeMins: Number(comboPrepTime) || 8,
+          isAvailable: true,
+          isUnderReview: false,
+        });
+        setToastMessage('تمت إضافة عرض الكومبو بنجاح');
+      }
+
+      await fetchMenu(currentKiosk.id, true);
+      setIsComboModalOpen(false);
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err: any) {
+      alert(err.message || 'فشل حفظ عرض الكومبو');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingItem(null);
@@ -80,6 +224,9 @@ export default function CashierMenuManagementPage() {
     setNewCategoryName(hasCategories ? '' : 'ساندوتشات وسناكس');
     setFormPrice('15');
     setFormPrepTime('5');
+    setFormHasOffer(false);
+    setFormOriginalPrice('');
+    setFormOfferTag('');
     setIsModalOpen(true);
   };
 
@@ -91,6 +238,10 @@ export default function CashierMenuManagementPage() {
     setNewCategoryName('');
     setFormPrice(item.price.toString());
     setFormPrepTime(item.preparationTimeMins?.toString() || '5');
+    const hasOffer = !!(item.originalPrice && item.originalPrice > item.price);
+    setFormHasOffer(hasOffer);
+    setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : '');
+    setFormOfferTag(item.offerTag || '');
     setIsModalOpen(true);
   };
 
@@ -130,12 +281,19 @@ export default function CashierMenuManagementPage() {
         return;
       }
 
+      const currentPrice = Number(formPrice) || 10;
+      const origPrice = formHasOffer && formOriginalPrice ? Number(formOriginalPrice) : undefined;
+      const validOrigPrice = origPrice && origPrice > currentPrice ? origPrice : undefined;
+      const finalOfferTag = formHasOffer ? (formOfferTag.trim() || undefined) : undefined;
+
       if (editingItem) {
         await updateMenuItem({
           ...editingItem,
           name: formName.trim(),
           categoryId: targetCategoryId,
-          price: Number(formPrice) || 10,
+          price: currentPrice,
+          originalPrice: validOrigPrice,
+          offerTag: finalOfferTag,
           preparationTimeMins: Number(formPrepTime) || 5,
         });
         setToastMessage('تم تحديث بيانات الصنف بنجاح');
@@ -144,7 +302,9 @@ export default function CashierMenuManagementPage() {
           kioskId: currentKiosk.id,
           name: formName.trim(),
           categoryId: targetCategoryId,
-          price: Number(formPrice) || 10,
+          price: currentPrice,
+          originalPrice: validOrigPrice,
+          offerTag: finalOfferTag,
           preparationTimeMins: Number(formPrepTime) || 5,
           isAvailable: true,
           isUnderReview: true,
@@ -184,10 +344,23 @@ export default function CashierMenuManagementPage() {
           </p>
         </div>
 
-        <Button variant="primary" size="sm" onClick={handleOpenAdd}>
-          <Plus className="w-4 h-4 ml-1.5" />
-          <span>إضافة صنف جديد</span>
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleOpenAddCombo}
+            className="border-accent/50 text-accent hover:bg-accent-soft font-bold shadow-xs"
+          >
+            <Sparkles className="w-4 h-4 ml-1.5 text-accent" />
+            <span>+ إضافة عرض / كومبو</span>
+          </Button>
+
+          <Button variant="primary" size="sm" onClick={handleOpenAdd}>
+            <Plus className="w-4 h-4 ml-1.5" />
+            <span>إضافة صنف جديد</span>
+          </Button>
+        </div>
       </div>
 
       {/* Feedback Toast */}
@@ -219,7 +392,9 @@ export default function CashierMenuManagementPage() {
                     {/* Item Info */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-xl bg-canvas border border-line flex items-center justify-center text-ink-soft flex-shrink-0">
-                        {item.categoryId.includes('drink') ? (
+                        {item.isCombo ? (
+                          <Package className="w-4 h-4 stroke-[1.8] text-accent" />
+                        ) : item.categoryId.includes('drink') ? (
                           <Coffee className="w-4 h-4 stroke-[1.5]" />
                         ) : (
                           <Utensils className="w-4 h-4 stroke-[1.5]" />
@@ -227,23 +402,55 @@ export default function CashierMenuManagementPage() {
                       </div>
 
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-body font-bold text-sm text-ink truncate">
                             {item.name}
                           </p>
+
+                          {item.isCombo && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold text-accent bg-accent-soft px-1.5 py-0.5 rounded-md border border-accent/25 whitespace-nowrap">
+                              <Package className="w-3 h-3 stroke-[2]" />
+                              باقة كومبو
+                            </span>
+                          )}
+
                           {item.isUnderReview && (
                             <span className="bg-primary-soft text-primary-ink text-[10px] font-body font-bold px-2 py-0.5 rounded-md whitespace-nowrap">
                               قيد المراجعة
                             </span>
                           )}
                         </div>
-                        <p className="font-mono text-xs text-ink-soft font-semibold mt-0.5">
+
+                        {/* Combo Items breakdown */}
+                        {item.isCombo && item.comboItems && item.comboItems.length > 0 && (
+                          <p className="text-[11px] font-body text-ink-soft mt-0.5">
+                            يشمل: {item.comboItems.map((c) => `${c.quantity}× ${c.name}`).join(' + ')}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-2 mt-0.5">
                           {item.isAvailable ? (
-                            formatEGP(item.price)
+                            item.originalPrice && item.originalPrice > item.price ? (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-mono text-xs text-danger font-black font-mono-nums">
+                                  {formatEGP(item.price)}
+                                </span>
+                                <span className="font-mono text-[11px] text-ink-soft line-through font-mono-nums">
+                                  {formatEGP(item.originalPrice)}
+                                </span>
+                                <span className="text-[10px] font-body font-bold text-accent bg-accent-soft px-1.5 py-0.5 rounded-md border border-accent/20">
+                                  {item.offerTag || `وفر ${item.originalPrice - item.price} ج.م`}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-mono text-xs text-ink-soft font-semibold">
+                                {formatEGP(item.price)}
+                              </span>
+                            )
                           ) : (
-                            <span className="text-danger">غير متاح دلوقتي</span>
+                            <span className="text-danger font-body text-xs font-semibold">غير متاح دلوقتي</span>
                           )}
-                        </p>
+                        </div>
                       </div>
                     </div>
 
@@ -266,7 +473,7 @@ export default function CashierMenuManagementPage() {
                       {/* Edit Button */}
                       <button
                         type="button"
-                        onClick={() => handleOpenEdit(item)}
+                        onClick={() => item.isCombo ? handleOpenEditCombo(item) : handleOpenEdit(item)}
                         className="w-8 h-8 rounded-xl bg-surface border border-line flex items-center justify-center text-ink-soft hover:text-ink hover:bg-canvas transition-colors"
                         aria-label="تعديل"
                       >
@@ -391,21 +598,87 @@ export default function CashierMenuManagementPage() {
             )}
           </div>
 
+          {/* Offer & Discount Section */}
+          <div className="bg-canvas border border-line/80 rounded-2xl p-3.5 space-y-3">
+            <div
+              className="flex items-center justify-between cursor-pointer select-none"
+              onClick={() => setFormHasOffer(!formHasOffer)}
+            >
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4 text-accent" />
+                <div>
+                  <p className="font-body font-bold text-xs text-ink">تفعيل عرض / خصم على الصنف</p>
+                  <p className="font-body text-[11px] text-ink-soft">سيظهر الصنف في قسم العروض بخصم مميز للطلاب</p>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={formHasOffer}
+                onChange={(e) => setFormHasOffer(e.target.checked)}
+                className="w-4 h-4 accent-accent rounded cursor-pointer"
+              />
+            </div>
+
+            {formHasOffer && (
+              <div className="space-y-3 pt-2 border-t border-line/60">
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="السعر الأصلي قبل الخصم (ج.م)"
+                    type="number"
+                    value={formOriginalPrice}
+                    onChange={(e) => setFormOriginalPrice(e.target.value)}
+                    placeholder="مثال: 35"
+                    required={formHasOffer}
+                  />
+                  <Input
+                    label="سعر العرض للبيع (ج.م)"
+                    type="number"
+                    value={formPrice}
+                    onChange={(e) => setFormPrice(e.target.value)}
+                    placeholder="مثال: 25"
+                    required
+                  />
+                </div>
+
+                {/* Savings Live Preview */}
+                {Number(formOriginalPrice) > Number(formPrice) && Number(formPrice) > 0 && (
+                  <div className="flex items-center justify-between bg-accent-soft/50 border border-accent/30 rounded-xl px-3 py-2 text-xs font-body">
+                    <span className="text-ink font-semibold">توفير الطالب المحسوب:</span>
+                    <span className="font-bold text-accent font-mono font-mono-nums">
+                      وفر {Number(formOriginalPrice) - Number(formPrice)} ج.م ({Math.round(((Number(formOriginalPrice) - Number(formPrice)) / Number(formOriginalPrice)) * 100)}%-)
+                    </span>
+                  </div>
+                )}
+
+                <Input
+                  label="نص شارة العرض (اختياري)"
+                  value={formOfferTag}
+                  onChange={(e) => setFormOfferTag(e.target.value)}
+                  placeholder="مثال: عرض خاص، كومبو التوفير، خصم 25%"
+                />
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="السعر (ج.م)"
-              type="number"
-              value={formPrice}
-              onChange={(e) => setFormPrice(e.target.value)}
-              required
-            />
-            <Input
-              label="وقت التحضير (دقائق)"
-              type="number"
-              value={formPrepTime}
-              onChange={(e) => setFormPrepTime(e.target.value)}
-              required
-            />
+            {!formHasOffer && (
+              <Input
+                label="السعر (ج.م)"
+                type="number"
+                value={formPrice}
+                onChange={(e) => setFormPrice(e.target.value)}
+                required
+              />
+            )}
+            <div className={formHasOffer ? 'col-span-2' : ''}>
+              <Input
+                label="وقت التحضير (دقائق)"
+                type="number"
+                value={formPrepTime}
+                onChange={(e) => setFormPrepTime(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-3 pt-3 border-t border-line/60">
@@ -417,6 +690,204 @@ export default function CashierMenuManagementPage() {
               variant="ghost"
               size="md"
               onClick={() => setIsModalOpen(false)}
+              className="flex-1"
+            >
+              إلغاء
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Combo Deal Creation & Edit Modal */}
+      <Modal
+        isOpen={isComboModalOpen}
+        onClose={() => setIsComboModalOpen(false)}
+        title={editingCombo ? 'تعديل عرض الكومبو' : 'إنشاء عرض / باقة كومبو جديدة'}
+        description="اختر الأصناف المشمولة في العرض والكميات وحدد سعر البيع المخفض."
+      >
+        <form onSubmit={handleSaveCombo} className="space-y-4 text-right">
+          {/* Combo Name */}
+          <Input
+            label="اسم العرض / الكومبو"
+            value={comboName}
+            onChange={(e) => setComboName(e.target.value)}
+            placeholder="مثال: عرض الصحاب (2 بطاطس + كانز) أو كومبو التوفير"
+            required
+          />
+
+          {/* Category */}
+          {categories.length > 0 && (
+            <div>
+              <label className="block text-xs font-body font-bold text-ink mb-1.5">
+                التصنيف التابع له العرض
+              </label>
+              <select
+                value={comboCategory}
+                onChange={(e) => setComboCategory(e.target.value)}
+                className="w-full bg-surface border border-line rounded-xl px-3 py-2 text-xs font-body text-ink focus:outline-none focus:border-accent"
+              >
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Bundle Items Picker */}
+          <div className="bg-canvas border border-line/80 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-accent" />
+                <p className="font-body font-bold text-xs text-ink">
+                  الأصناف المشمولة في العرض ({selectedComboItems.length})
+                </p>
+              </div>
+              <span className="text-[11px] font-body text-ink-soft">
+                اختر صنفاً لإضافته للباقة
+              </span>
+            </div>
+
+            {/* Select dropdown to add items */}
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                handleAddItemToCombo(e.target.value);
+                e.target.value = '';
+              }}
+              className="w-full bg-surface border border-line/80 rounded-xl px-3 py-2 text-xs font-body text-ink focus:outline-none focus:border-accent cursor-pointer"
+            >
+              <option value="" disabled>
+                + اختر صنفاً من المنيو لإضافته للعرض...
+              </option>
+              {kioskItems
+                .filter((i) => !i.isCombo)
+                .map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name} ({formatEGP(i.price)})
+                  </option>
+                ))}
+            </select>
+
+            {/* Selected Items List with Quantity Controls */}
+            {selectedComboItems.length > 0 ? (
+              <div className="space-y-2 pt-1">
+                {selectedComboItems.map((ci) => (
+                  <div
+                    key={ci.itemId}
+                    className="flex items-center justify-between bg-surface border border-line/70 rounded-xl px-3 py-2 text-xs"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-body font-bold text-ink truncate">{ci.name}</p>
+                      <p className="font-mono text-[11px] text-ink-soft font-mono-nums">
+                        {ci.price} ج.م × {ci.quantity} = {ci.price * ci.quantity} ج.م
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 bg-canvas border border-line rounded-lg px-1.5 py-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateComboItemQuantity(ci.itemId, ci.quantity - 1)}
+                          className="w-5 h-5 flex items-center justify-center text-ink-soft hover:text-danger hover:bg-surface rounded transition-colors"
+                        >
+                          <Minus className="w-3 h-3 stroke-[2.5]" />
+                        </button>
+                        <span className="font-mono text-xs font-bold text-ink w-4 text-center font-mono-nums">
+                          {ci.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateComboItemQuantity(ci.itemId, ci.quantity + 1)}
+                          className="w-5 h-5 flex items-center justify-center text-ink-soft hover:text-accent hover:bg-surface rounded transition-colors"
+                        >
+                          <Plus className="w-3 h-3 stroke-[2.5]" />
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateComboItemQuantity(ci.itemId, 0)}
+                        className="p-1 text-ink-soft hover:text-danger rounded-lg transition-colors"
+                        title="حذف من الباقة"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 stroke-[1.8]" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Auto Calculated Original Price Summary */}
+                <div className="flex items-center justify-between bg-surface border border-line/80 rounded-xl px-3 py-2 text-xs font-body">
+                  <span className="text-ink-soft font-medium">إجمالي السعر الأصلي للأصناف:</span>
+                  <span className="font-mono font-bold text-ink font-mono-nums">
+                    {comboOriginalPrice} ج.م
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-center text-[11px] font-body text-ink-soft py-3 bg-surface/50 border border-dashed border-line rounded-xl">
+                لم يتم اختيار أصناف بعد. اختر الأصناف من القائمة أعلاه لتكوين العرض.
+              </p>
+            )}
+          </div>
+
+          {/* Pricing & Savings */}
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="سعر العرض للبيع (ج.م)"
+              type="number"
+              value={comboSellingPrice}
+              onChange={(e) => setComboSellingPrice(e.target.value)}
+              placeholder="مثال: 70"
+              required
+            />
+            <Input
+              label="وقت التحضير (دقائق)"
+              type="number"
+              value={comboPrepTime}
+              onChange={(e) => setComboPrepTime(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Dynamic Savings Banner */}
+          {comboOriginalPrice > Number(comboSellingPrice) && Number(comboSellingPrice) > 0 && (
+            <div className="flex items-center justify-between bg-accent-soft border border-accent/40 rounded-2xl px-4 py-2.5 text-xs font-body">
+              <div className="flex items-center gap-1.5 text-ink font-semibold">
+                <Percent className="w-3.5 h-3.5 text-accent stroke-[2.5]" />
+                <span>توفير الطالب في العرض:</span>
+              </div>
+              <span className="font-bold text-accent font-mono font-mono-nums text-sm">
+                وفر {comboOriginalPrice - Number(comboSellingPrice)} ج.م (خصم {Math.round(((comboOriginalPrice - Number(comboSellingPrice)) / comboOriginalPrice) * 100)}%-)
+              </span>
+            </div>
+          )}
+
+          {/* Offer Tag Badge Input */}
+          <Input
+            label="نص شارة العرض (اختياري)"
+            value={comboOfferTag}
+            onChange={(e) => setComboOfferTag(e.target.value)}
+            placeholder="مثال: كومبو التوفير، اشتري 2 بسعر خاص"
+          />
+
+          <div className="flex items-center gap-3 pt-3 border-t border-line/60">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={isSubmitting || selectedComboItems.length === 0}
+              className="flex-1"
+            >
+              {editingCombo ? 'حفظ تعديلات العرض' : 'إنشاء ونشر العرض'}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="md"
+              onClick={() => setIsComboModalOpen(false)}
               className="flex-1"
             >
               إلغاء

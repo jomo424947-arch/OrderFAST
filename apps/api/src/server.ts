@@ -34,4 +34,5 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+// OrderFAST API Server - Combo support enabled
 start();

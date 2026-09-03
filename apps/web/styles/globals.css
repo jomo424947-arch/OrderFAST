@@ -6,15 +6,15 @@
   --bg: #FFFFFF;
   --canvas: #F0EEE8;
   --surface: #FAF8F3;
-  --ink: #241F1A;
-  --ink-soft: #6B6255;
+  --ink: #181512;
+  --ink-soft: #3E372E;
   --primary: #E8992A;
-  --primary-ink: #5C3B08;
+  --primary-ink: #3B2202;
   --primary-soft: #FBEBD1;
-  --accent: #2F5233;
-  --accent-soft: #E3ECE1;
+  --accent: #234727;
+  --accent-soft: #E1ECE0;
   --danger: #B23A2E;
-  --line: #D8CFBE;
+  --line: #CEC2AE;
   
   --font-display: 'El Messiri', 'Segoe UI', Tahoma, sans-serif;
   --font-body: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;

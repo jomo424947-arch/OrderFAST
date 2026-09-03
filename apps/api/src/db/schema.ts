@@ -85,7 +85,8 @@ export const kiosks = pgTable('kiosks', {
   isRushMode: boolean('is_rush_mode').notNull().default(false),
   openingHours: text('opening_hours').notNull().default('8:00 ص - 4:00 م'),
   phone: text('phone'),
-  rating: numeric('rating', { precision: 3, scale: 2 }).notNull().default('5.00'),
+  rating: numeric('rating', { precision: 3, scale: 2 }).notNull().default('0.00'),
+  ratingCount: integer('rating_count').notNull().default(0),
   defaultPrepTimeMins: integer('default_prep_time_mins').notNull().default(15),
   acceptanceTimeoutSecs: integer('acceptance_timeout_secs').notNull().default(300),
   imageUrl: text('image_url'),
@@ -151,6 +152,10 @@ export const menuItems = pgTable('menu_items', {
   name: text('name').notNull(),
   description: text('description'),
   price: integer('price').notNull(), // in Piasters (e.g. 2000 = 20 EGP)
+  originalPrice: integer('original_price'), // in Piasters (e.g. 3500 = 35 EGP) before discount
+  offerTag: text('offer_tag'), // e.g. "عرض خاص", "وفر 10 ج.م"
+  isCombo: boolean('is_combo').notNull().default(false),
+  comboItems: jsonb('combo_items').$type<{ itemId: string; name: string; quantity: number }[]>(),
   isAvailable: boolean('is_available').notNull().default(true),
   isUnderReview: boolean('is_under_review').notNull().default(true),
   preparationTimeMins: integer('preparation_time_mins').notNull().default(5),
@@ -209,6 +214,8 @@ export const orders = pgTable('orders', {
   cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
   expiredAt: timestamp('expired_at', { withTimezone: true }),
   noShowAt: timestamp('no_show_at', { withTimezone: true }),
+  rating: integer('rating'),
+  ratedAt: timestamp('rated_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
@@ -216,6 +223,7 @@ export const orders = pgTable('orders', {
   discountCheck: check('order_discount_check', sql`${table.discount} >= 0`),
   feesCheck: check('order_fees_check', sql`${table.fees} >= 0`),
   totalCheck: check('order_total_calc_check', sql`${table.total} = ${table.subtotal} - ${table.discount} + ${table.fees}`),
+  ratingBoundsCheck: check('order_rating_bounds_check', sql`${table.rating} IS NULL OR (${table.rating} >= 1 AND ${table.rating} <= 5)`),
   kioskDailyOrderUnique: uniqueIndex('idx_orders_kiosk_daily_num').on(table.kioskId, table.orderDate, table.orderNumber),
 
   // Targeted Real-World Performance Indexes

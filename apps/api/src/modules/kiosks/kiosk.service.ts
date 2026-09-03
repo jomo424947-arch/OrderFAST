@@ -46,6 +46,7 @@ export class KioskService {
       return {
         ...kiosk,
         rating: Number(kiosk.rating),
+        ratingCount: kiosk.ratingCount || 0,
         estimatedWaitMins,
         ordersAheadCount: activeOrdersCount,
       };
@@ -90,6 +91,7 @@ export class KioskService {
     const result = {
       ...kiosk,
       rating: Number(kiosk.rating),
+      ratingCount: kiosk.ratingCount || 0,
       estimatedWaitMins: kiosk.defaultPrepTimeMins + (kiosk.isRushMode ? 5 : 0),
       ordersAheadCount: countResult?.count || 0,
     };
@@ -279,6 +281,7 @@ export class KioskService {
     phone?: string;
     openingHours?: string;
     defaultPrepTimeMins?: number;
+    imageUrl?: string;
   }) {
     const kioskId = generateId();
 
@@ -297,7 +300,9 @@ export class KioskService {
         phone: data.phone,
         defaultPrepTimeMins: data.defaultPrepTimeMins || 15,
         acceptanceTimeoutSecs: 300,
-        rating: '5.00',
+        rating: '0.00',
+        ratingCount: 0,
+        imageUrl: data.imageUrl || null,
       })
       .returning();
 

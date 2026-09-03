@@ -53,7 +53,7 @@ export default function TermsPage() {
         'الدفع يتم مباشرة عند استلام الطلب من الكشك أو الكافيه داخل الحرم الجامعي.',
         'طرق الدفع المعتمدة حالياً هي: الدفع النقدي (كاش) أو المحافظ الإلكترونية المتفق عليها مع الكشك (مثل فودافون كاش أو إنستاباي).',
         'لا يتم خصم أي مبالغ إلكترونية مسبقة عبر بطاقات بنكية من خلال التطبيق في المرحلة الحالية.',
-        'يلتزم الطالب بدفع القيمة الإجمالية المحددة في تذكرة الطلب دون أي زيادات غير معتمدة في المنيو.',
+        'يلتزم الطالب بدفع القيمة الإجمالية المحددة في فاتورة الطلب دون أي زيادات غير معتمدة في المنيو.',
       ],
     },
     {
@@ -69,11 +69,13 @@ export default function TermsPage() {
     {
       id: 'no-show',
       icon: Ban,
-      title: '4. سياسة عدم الحضور للاستلام (No-Show Policy)',
+      title: '4. سياسة عدم الحضور للاستلام وحظر الحساب المباشر (No-Show Policy)',
+      isStrict: true,
       content: [
-        'عند تجهيز الطلب وظهور إشعار "جاهز للاستلام"، يلتزم الطالب بالتوجه إلى الكشك واستلام طلبه خلال فترة زمنية مناسبة.',
-        'في حال عدم الحضور للاستلام بعد إشعار الجاهزية، يقوم الكاشير بتسجيل حالة "عدم استلام" (No-Show) على حساب الطالب.',
-        'تكرار حالات عدم الاستلام (أكثر من مرتين) يعرض الحساب تلقائياً للتقييد والتعليق المؤقت بالتنسيق مع إدارة الجامعة لحماية حقوق أصحاب الأكشاك.',
+        'عند تجهيز الطلب وإرسال إشعار "جاهز للاستلام"، يلتزم الطالب بالتوجه فوراً إلى الكشك لاستلام طلبه وسداد قيمته.',
+        'عدم الحضور لاستلام الأوردر (No-Show) حتى لمرة واحدة فقط يؤدي إلى حظر وتبنيد حساب الطالب فوراً وبشكل نهائي بدون سابق إنذار.',
+        'تطبيق سياسة "أوردر واحد لم يتم استلامه = حظر فوري مباشر" لحماية حقوق أصحاب الأكشاك ومنع إهدار الطعام والمشروبات المجهزة خصيصاً.',
+        'في حال حظر الحساب بسبب عدم الاستلام، لن يتمكن الطالب من تسجيل طلبات جديدة أو الاستفادة من خدمات التطبيق نهائياً.',
       ],
     },
     {
@@ -150,24 +152,61 @@ export default function TermsPage() {
         <div className="space-y-4">
           {sections.map((section) => {
             const Icon = section.icon;
+            const isStrict = (section as any).isStrict;
+
             return (
               <div
                 key={section.id}
-                className="bg-surface border border-line rounded-2xl p-5 sm:p-6 shadow-sm hover:border-line/90 transition-all text-right space-y-3"
+                id={section.id}
+                className={
+                  isStrict
+                    ? 'bg-danger-soft/70 border-2 border-danger/40 rounded-2xl p-5 sm:p-6 shadow-sm text-right space-y-3 scroll-mt-6'
+                    : 'bg-surface border border-line rounded-2xl p-5 sm:p-6 shadow-sm hover:border-line/90 transition-all text-right space-y-3 scroll-mt-6'
+                }
               >
-                <div className="flex items-center gap-3 pb-2 border-b border-line/50">
-                  <div className="w-8 h-8 rounded-xl bg-primary-soft text-primary-ink flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4" />
+                <div
+                  className={`flex items-center justify-between gap-3 pb-2 border-b ${
+                    isStrict ? 'border-danger/30' : 'border-line/50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        isStrict
+                          ? 'bg-danger/20 text-danger'
+                          : 'bg-primary-soft text-primary-ink'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <h3
+                      className={`font-display font-bold text-base ${
+                        isStrict ? 'text-danger' : 'text-ink'
+                      }`}
+                    >
+                      {section.title}
+                    </h3>
                   </div>
-                  <h3 className="font-display font-bold text-base text-ink">
-                    {section.title}
-                  </h3>
+
+                  {isStrict && (
+                    <span className="bg-danger text-white text-[10px] sm:text-xs font-bold px-2.5 py-0.5 rounded-full shadow-xs">
+                      حظر فوري ومباشر
+                    </span>
+                  )}
                 </div>
 
-                <ul className="space-y-2 font-body text-xs sm:text-sm text-ink-soft leading-relaxed pr-1">
+                <ul
+                  className={`space-y-2 font-body text-xs sm:text-sm leading-relaxed pr-1 ${
+                    isStrict ? 'text-red-950 font-medium' : 'text-ink-soft'
+                  }`}
+                >
                   {section.content.map((point, idx) => (
                     <li key={idx} className="flex items-start gap-2.5">
-                      <CheckCircle2 className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                      {isStrict ? (
+                        <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                      )}
                       <span>{point}</span>
                     </li>
                   ))}

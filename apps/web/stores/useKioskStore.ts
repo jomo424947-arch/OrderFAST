@@ -31,6 +31,7 @@ interface KioskState {
 
   toggleKioskOpen: (id: string) => Promise<void>;
   setWaitTime: (id: string, mins: number) => Promise<void>;
+  updateKioskSettings: (id: string, settings: any) => Promise<Kiosk>;
   toggleItemAvailability: (itemId: string) => Promise<void>;
   createCategory: (kioskId: string, name: string) => Promise<MenuCategory>;
   addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<MenuItem>;
@@ -213,6 +214,20 @@ export const useKioskStore = create<KioskState>((set, get) => ({
       }));
     } catch (err: any) {
       set({ error: err.message || 'فشل تعديل وقت الانتظار' });
+    }
+  },
+
+  updateKioskSettings: async (id: string, settings: any) => {
+    try {
+      const updated = await kioskService.updateKioskSettings(id, settings);
+      set((state) => ({
+        kiosks: state.kiosks.map((k) => (k.id === id ? { ...k, ...updated } : k)),
+        kiosksWithStaff: state.kiosksWithStaff.map((k) => (k.id === id ? { ...k, ...updated } : k)),
+      }));
+      return updated;
+    } catch (err: any) {
+      set({ error: err.message || 'فشل تعديل إعدادات الكشك' });
+      throw err;
     }
   },
 

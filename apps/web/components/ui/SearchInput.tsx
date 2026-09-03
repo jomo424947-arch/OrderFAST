@@ -16,8 +16,8 @@ export const SearchInput: React.FC<SearchInputProps> = ({
 }) => {
   return (
     <div className="relative w-full">
-      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-soft pointer-events-none">
-        <Search className="w-4 h-4" />
+      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink/75 pointer-events-none">
+        <Search className="w-4 h-4 stroke-[2.2]" />
       </div>
       <input
         type="text"
@@ -25,7 +25,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         onChange={onChange}
         placeholder={placeholder}
         className={cn(
-          'w-full bg-surface border-[1.5px] border-line rounded-xl pr-10 pl-10 py-2.5 font-body text-xs sm:text-sm text-ink placeholder:text-ink-soft/75 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 shadow-sm',
+          'w-full bg-surface border-[1.5px] border-line rounded-xl pr-10 pl-10 py-2.5 font-body text-xs sm:text-sm text-ink placeholder:text-ink/55 font-medium focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 shadow-sm',
           className
         )}
         {...props}

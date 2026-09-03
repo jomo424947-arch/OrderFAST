@@ -1,5 +1,5 @@
 import { eq, and, sql, desc, asc, inArray } from 'drizzle-orm';
-import { db } from '../../db/client.js';
+import { db, pool } from '../../db/client.js';
 import {
   orders,
   orderItems,
@@ -14,6 +14,7 @@ import {
 } from '../../db/schema.js';
 import { AppError } from '../../shared/errors/index.js';
 import { generateId } from '../../shared/id/index.js';
+import { cacheService } from '../../shared/cache/index.js';
 import type {
   CreateOrderInput,
   AcceptOrderInput,
@@ -213,7 +214,7 @@ export class OrderService {
       }
 
       const discount = 0;
-      const fees = 0;
+      const fees = 100; // 100 piasters = 1.00 EGP fixed service fee
       const total = subtotal - discount + fees;
 
       // Step 6: Atomic Order Number Generation (kiosk_daily_counters)
@@ -452,6 +453,32 @@ export class OrderService {
       .orderBy(asc(orders.createdAt));
 
     return this.populateOrderItems(activeOrders);
+  }
+
+  /**
+   * 5.1 GET KIOSK FINISHED / HISTORY ORDERS (Completed, Rejected, Cancelled, No-Show, Expired)
+   */
+  async getKioskFinishedOrders(kioskId: string, limit = 100) {
+    const finishedOrders = await db
+      .select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.kioskId, kioskId),
+          sql`${orders.orderDate} = CURRENT_DATE`,
+          inArray(orders.status, [
+            'COMPLETED',
+            'REJECTED',
+            'CANCELLED',
+            'NO_SHOW',
+            'EXPIRED',
+          ])
+        )
+      )
+      .orderBy(desc(orders.createdAt))
+      .limit(limit);
+
+    return this.populateOrderItems(finishedOrders);
   }
 
   /**
@@ -801,6 +828,95 @@ export class OrderService {
   }
 
   /**
+   * 11. RATE ORDER (Stars only: 1 to 5)
+   * Student rates completed order -> saves rating -> recalculates kiosk average rating & ratingCount
+   */
+  async rateOrder(
+    orderId: string,
+    rating: number,
+    requestingUser: AuthenticatedUser
+  ) {
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw AppError.badRequest('التقييم يجب أن يكون عدداً صحيحاً بين 1 و 5 نجوم');
+    }
+
+    return await db.transaction(async (tx) => {
+      const [existingOrder] = await tx
+        .select()
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
+
+      if (!existingOrder) {
+        throw AppError.notFound('الطلب غير موجود');
+      }
+
+      if (
+        existingOrder.studentId !== requestingUser.id &&
+        requestingUser.systemRole !== 'admin'
+      ) {
+        throw AppError.forbidden('لا يمكنك تقييم طلب لا يخصك');
+      }
+
+      if (existingOrder.status !== 'COMPLETED') {
+        throw AppError.badRequest('يمكنك تقييم الطلب فقط بعد استلامه بنجاح');
+      }
+
+      if (existingOrder.rating !== null && existingOrder.rating !== undefined) {
+        throw AppError.conflict('تم تقييم هذا الطلب مسبقاً', 'CONFLICT');
+      }
+
+      // 1. Update order with rating and timestamp
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          rating,
+          ratedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, orderId))
+        .returning();
+
+      // 2. Recalculate kiosk average rating & count from all rated orders of this kiosk
+      const [ratingStats] = await tx
+        .select({
+          avgRating: sql<string>`ROUND(AVG(${orders.rating})::numeric, 2)::text`,
+          count: sql<number>`COUNT(*)::int`,
+        })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.kioskId, existingOrder.kioskId),
+            sql`${orders.rating} IS NOT NULL`
+          )
+        );
+
+      const newAvg = ratingStats?.avgRating ? ratingStats.avgRating : '0.00';
+      const newCount = ratingStats?.count ?? 0;
+
+      // 3. Update kiosk table
+      await tx
+        .update(kiosks)
+        .set({
+          rating: newAvg,
+          ratingCount: newCount,
+          updatedAt: new Date(),
+        })
+        .where(eq(kiosks.id, existingOrder.kioskId));
+
+      // 4. Invalidate kiosk caches for immediate frontend updates
+      await cacheService.del('kiosks:all');
+      await cacheService.del(`kiosk:${existingOrder.kioskId}`);
+
+      return {
+        ...updatedOrder,
+        kioskRating: parseFloat(newAvg),
+        kioskRatingCount: newCount,
+      };
+    });
+  }
+
+  /**
    * 11. MARK NO SHOW (Student failed to pick up)
    */
   async markNoShow(orderId: string, requestingUser: AuthenticatedUser) {
@@ -837,15 +953,13 @@ export class OrderService {
       }
 
       // Increment student no-show count & adjust account status:
-      // 1 No-Show -> 'warning'
-      // 2 or more No-Shows -> 'restricted' (banned from ordering)
+      // Immediate ban on 1st No-Show -> 'restricted' (banned from ordering without prior notice)
       const [student] = await tx
         .update(students)
         .set({
           noShowCount: sql`${students.noShowCount} + 1`,
           accountStatus: sql`CASE 
-            WHEN ${students.noShowCount} + 1 >= 2 THEN 'restricted'::account_status_enum
-            WHEN ${students.noShowCount} + 1 = 1 THEN 'warning'::account_status_enum
+            WHEN ${students.noShowCount} + 1 >= 1 THEN 'restricted'::account_status_enum
             ELSE 'active'::account_status_enum
           END`,
           updatedAt: new Date(),
@@ -1159,11 +1273,166 @@ export class OrderService {
       .from(orders)
       .where(inArray(orders.status, ['PENDING_KIOSK', 'ACCEPTED', 'PREPARING', 'READY']));
 
+    // Platform Service Fees Earnings (All-time and Today)
+    const [feeStats] = await db
+      .select({
+        totalFeeRevenuePiasters: sql<number>`coalesce(sum(${orders.fees}), 0)::int`,
+      })
+      .from(orders)
+      .where(eq(orders.status, 'COMPLETED'));
+
+    const [todayFeeStats] = await db
+      .select({
+        todayFeeRevenuePiasters: sql<number>`coalesce(sum(${orders.fees}), 0)::int`,
+      })
+      .from(orders)
+      .where(and(eq(orders.status, 'COMPLETED'), sql`${orders.orderDate} = CURRENT_DATE`));
+
     return {
       totalOrders: ordersCount?.count || 0,
       todayOrdersCount: todayCount?.count || 0,
       todaySalesPiasters: salesSum?.totalSales || 0,
       activeKitchenCount: activeCount?.count || 0,
+      totalFeeRevenuePiasters: feeStats?.totalFeeRevenuePiasters || 0,
+      todayFeeRevenuePiasters: todayFeeStats?.todayFeeRevenuePiasters || 0,
+    };
+  }
+
+  /**
+   * 18. ADMIN: Comprehensive Platform & Financial Analytics
+   * Calculates real platform revenue from orders.fees permanently stored in database
+   */
+  async getAdminAnalytics(timeframe: 'all' | 'today' | 'week' | 'month' = 'all') {
+    // 1. Base date filter condition for the requested timeframe
+    let dateFilterSql = "1=1";
+    if (timeframe === 'today') {
+      dateFilterSql = "o.order_date = CURRENT_DATE";
+    } else if (timeframe === 'week') {
+      dateFilterSql = "o.order_date >= CURRENT_DATE - INTERVAL '7 days'";
+    } else if (timeframe === 'month') {
+      dateFilterSql = "o.order_date >= CURRENT_DATE - INTERVAL '30 days'";
+    }
+
+    // 2. Summary stats across completed orders
+    const summaryRes = await pool.query(`
+      SELECT
+        COUNT(*)::int AS "completedOrdersCount",
+        COALESCE(SUM(subtotal), 0)::int AS "totalKioskSalesPiasters",
+        COALESCE(SUM(fees), 0)::int AS "totalFeeRevenuePiasters",
+        COALESCE(SUM(total), 0)::int AS "totalGrossVolumePiasters",
+        COALESCE(ROUND(AVG(fees)), 0)::int AS "avgFeePiasters",
+        COALESCE(ROUND(AVG(total)), 0)::int AS "avgOrderTotalPiasters"
+      FROM orders o
+      WHERE o.status = 'COMPLETED' AND ${dateFilterSql};
+    `);
+    const summaryRow = summaryRes.rows[0] || {};
+
+    // Today completed fee stats
+    const todayRes = await pool.query(`
+      SELECT
+        COUNT(*)::int AS "todayCompletedCount",
+        COALESCE(SUM(subtotal), 0)::int AS "todaySalesPiasters",
+        COALESCE(SUM(fees), 0)::int AS "todayFeeRevenuePiasters"
+      FROM orders
+      WHERE status = 'COMPLETED' AND order_date = CURRENT_DATE;
+    `);
+    const todayRow = todayRes.rows[0] || {};
+
+    // Month completed fee stats
+    const monthRes = await pool.query(`
+      SELECT
+        COALESCE(SUM(fees), 0)::int AS "monthFeeRevenuePiasters"
+      FROM orders
+      WHERE status = 'COMPLETED' AND order_date >= date_trunc('month', CURRENT_DATE);
+    `);
+    const monthRow = monthRes.rows[0] || {};
+
+    // Total orders across all statuses in the timeframe
+    const statusCountsRes = await pool.query(`
+      SELECT
+        status,
+        COUNT(*)::int AS count
+      FROM orders o
+      WHERE ${dateFilterSql}
+      GROUP BY status;
+    `);
+
+    const statusDistribution: Record<string, number> = {};
+    let totalOrdersCount = 0;
+    for (const r of statusCountsRes.rows) {
+      statusDistribution[r.status] = r.count;
+      totalOrdersCount += r.count;
+    }
+
+    // 3. Breakdown per Kiosk (food sales, fees earned for admin, completed orders count)
+    const kioskBreakdownRes = await pool.query(`
+      SELECT
+        k.id AS "kioskId",
+        k.name AS "kioskName",
+        k.category AS "kioskCategory",
+        k.rating AS "kioskRating",
+        k.rating_count AS "kioskRatingCount",
+        COUNT(o.id)::int AS "completedOrdersCount",
+        COALESCE(SUM(o.subtotal), 0)::int AS "kioskSalesPiasters",
+        COALESCE(SUM(o.fees), 0)::int AS "feeRevenuePiasters",
+        COALESCE(SUM(o.total), 0)::int AS "grossVolumePiasters"
+      FROM kiosks k
+      LEFT JOIN orders o ON o.kiosk_id = k.id AND o.status = 'COMPLETED' AND ${dateFilterSql}
+      GROUP BY k.id, k.name, k.category, k.rating, k.rating_count
+      ORDER BY "feeRevenuePiasters" DESC, "kioskSalesPiasters" DESC;
+    `);
+
+    // 4. Breakdown per Payment Method (Cash vs Digital Wallet)
+    const paymentBreakdownRes = await pool.query(`
+      SELECT
+        COALESCE(payment_method, 'cash') AS "paymentMethod",
+        COUNT(*)::int AS "ordersCount",
+        COALESCE(SUM(subtotal), 0)::int AS "kioskSalesPiasters",
+        COALESCE(SUM(fees), 0)::int AS "feeRevenuePiasters",
+        COALESCE(SUM(total), 0)::int AS "grossVolumePiasters"
+      FROM orders o
+      WHERE o.status = 'COMPLETED' AND ${dateFilterSql}
+      GROUP BY payment_method
+      ORDER BY "ordersCount" DESC;
+    `);
+
+    // 5. Daily Timeline (last 30 days)
+    const dailyTimelineRes = await pool.query(`
+      SELECT
+        to_char(order_date, 'YYYY-MM-DD') AS "date",
+        COUNT(*)::int AS "completedOrders",
+        COALESCE(SUM(subtotal), 0)::int AS "kioskSalesPiasters",
+        COALESCE(SUM(fees), 0)::int AS "feeRevenuePiasters",
+        COALESCE(SUM(total), 0)::int AS "grossVolumePiasters"
+      FROM orders
+      WHERE status = 'COMPLETED'
+        AND order_date >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY order_date
+      ORDER BY order_date ASC;
+    `);
+
+    return {
+      timeframe,
+      summary: {
+        totalOrdersCount,
+        completedOrdersCount: summaryRow.completedOrdersCount || 0,
+        totalKioskSalesPiasters: summaryRow.totalKioskSalesPiasters || 0,
+        totalFeeRevenuePiasters: summaryRow.totalFeeRevenuePiasters || 0,
+        totalGrossVolumePiasters: summaryRow.totalGrossVolumePiasters || 0,
+        avgFeePiasters: summaryRow.avgFeePiasters || 0,
+        avgOrderTotalPiasters: summaryRow.avgOrderTotalPiasters || 0,
+        todayCompletedCount: todayRow.todayCompletedCount || 0,
+        todaySalesPiasters: todayRow.todaySalesPiasters || 0,
+        todayFeeRevenuePiasters: todayRow.todayFeeRevenuePiasters || 0,
+        monthFeeRevenuePiasters: monthRow.monthFeeRevenuePiasters || 0,
+      },
+      statusDistribution,
+      kioskBreakdown: kioskBreakdownRes.rows.map((r: any) => ({
+        ...r,
+        kioskRating: Number(r.kioskRating) || 0,
+      })),
+      paymentBreakdown: paymentBreakdownRes.rows,
+      dailyTimeline: dailyTimelineRes.rows,
     };
   }
 }

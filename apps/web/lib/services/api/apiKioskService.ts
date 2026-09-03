@@ -56,6 +56,11 @@ export class ApiKioskService implements IKioskService {
     return adaptKioskFromApi(rawUpdated);
   }
 
+  async updateKioskSettings(kioskId: string, settings: any): Promise<Kiosk> {
+    const rawUpdated = await apiClient.patch<ApiKioskRaw>(`/kiosks/${kioskId}/settings`, settings);
+    return adaptKioskFromApi(rawUpdated);
+  }
+
   async getKioskStats(kioskId: string): Promise<any> {
     return apiClient.get<any>(`/kiosks/${kioskId}/stats`);
   }
@@ -78,6 +83,7 @@ export class ApiKioskService implements IKioskService {
     category?: string;
     phone?: string;
     openingHours?: string;
+    imageUrl?: string;
   }): Promise<Kiosk> {
     const raw = await apiClient.post<ApiKioskRaw>('/kiosks', data);
     return adaptKioskFromApi(raw);

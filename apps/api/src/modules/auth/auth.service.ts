@@ -336,6 +336,23 @@ export class AuthService {
 
     return updated;
   }
+
+  /**
+   * Sends password reset email via Supabase
+   */
+  async sendPasswordResetEmail(email: string, redirectTo?: string) {
+    const supabase = getSupabase();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
+    if (error) {
+      if (error.message.includes('60 seconds')) {
+        throw AppError.badRequest('لأسباب أمنية، يمكنك طلب رابط الاستعادة مرة واحدة كل 60 ثانية');
+      }
+      throw AppError.badRequest(error.message || 'فشل في إرسال رابط استعادة كلمة المرور');
+    }
+    return { success: true };
+  }
 }
 
 export const authService = new AuthService();

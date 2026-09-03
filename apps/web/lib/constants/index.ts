@@ -111,3 +111,8 @@ export const ACCOUNT_STATUS_DETAILS: Record<
     badgeClass: "bg-danger-soft text-danger",
   },
 };
+
+/** رسوم خدمة الطلب الثابتة لكل طلب (1 ج.م) */
+export const SERVICE_FEE_EGP = 1;
+export const SERVICE_FEE_PIASTERS = 100;
+

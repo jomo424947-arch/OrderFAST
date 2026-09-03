@@ -113,19 +113,56 @@ export default function CartPage() {
       <div className="bg-surface border border-line/80 rounded-3xl p-5 shadow-warm divide-y divide-line/70">
         {items.map((cartItem) => {
           const itemTotal = cartItem.menuItem.price * cartItem.quantity;
+          const isCombo = cartItem.menuItem.isCombo;
+          const hasComboItems = isCombo && cartItem.menuItem.comboItems && cartItem.menuItem.comboItems.length > 0;
+          const hasOffer = Boolean(cartItem.menuItem.offerTag || (cartItem.menuItem.originalPrice && cartItem.menuItem.originalPrice > cartItem.menuItem.price));
 
           return (
             <div
               key={cartItem.menuItem.id}
-              className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-3"
+              className="py-3.5 first:pt-0 last:pb-0 flex items-start justify-between gap-3"
             >
-              <div>
-                <p className="font-body font-semibold text-sm text-ink mb-2">
-                  {cartItem.menuItem.name}
-                </p>
+              <div className="flex-1 min-w-0">
+                {/* Title & Subtle Badges */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="font-body font-bold text-sm text-ink">
+                    {cartItem.menuItem.name}
+                  </p>
 
-                {/* Mini Stepper matching design reference */}
-                <div className="flex items-center gap-2.5">
+                  {isCombo && (
+                    <span className="text-[10px] font-body font-medium text-ink-soft bg-canvas px-2 py-0.5 rounded-md border border-line/60">
+                      باقة كومبو
+                    </span>
+                  )}
+
+                  {cartItem.menuItem.offerTag && (
+                    <span className="text-[10px] font-body font-semibold text-danger/90 bg-danger-soft/60 px-2 py-0.5 rounded-md border border-danger/20">
+                      {cartItem.menuItem.offerTag}
+                    </span>
+                  )}
+                </div>
+
+                {/* Offer & Combo Items Contents Breakdown - Big, Clear & Prominent */}
+                {hasComboItems && (
+                  <div className="bg-canvas/80 border border-line/70 rounded-xl px-2.5 py-1.5 mt-2 mb-2 text-right">
+                    <p className="font-body text-xs sm:text-sm font-bold text-ink leading-snug">
+                      <span className="text-ink-soft text-xs font-semibold ml-1">يشمل:</span>
+                      <span className="text-ink font-black">
+                        {cartItem.menuItem.comboItems!.map((c) => `${c.quantity}× ${c.name}`).join(' + ')}
+                      </span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Description if regular item */}
+                {cartItem.menuItem.description && !isCombo && (
+                  <p className="font-body text-[11px] text-ink-soft/80 mt-0.5 mb-2 leading-relaxed">
+                    {cartItem.menuItem.description}
+                  </p>
+                )}
+
+                {/* Mini Stepper */}
+                <div className="flex items-center gap-2.5 mt-2">
                   <button
                     type="button"
                     onClick={() =>
@@ -159,9 +196,16 @@ export default function CartPage() {
               </div>
 
               {/* Item Total Price */}
-              <span className="font-mono text-sm font-bold text-ink font-mono-nums">
-                {formatEGP(itemTotal)}
-              </span>
+              <div className="text-left flex-shrink-0 pt-0.5">
+                <span className="font-mono text-sm font-bold text-ink font-mono-nums block">
+                  {formatEGP(itemTotal)}
+                </span>
+                {cartItem.menuItem.originalPrice && cartItem.menuItem.originalPrice > cartItem.menuItem.price && (
+                  <span className="font-mono text-[11px] text-ink-soft/60 line-through font-mono-nums block">
+                    {formatEGP(cartItem.menuItem.originalPrice * cartItem.quantity)}
+                  </span>
+                )}
+              </div>
             </div>
           );
         })}
@@ -169,14 +213,19 @@ export default function CartPage() {
 
       {/* Summary Box */}
       <div className="bg-surface border border-line/80 rounded-3xl p-5 shadow-warm space-y-2.5">
-        <div className="flex justify-between text-xs font-body text-ink-soft">
+        <div className="flex justify-between text-xs font-body text-ink-soft font-medium">
           <span>إجمالي الأصناف</span>
           <span className="font-mono font-semibold font-mono-nums">{formatEGP(subtotal)}</span>
         </div>
 
-        <div className="flex justify-between font-body text-sm font-bold text-ink pt-2 border-t border-line/60">
+        <div className="flex justify-between text-xs font-body text-ink-soft font-medium">
+          <span>رسوم الخدمة</span>
+          <span className="font-mono font-semibold font-mono-nums">{formatEGP(1)}</span>
+        </div>
+
+        <div className="flex justify-between font-body text-sm font-bold text-ink pt-2.5 border-t border-line/60">
           <span>المطلوب عند الاستلام</span>
-          <span className="font-mono text-base text-primary-ink font-mono-nums font-black">{formatEGP(subtotal)}</span>
+          <span className="font-mono text-base text-primary-ink font-mono-nums font-black">{formatEGP(subtotal + 1)}</span>
         </div>
 
         {/* Clear instruction about campus on-pickup payment */}

@@ -1,14 +1,16 @@
 import { create } from 'zustand';
-import { Order, OrderStatus, CartItem, Kiosk } from '@/types';
+import { Order, OrderStatus, CartItem, Kiosk, AdminAnalyticsResponse } from '@/types';
 import { orderService } from '@/lib/services/orderService';
 import { ApiOrderService } from '@/lib/services/api/apiOrderService';
 import { isValidUUID } from '@/lib/utils';
 import { playNewOrderChime } from '@/lib/utils/sound';
+import { useKioskStore } from './useKioskStore';
 
 interface OrderState {
   orders: Order[];
   adminOrders: Order[];
-  adminStats: { totalOrders: number; todayOrdersCount: number; todaySalesPiasters: number; activeKitchenCount: number } | null;
+  adminStats: { totalOrders: number; todayOrdersCount: number; todaySalesPiasters: number; activeKitchenCount: number; totalFeeRevenuePiasters?: number; todayFeeRevenuePiasters?: number } | null;
+  adminAnalytics: AdminAnalyticsResponse | null;
   isLoading: boolean;
   error: string | null;
   lastPolledAt: number | null;
@@ -17,6 +19,7 @@ interface OrderState {
   fetchKioskOrders: (kioskId: string, silent?: boolean) => Promise<Order[]>;
   fetchAdminOrders: () => Promise<Order[]>;
   fetchAdminStats: () => Promise<any>;
+  fetchAdminAnalytics: (timeframe?: 'all' | 'today' | 'week' | 'month') => Promise<AdminAnalyticsResponse | null>;
   fetchOrderById: (orderId: string, silent?: boolean) => Promise<Order | null>;
 
   startKioskPolling: (kioskId: string, intervalMs?: number) => () => void;
@@ -36,11 +39,14 @@ interface OrderState {
   rejectOrder: (orderId: string, reason?: string) => Promise<void>;
   setOrderStatus: (orderId: string, status: OrderStatus, reason?: string) => Promise<void>;
   cancelOrder: (orderId: string, reason?: string) => Promise<void>;
+  rateOrder: (orderId: string, rating: number) => Promise<void>;
+  batchAcceptOrders: (kioskId: string, orderIds: string[]) => Promise<void>;
 
   getOrderById: (orderId: string) => Order | undefined;
   getStudentOrders: (studentId: string) => Order[];
   getKioskIncomingOrders: (kioskId: string) => Order[];
   getKioskActiveOrders: (kioskId: string) => Order[];
+  getKioskFinishedOrders: (kioskId: string) => Order[];
   decrementTimers: () => void;
 }
 
@@ -48,6 +54,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   orders: [],
   adminOrders: [],
   adminStats: null,
+  adminAnalytics: null,
   isLoading: false,
   error: null,
   lastPolledAt: null,
@@ -119,6 +126,20 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       }
       return null;
     } catch {
+      return null;
+    }
+  },
+
+  fetchAdminAnalytics: async (timeframe = 'all') => {
+    try {
+      if (orderService.getAdminAnalytics) {
+        const data = await orderService.getAdminAnalytics(timeframe);
+        set({ adminAnalytics: data });
+        return data;
+      }
+      return null;
+    } catch (err: any) {
+      console.error('Failed to fetch admin analytics:', err);
       return null;
     }
   },
@@ -290,6 +311,23 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     }
   },
 
+  batchAcceptOrders: async (kioskId: string, orderIds: string[]) => {
+    if (!orderIds.length) return;
+    try {
+      if (orderService.batchAcceptOrders) {
+        await orderService.batchAcceptOrders(kioskId, orderIds);
+      } else {
+        await Promise.all(
+          orderIds.map((id) => orderService.updateOrderStatus(id, 'ACCEPTED'))
+        );
+      }
+      await get().fetchKioskOrders(kioskId, true);
+    } catch (err: any) {
+      set({ error: err.message || 'فشل قبول جميع الطلبات' });
+      throw err;
+    }
+  },
+
   rejectOrder: async (orderId: string, reason?: string) => {
     try {
       const rejectionReason = reason || 'الكشك غير قادر على استلام طلبات جديدة حالياً';
@@ -327,6 +365,20 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     }
   },
 
+  rateOrder: async (orderId: string, rating: number) => {
+    try {
+      const updated = await orderService.rateOrder(orderId, rating);
+      set((state) => ({
+        orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+      }));
+      // Invalidate and refresh kiosks list so new rating immediately reflects
+      useKioskStore.getState().fetchKiosks();
+    } catch (err: any) {
+      set({ error: err.message || 'فشل إرسال التقييم' });
+      throw err;
+    }
+  },
+
   getOrderById: (orderId: string) => {
     return get().orders.find(
       (o) => o.id === orderId || o.orderNumber === orderId || o.orderNumber === `#${orderId}`
@@ -349,6 +401,24 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         o.kioskId === kioskId &&
         (o.status === 'ACCEPTED' || o.status === 'PREPARING' || o.status === 'READY')
     );
+  },
+
+  getKioskFinishedOrders: (kioskId: string) => {
+    const todayStr = new Date().toDateString();
+    return get().orders.filter((o) => {
+      if (o.kioskId !== kioskId) return false;
+      const isFinished =
+        o.status === 'COMPLETED' ||
+        o.status === 'REJECTED' ||
+        o.status === 'CANCELLED' ||
+        o.status === 'NO_SHOW' ||
+        o.status === 'EXPIRED';
+      if (!isFinished) return false;
+      if (o.createdAt) {
+        return new Date(o.createdAt).toDateString() === todayStr;
+      }
+      return true;
+    });
   },
 
   decrementTimers: () => {

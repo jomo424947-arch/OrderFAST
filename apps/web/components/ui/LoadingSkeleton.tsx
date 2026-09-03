@@ -24,15 +24,23 @@ export const Skeleton: React.FC<SkeletonProps> = ({ className, count = 1 }) => {
 
 export const KioskCardSkeleton: React.FC = () => {
   return (
-    <div className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-3">
-      <Skeleton className="w-12 h-12 rounded-xl flex-shrink-0" />
-      <div className="flex-1 space-y-2">
-        <Skeleton className="w-1/3 h-4" />
-        <Skeleton className="w-1/2 h-3" />
-      </div>
-      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-        <Skeleton className="w-14 h-5 rounded-full" />
-        <Skeleton className="w-10 h-3" />
+    <div className="bg-surface border border-line/70 rounded-3xl overflow-hidden shadow-warm">
+      <Skeleton className="w-full h-36 sm:h-40 rounded-none" />
+      <div className="p-4 sm:p-5 pt-3 space-y-3">
+        <div className="flex items-start justify-between -mt-9 relative z-10">
+          <Skeleton className="w-14 h-14 rounded-2xl border-2 border-white" />
+          <Skeleton className="w-12 h-6 rounded-xl mt-2" />
+        </div>
+        <Skeleton className="w-1/2 h-5 rounded-lg" />
+        <Skeleton className="w-2/3 h-4 rounded-lg" />
+        <div className="flex gap-2 pt-1">
+          <Skeleton className="w-16 h-5 rounded-md" />
+          <Skeleton className="w-20 h-5 rounded-md" />
+        </div>
+        <div className="pt-3 border-t border-line/40 flex justify-between">
+          <Skeleton className="w-24 h-3.5" />
+          <Skeleton className="w-16 h-3.5" />
+        </div>
       </div>
     </div>
   );

@@ -31,7 +31,10 @@ export default function LoginPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const hash = window.location.hash;
-      if (
+      if (urlParams.get('reset') === 'true') {
+        setSuccessMessage('تم تعيين كلمة المرور بنجاح! 🎉 يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.');
+        window.history.replaceState(null, '', '/auth/login');
+      } else if (
         urlParams.get('verified') === 'true' ||
         hash.includes('type=signup') ||
         hash.includes('access_token')
@@ -103,7 +106,7 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@sphinx.edu.eg"
+            placeholder="name@example.com"
             required
             autoComplete="email"
           />

@@ -48,33 +48,30 @@ export default function CashierActiveOrdersPage() {
           <button
             type="button"
             onClick={() => setActiveFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold border transition-all ${
-              activeFilter === 'all'
+            className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold border transition-all ${activeFilter === 'all'
                 ? 'bg-primary text-primary-ink border-primary'
                 : 'bg-surface text-ink-soft border-line hover:bg-canvas'
-            }`}
+              }`}
           >
             الكل ({activeOrders.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveFilter('preparing')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold border transition-all ${
-              activeFilter === 'preparing'
+            className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold border transition-all ${activeFilter === 'preparing'
                 ? 'bg-primary text-primary-ink border-primary'
                 : 'bg-surface text-ink-soft border-line hover:bg-canvas'
-            }`}
+              }`}
           >
             جاري التجهيز ({activeOrders.filter((o) => o.status === 'ACCEPTED' || o.status === 'PREPARING').length})
           </button>
           <button
             type="button"
             onClick={() => setActiveFilter('ready')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold border transition-all ${
-              activeFilter === 'ready'
+            className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold border transition-all ${activeFilter === 'ready'
                 ? 'bg-accent text-white border-accent'
                 : 'bg-surface text-ink-soft border-line hover:bg-canvas'
-            }`}
+              }`}
           >
             جاهز للاستلام ({activeOrders.filter((o) => o.status === 'READY').length})
           </button>

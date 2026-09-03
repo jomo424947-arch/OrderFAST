@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { OrderTicket } from '@/components/orders/OrderTicket';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
+import { OrderRatingCard } from '@/components/orders/OrderRatingCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -43,6 +44,8 @@ export default function OrderTrackingPage() {
 
   const [isReadyModalOpen, setIsReadyModalOpen] = useState(false);
   const hasTriggeredReadyModalRef = useRef(false);
+  const ratingSectionRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToRatingRef = useRef(false);
 
   useEffect(() => {
     if (!orderId) return;
@@ -58,6 +61,17 @@ export default function OrderTrackingPage() {
       playReadyChime();
     }
   }, [order?.status]);
+
+  // Smooth scroll to rating card when order is delivered/completed and not yet rated
+  useEffect(() => {
+    if (order?.status === 'COMPLETED' && !order?.rating && !hasScrolledToRatingRef.current) {
+      hasScrolledToRatingRef.current = true;
+      const timer = setTimeout(() => {
+        ratingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [order?.status, order?.rating]);
 
   if (!order) {
     return (
@@ -79,6 +93,7 @@ export default function OrderTrackingPage() {
 
   const isPending = order.status === 'PENDING_KIOSK';
   const isReady = order.status === 'READY';
+  const isCompleted = order.status === 'COMPLETED';
 
   return (
     <div className="max-w-md mx-auto space-y-5 pb-12">
@@ -155,6 +170,17 @@ export default function OrderTrackingPage() {
       <div className="bg-surface border border-line/80 rounded-3xl p-5 shadow-warm">
         <OrderTimeline status={order.status} />
       </div>
+
+      {/* Kiosk Star Rating Card after Delivery */}
+      {isCompleted && (
+        <div ref={ratingSectionRef}>
+          <OrderRatingCard
+            orderId={order.id}
+            kioskName={order.kioskName}
+            existingRating={order.rating}
+          />
+        </div>
+      )}
 
       {/* Order Items Breakdown */}
       <div className="bg-surface border border-line/80 rounded-3xl p-5 shadow-warm space-y-3">

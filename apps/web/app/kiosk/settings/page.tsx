@@ -1,70 +1,109 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Save, Clock, Zap, Store, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ImageUploadDropzone } from '@/components/ui/ImageUploadDropzone';
+import {
+  Save,
+  Clock,
+  Zap,
+  CheckCircle2,
+  Image as ImageIcon,
+} from 'lucide-react';
 
 export default function CashierSettingsPage() {
-  const { activeKioskId, kiosks, fetchKiosks, setWaitTime, toggleKioskOpen } = useKioskStore();
+  const {
+    activeKioskId,
+    kiosks,
+    fetchKiosks,
+    updateKioskSettings,
+    toggleKioskOpen,
+  } = useKioskStore();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (kiosks.length === 0) {
       fetchKiosks();
     }
   }, [kiosks.length, fetchKiosks]);
 
-  const currentKiosk = kiosks.find((k) => k.id === activeKioskId) || kiosks[0] || {
-    id: activeKioskId,
-    name: 'الكشك',
-    isOpen: true,
-    openingHours: '8:00 ص - 4:00 م',
-    estimatedWaitMins: 15,
-    isRushMode: false,
-    phone: '01123456780',
-  };
+  const currentKiosk =
+    kiosks.find((k) => k.id === activeKioskId) ||
+    kiosks[0] || {
+      id: activeKioskId,
+      name: 'الكشك',
+      isOpen: true,
+      openingHours: '8:00 ص - 4:00 م',
+      estimatedWaitMins: 15,
+      isRushMode: false,
+      phone: '01123456780',
+      imageUrl: '',
+    };
 
   const [waitTime, setLocalWaitTime] = useState(currentKiosk.estimatedWaitMins || 15);
   const [isRushMode, setIsRushMode] = useState(currentKiosk.isRushMode || false);
   const [openingHours, setOpeningHours] = useState(currentKiosk.openingHours || '8:00 ص - 4:00 م');
   const [phone, setPhone] = useState(currentKiosk.phone || '01123456780');
+  const [imageUrl, setImageUrl] = useState(currentKiosk.imageUrl || '');
+  const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (currentKiosk) {
       setLocalWaitTime(currentKiosk.estimatedWaitMins || 15);
       setIsRushMode(currentKiosk.isRushMode || false);
       setOpeningHours(currentKiosk.openingHours || '8:00 ص - 4:00 م');
       setPhone(currentKiosk.phone || '01123456780');
+      setImageUrl(currentKiosk.imageUrl || '');
     }
-  }, [currentKiosk.id, currentKiosk.estimatedWaitMins, currentKiosk.isRushMode, currentKiosk.openingHours, currentKiosk.phone]);
+  }, [
+    currentKiosk.id,
+    currentKiosk.estimatedWaitMins,
+    currentKiosk.isRushMode,
+    currentKiosk.openingHours,
+    currentKiosk.phone,
+    currentKiosk.imageUrl,
+  ]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentKiosk?.id) {
-      setWaitTime(currentKiosk.id, Number(waitTime));
+    if (!currentKiosk?.id) return;
+
+    try {
+      setIsSaving(true);
+      await updateKioskSettings(currentKiosk.id, {
+        defaultPrepTimeMins: Number(waitTime),
+        openingHours: openingHours.trim(),
+        phone: phone.trim(),
+        imageUrl: imageUrl.trim() || null,
+      });
+
       setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 2000);
+      setTimeout(() => setIsSaved(false), 2500);
+    } catch (err: any) {
+      alert(err.message || 'فشل حفظ الإعدادات');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
-    <div className="space-y-6 max-w-xl">
+    <div className="space-y-6 max-w-xl pb-16">
       {/* Header */}
       <div className="pb-2 border-b border-line/60">
         <h2 className="font-display font-bold text-2xl text-ink">
           إعدادات الكشك
         </h2>
         <p className="font-body text-xs text-ink-soft">
-          التحكم في مواعيد العمل، متوسط وقت التحضير، وتفعيل وضع الذروة
+          التحكم في مواعيد العمل، صورة غلاف الكشك، ومتوسط وقت التحضير
         </p>
       </div>
 
       {isSaved && (
         <div className="bg-accent-soft border border-accent/30 text-accent rounded-2xl p-3 text-xs font-body font-bold flex items-center gap-2 animate-in fade-in duration-200">
           <CheckCircle2 className="w-4 h-4" />
-          <span>تم حفظ إعدادات الكشك بنجاح!</span>
+          <span>تم حفظ إعدادات وصورة الكشك بنجاح!</span>
         </div>
       )}
 
@@ -114,6 +153,25 @@ export default function CashierSettingsPage() {
           </div>
         </div>
 
+        {/* Kiosk Cover Image Section */}
+        <div className="bg-surface border border-line/80 rounded-3xl p-5 shadow-warm space-y-4 text-right">
+          <div className="pb-2 border-b border-line/60 flex items-center justify-between">
+            <h4 className="font-display font-bold text-base text-ink flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-accent" />
+              <span>صورة غلاف الكشك</span>
+            </h4>
+            <span className="text-[11px] font-body text-ink-soft">
+              تظهر للطلاب في دليل الأكشاك
+            </span>
+          </div>
+
+          <ImageUploadDropzone
+            value={imageUrl}
+            onChange={(url) => setImageUrl(url)}
+            onClear={() => setImageUrl('')}
+          />
+        </div>
+
         {/* Operational Time Estimates */}
         <div className="bg-surface border border-line/80 rounded-3xl p-5 shadow-warm space-y-4 text-right">
           <h4 className="font-display font-bold text-base text-ink pb-2 border-b border-line/60 flex items-center gap-2">
@@ -161,7 +219,13 @@ export default function CashierSettingsPage() {
           />
         </div>
 
-        <Button type="submit" variant="primary" size="lg" className="w-full shadow-warm">
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          isLoading={isSaving}
+          className="w-full shadow-warm"
+        >
           <Save className="w-4 h-4 ml-1.5" />
           <span>حفظ التعديلات</span>
         </Button>
@@ -169,3 +233,4 @@ export default function CashierSettingsPage() {
     </div>
   );
 }
+

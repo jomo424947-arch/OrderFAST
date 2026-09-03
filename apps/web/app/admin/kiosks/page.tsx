@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { ImageUploadDropzone } from '@/components/ui/ImageUploadDropzone';
 import { COLLEGES } from '@/lib/constants';
 import {
   Plus,
@@ -18,6 +20,7 @@ import {
   Phone,
   Star,
   AlertCircle,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 export default function AdminKiosksPage() {
@@ -29,6 +32,7 @@ export default function AdminKiosksPage() {
     fetchKiosksWithStaff,
     fetchStaffList,
     createKiosk,
+    updateKioskSettings,
     assignStaff,
     removeStaff,
   } = useKioskStore();
@@ -38,6 +42,12 @@ export default function AdminKiosksPage() {
   const [selectedKioskForAssign, setSelectedKioskForAssign] = useState<any>(null);
   const [selectedStaffUserId, setSelectedStaffUserId] = useState<string>('');
   const [selectedStaffRole, setSelectedStaffRole] = useState<'cashier' | 'owner'>('cashier');
+
+  // Image Edit Modal State (Admin)
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedKioskForImage, setSelectedKioskForImage] = useState<any>(null);
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [isSavingImage, setIsSavingImage] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,6 +66,7 @@ export default function AdminKiosksPage() {
   const [category, setCategory] = useState('مشروبات وسناكس');
   const [phone, setPhone] = useState('');
   const [openingHours, setOpeningHours] = useState('8:00 ص - 5:00 م');
+  const [newKioskImageUrl, setNewKioskImageUrl] = useState('');
 
   const handleOpenAddModal = () => {
     setKioskName('');
@@ -64,6 +75,7 @@ export default function AdminKiosksPage() {
     setCategory('مشروبات وسناكس');
     setPhone('');
     setOpeningHours('8:00 ص - 5:00 م');
+    setNewKioskImageUrl('');
     setIsAddModalOpen(true);
   };
 
@@ -80,6 +92,7 @@ export default function AdminKiosksPage() {
         category,
         openingHours: openingHours.trim() || '8:00 ص - 5:00 م',
         phone: phone.trim() || undefined,
+        imageUrl: newKioskImageUrl.trim() || undefined,
       });
 
       await fetchKiosksWithStaff();
@@ -90,6 +103,32 @@ export default function AdminKiosksPage() {
       alert(err.message || 'فشل إضافة الكشك');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenImageModal = (kiosk: any) => {
+    setSelectedKioskForImage(kiosk);
+    setEditImageUrl(kiosk.imageUrl || '');
+    setIsImageModalOpen(true);
+  };
+
+  const handleUpdateImageSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedKioskForImage) return;
+
+    try {
+      setIsSavingImage(true);
+      await updateKioskSettings(selectedKioskForImage.id, {
+        imageUrl: editImageUrl.trim() || null,
+      });
+      await fetchKiosksWithStaff();
+      setIsImageModalOpen(false);
+      setToastMessage(`تم تحديث صورة كشك "${selectedKioskForImage.name}" بنجاح!`);
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err: any) {
+      alert(err.message || 'فشل تحديث صورة الكشك');
+    } finally {
+      setIsSavingImage(false);
     }
   };
 
@@ -222,6 +261,25 @@ export default function AdminKiosksPage() {
                       <span className="font-mono">{kiosk.phone}</span>
                     </div>
                   )}
+
+                  {/* Kiosk Image Admin Row */}
+                  <div className="flex items-center justify-between pt-2 border-t border-line/60 mt-2">
+                    <div className="flex items-center gap-1.5 text-ink-soft">
+                      <ImageIcon className="w-3.5 h-3.5 text-accent" />
+                      <span>صورة الكشك:</span>
+                      <span className="font-semibold text-ink">
+                        {kiosk.imageUrl ? 'صورة مخصصة' : 'صورة ذكية افتراضية'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenImageModal(kiosk)}
+                      className="inline-flex items-center gap-1 text-[11px] font-body font-bold text-accent hover:underline bg-accent-soft/70 px-2.5 py-1 rounded-lg transition-colors"
+                    >
+                      <ImageIcon className="w-3 h-3" />
+                      <span>تغيير الصورة</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -373,6 +431,17 @@ export default function AdminKiosksPage() {
             dir="ltr"
           />
 
+          <div className="space-y-1.5 text-right">
+            <label className="block font-body text-xs font-medium text-ink-soft">
+              صورة غلاف الكشك (اختياري)
+            </label>
+            <ImageUploadDropzone
+              value={newKioskImageUrl}
+              onChange={(url) => setNewKioskImageUrl(url)}
+              onClear={() => setNewKioskImageUrl('')}
+            />
+          </div>
+
           <div className="flex items-center gap-3 pt-3 border-t border-line/60">
             <Button
               type="submit"
@@ -500,6 +569,43 @@ export default function AdminKiosksPage() {
               </Button>
             </div>
           )}
+        </form>
+      </Modal>
+
+      {/* 3. Edit Kiosk Image Modal (Admin) */}
+      <Modal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        title={`تغيير صورة كشك: ${selectedKioskForImage?.name || ''}`}
+        description="ارفع صورة جديدة من جهازك ليتم عرضها للطلاب في دليل الأكشاك."
+      >
+        <form onSubmit={handleUpdateImageSubmit} className="space-y-4 text-right">
+          <ImageUploadDropzone
+            value={editImageUrl}
+            onChange={(url) => setEditImageUrl(url)}
+            onClear={() => setEditImageUrl('')}
+          />
+
+          <div className="flex items-center gap-3 pt-3 border-t border-line/60">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              isLoading={isSavingImage}
+              className="flex-1"
+            >
+              حفظ الصورة
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="md"
+              onClick={() => setIsImageModalOpen(false)}
+              className="flex-1"
+            >
+              إلغاء
+            </Button>
+          </div>
         </form>
       </Modal>
     </div>

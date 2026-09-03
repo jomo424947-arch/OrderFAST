@@ -51,6 +51,23 @@ export async function authRoutes(app: FastifyInstance) {
     });
   });
 
+  // Request Password Reset Link
+  app.post('/forgot-password', async (request, reply) => {
+    const body = (request.body as { email?: string; redirectTo?: string }) || {};
+    if (!body.email) {
+      return reply.status(400).send({
+        success: false,
+        error: { message: 'البريد الإلكتروني مطلوب' },
+      });
+    }
+    const result = await authService.sendPasswordResetEmail(body.email, body.redirectTo);
+    return reply.status(200).send({
+      success: true,
+      message: 'تم إرسال رابط استعادة كلمة المرور بنجاح',
+      data: result,
+    });
+  });
+
   // Get Current Authenticated Profile
   app.get('/me', { preHandler: [authenticate] }, async (request, reply) => {
     const profile = await authService.getProfileById(request.user!.id);

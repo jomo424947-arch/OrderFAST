@@ -7,6 +7,7 @@ export interface IKioskService {
   searchKiosks(query: string, category?: string): Promise<Kiosk[]>;
   updateKioskStatus(kioskId: string, isOpen: boolean, isRushMode?: boolean): Promise<Kiosk>;
   updateEstimatedWaitTime(kioskId: string, mins: number): Promise<Kiosk>;
+  updateKioskSettings(kioskId: string, settings: any): Promise<Kiosk>;
   getKioskStats?(kioskId: string): Promise<any>;
 }
 
@@ -53,6 +54,13 @@ export class MockKioskService implements IKioskService {
     const index = this.kiosks.findIndex((k) => k.id === kioskId);
     if (index === -1) throw new Error("Kiosk not found");
     this.kiosks[index] = { ...this.kiosks[index], estimatedWaitMins: mins };
+    return this.kiosks[index];
+  }
+
+  async updateKioskSettings(kioskId: string, settings: any): Promise<Kiosk> {
+    const index = this.kiosks.findIndex((k) => k.id === kioskId);
+    if (index === -1) throw new Error("Kiosk not found");
+    this.kiosks[index] = { ...this.kiosks[index], ...settings };
     return this.kiosks[index];
   }
 }

@@ -111,28 +111,26 @@ export const Logo: React.FC<LogoProps> = ({
   }
 
   const content = (
-    <div className={`group inline-flex items-center gap-2.5 select-none ${className}`}>
-      <LogoSymbol size={variant === 'compact' ? 32 : 42} />
-      <div className="flex flex-col">
+    <div dir="ltr" className={`group inline-flex items-center gap-2.5 select-none ${className}`}>
+      <div className="flex flex-col text-left">
         <div className="flex items-baseline tracking-tight font-display font-bold leading-none">
           <span
-            style={{ color: textColor }}
-            className={variant === 'compact' ? 'text-xl' : 'text-2xl sm:text-3xl'}
-          >
-            Order
-          </span>
-          <span
-            className={`italic font-black text-primary ${
+            className={`font-black text-primary ${
               variant === 'compact' ? 'text-xl' : 'text-2xl sm:text-3xl'
             }`}
             style={{
-              fontStyle: 'italic',
               background: 'linear-gradient(135deg, #FFA41C 0%, #E8992A 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
           >
             FAST
+          </span>
+          <span
+            style={{ color: textColor }}
+            className={variant === 'compact' ? 'text-xl' : 'text-2xl sm:text-3xl'}
+          >
+            Order
           </span>
         </div>
         {showTagline && variant !== 'compact' && (
@@ -144,6 +142,7 @@ export const Logo: React.FC<LogoProps> = ({
           </span>
         )}
       </div>
+      <LogoSymbol size={variant === 'compact' ? 32 : 42} />
     </div>
   );
 

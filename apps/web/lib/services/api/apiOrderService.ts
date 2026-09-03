@@ -45,12 +45,13 @@ export class ApiOrderService implements IOrderService {
   }
 
   async getOrdersByKiosk(kioskId: string): Promise<Order[]> {
-    // Combine incoming + active orders for kiosk
-    const [incoming, active] = await Promise.all([
+    // Combine incoming + active + finished orders for kiosk
+    const [incoming, active, finished] = await Promise.all([
       this.getKioskIncomingOrders(kioskId),
       this.getKioskActiveOrders(kioskId),
+      this.getKioskFinishedOrders(kioskId),
     ]);
-    return [...incoming, ...active];
+    return [...incoming, ...active, ...finished];
   }
 
   async getKioskIncomingOrders(kioskId: string): Promise<Order[]> {
@@ -61,6 +62,15 @@ export class ApiOrderService implements IOrderService {
   async getKioskActiveOrders(kioskId: string): Promise<Order[]> {
     const rawList = await apiClient.get<ApiOrderRaw[]>(`/orders/kiosks/${kioskId}/active`);
     return Array.isArray(rawList) ? rawList.map(adaptOrderFromApi) : [];
+  }
+
+  async getKioskFinishedOrders(kioskId: string): Promise<Order[]> {
+    try {
+      const rawList = await apiClient.get<ApiOrderRaw[]>(`/orders/kiosks/${kioskId}/history`);
+      return Array.isArray(rawList) ? rawList.map(adaptOrderFromApi) : [];
+    } catch {
+      return [];
+    }
   }
 
   async cancelOrder(orderId: string, reason?: string): Promise<Order> {
@@ -103,6 +113,13 @@ export class ApiOrderService implements IOrderService {
 
   async markNoShow(orderId: string): Promise<Order> {
     const raw = await apiClient.post<ApiOrderRaw>(`/orders/${orderId}/no-show`);
+    return adaptOrderFromApi(raw);
+  }
+
+  async rateOrder(orderId: string, rating: number): Promise<Order> {
+    const raw = await apiClient.post<ApiOrderRaw>(`/orders/${orderId}/rate`, {
+      rating,
+    });
     return adaptOrderFromApi(raw);
   }
 
@@ -155,7 +172,15 @@ export class ApiOrderService implements IOrderService {
     todayOrdersCount: number;
     todaySalesPiasters: number;
     activeKitchenCount: number;
+    totalFeeRevenuePiasters?: number;
+    todayFeeRevenuePiasters?: number;
   }> {
     return apiClient.get('/orders/admin/stats');
+  }
+
+  async getAdminAnalytics(timeframe?: string): Promise<any> {
+    return apiClient.get('/orders/admin/analytics', {
+      params: timeframe ? { timeframe } : undefined,
+    });
   }
 }

@@ -31,6 +31,7 @@ export interface Kiosk {
   estimatedWaitMins: number;
   ordersAheadCount: number;
   rating: number;
+  ratingCount?: number;
   imageUrl?: string;
   acceptsOnlineOrders: boolean;
   isRushMode: boolean;
@@ -53,6 +54,10 @@ export interface MenuItem {
   name: string;
   description?: string;
   price: number; // in EGP
+  originalPrice?: number; // in EGP (السعر قبل الخصم)
+  offerTag?: string; // شارة مخصصة مثل "عرض خاص" أو "وفر 10 ج.م"
+  isCombo?: boolean;
+  comboItems?: { itemId: string; name: string; quantity: number }[];
   isAvailable: boolean;
   isUnderReview?: boolean; // For "قيد المراجعة" tag
   imageUrl?: string;
@@ -110,6 +115,8 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   reviewTimeRemainingSeconds?: number;
+  rating?: number | null;
+  ratedAt?: string | null;
 }
 
 export type NotificationType = 'order_status' | 'kiosk_notice' | 'system' | 'warning';
@@ -144,3 +151,55 @@ export interface Cashier extends User {
 export interface Admin extends User {
   permissions?: string[];
 }
+
+export interface AdminAnalyticsSummary {
+  totalOrdersCount: number;
+  completedOrdersCount: number;
+  totalKioskSalesPiasters: number;
+  totalFeeRevenuePiasters: number;
+  totalGrossVolumePiasters: number;
+  avgFeePiasters: number;
+  avgOrderTotalPiasters: number;
+  todayCompletedCount: number;
+  todaySalesPiasters: number;
+  todayFeeRevenuePiasters: number;
+  monthFeeRevenuePiasters: number;
+}
+
+export interface AdminKioskAnalytics {
+  kioskId: string;
+  kioskName: string;
+  kioskCategory: string;
+  kioskRating: number;
+  kioskRatingCount: number;
+  completedOrdersCount: number;
+  kioskSalesPiasters: number;
+  feeRevenuePiasters: number;
+  grossVolumePiasters: number;
+}
+
+export interface AdminPaymentAnalytics {
+  paymentMethod: string;
+  ordersCount: number;
+  kioskSalesPiasters: number;
+  feeRevenuePiasters: number;
+  grossVolumePiasters: number;
+}
+
+export interface AdminDailyAnalytics {
+  date: string;
+  completedOrders: number;
+  kioskSalesPiasters: number;
+  feeRevenuePiasters: number;
+  grossVolumePiasters: number;
+}
+
+export interface AdminAnalyticsResponse {
+  timeframe: 'all' | 'today' | 'week' | 'month';
+  summary: AdminAnalyticsSummary;
+  statusDistribution: Record<string, number>;
+  kioskBreakdown: AdminKioskAnalytics[];
+  paymentBreakdown: AdminPaymentAnalytics[];
+  dailyTimeline: AdminDailyAnalytics[];
+}
+

@@ -125,6 +125,21 @@ export async function orderRoutes(app: FastifyInstance) {
     }
   );
 
+  // 6.1 Staff: Get Finished / History Orders for Kiosk (COMPLETED, REJECTED, CANCELLED, NO_SHOW, EXPIRED)
+  app.get<{ Params: { kioskId: string } }>(
+    '/kiosks/:kioskId/history',
+    { preHandler: [authenticate, requireKioskStaff()] },
+    async (request, reply) => {
+      const data = await orderService.getKioskFinishedOrders(
+        request.params.kioskId
+      );
+      return reply.status(200).send({
+        success: true,
+        data,
+      });
+    }
+  );
+
   // 7. Staff: Accept Order
   app.post<{ Params: { id: string } }>(
     '/:id/accept',
@@ -214,6 +229,25 @@ export async function orderRoutes(app: FastifyInstance) {
     }
   );
 
+  // 11.1 Student: Rate Completed Order (Stars only: 1 to 5)
+  app.post<{ Params: { id: string }; Body: { rating: number } }>(
+    '/:id/rate',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const rating = Number(request.body?.rating);
+      const data = await orderService.rateOrder(
+        request.params.id,
+        rating,
+        request.user!
+      );
+      return reply.status(200).send({
+        success: true,
+        message: 'تم تسجيل تقييمك بنجاح. شكراً لك!',
+        data,
+      });
+    }
+  );
+
   // 12. Staff: Record No Show
   app.post<{ Params: { id: string } }>(
     '/:id/no-show',
@@ -291,6 +325,20 @@ export async function orderRoutes(app: FastifyInstance) {
     { preHandler: [authenticate, requireSystemRole(['admin'])] },
     async (_request, reply) => {
       const data = await orderService.getAdminCampusStats();
+      return reply.status(200).send({
+        success: true,
+        data,
+      });
+    }
+  );
+
+  // 17. Admin: Comprehensive Platform & Financial Analytics
+  app.get<{ Querystring: { timeframe?: 'all' | 'today' | 'week' | 'month' } }>(
+    '/admin/analytics',
+    { preHandler: [authenticate, requireSystemRole(['admin'])] },
+    async (request, reply) => {
+      const timeframe = request.query?.timeframe || 'all';
+      const data = await orderService.getAdminAnalytics(timeframe);
       return reply.status(200).send({
         success: true,
         data,

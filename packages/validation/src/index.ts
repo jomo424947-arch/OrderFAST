@@ -64,6 +64,7 @@ export const updateKioskSettingsSchema = z.object({
   acceptanceTimeoutSecs: z.number().int().min(60).max(1800).optional(),
   phone: z.string().optional(),
   acceptsOnlineOrders: z.boolean().optional(),
+  imageUrl: z.string().optional().nullable(),
 });
 
 export const createMenuCategorySchema = z.object({
@@ -72,12 +73,22 @@ export const createMenuCategorySchema = z.object({
   displayOrder: z.number().int().default(0),
 });
 
+export const comboItemSchema = z.object({
+  itemId: z.string(),
+  name: z.string(),
+  quantity: z.number().int().min(1),
+});
+
 export const createMenuItemSchema = z.object({
   kioskId: uuidSchema,
   categoryId: uuidSchema,
   name: z.string().min(2, { message: 'اسم الصنف مطلوب' }),
   description: z.string().optional(),
   price: egpPiastersSchema, // in piasters (e.g. 2000 for 20 EGP)
+  originalPrice: egpPiastersSchema.nullable().optional(),
+  offerTag: z.string().max(50).nullable().optional(),
+  isCombo: z.boolean().optional(),
+  comboItems: z.array(comboItemSchema).nullable().optional(),
   preparationTimeMins: z.number().int().min(1).max(60).default(5),
   imageUrl: z.string().url().optional(),
 });
@@ -87,6 +98,10 @@ export const updateMenuItemSchema = z.object({
   categoryId: uuidSchema.optional(),
   description: z.string().optional(),
   price: egpPiastersSchema.optional(),
+  originalPrice: egpPiastersSchema.nullable().optional(),
+  offerTag: z.string().max(50).nullable().optional(),
+  isCombo: z.boolean().optional(),
+  comboItems: z.array(comboItemSchema).nullable().optional(),
   preparationTimeMins: z.number().int().min(1).max(60).optional(),
   imageUrl: z.string().url().optional(),
   isAvailable: z.boolean().optional(),

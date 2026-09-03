@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   AlertCircle,
   TrendingUp,
+  Coins,
 } from 'lucide-react';
 import { formatEGP } from '@/lib/formatters';
 
@@ -52,6 +53,50 @@ export default function AdminDashboardPage() {
         <p className="font-body text-xs text-ink-soft mt-0.5">
           متابعة حية لجميع الأكشاك، الطلبات، الكاشيرات، وحسابات الطلاب
         </p>
+      </div>
+
+      {/* Financial Service Fee Revenue Callout Banner */}
+      <div className="bg-gradient-to-l from-amber-500/10 via-accent/5 to-surface border border-amber-500/30 rounded-3xl p-5 sm:p-6 shadow-warm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md flex-shrink-0">
+            <Coins className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-display font-bold text-lg text-ink">
+                أرباح المنصة من رسوم الخدمة
+              </h3>
+              <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                حساب دقيق من الطلبات
+              </span>
+            </div>
+            <p className="font-body text-xs text-ink-soft mt-0.5">
+              مجموع رسوم الخدمة المحصلة من كل أوردر مكتمل في الحرم الجامعي
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+          <div>
+            <span className="font-body text-[11px] text-ink-soft block">أرباح اليوم</span>
+            <span className="font-mono text-lg font-black text-accent font-mono-nums">
+              {formatEGP((adminStats?.todayFeeRevenuePiasters ?? 0) / 100)}
+            </span>
+          </div>
+          <div className="h-8 w-px bg-line hidden sm:block" />
+          <div>
+            <span className="font-body text-[11px] text-ink-soft block">إجمالي أرباح الرسوم</span>
+            <span className="font-mono text-xl font-black text-amber-700 font-mono-nums">
+              {formatEGP((adminStats?.totalFeeRevenuePiasters ?? 0) / 100)}
+            </span>
+          </div>
+          <Link href="/admin/analytics">
+            <Button variant="primary" size="sm" className="font-bold text-xs shadow-sm">
+              <span>صفحة الإحصائيات الكاملة</span>
+              <ArrowLeft className="w-4 h-4 mr-1" />
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards Grid */}

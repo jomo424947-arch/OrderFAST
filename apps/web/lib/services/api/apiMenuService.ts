@@ -16,11 +16,16 @@ export interface ApiMenuResponse {
 
 export class ApiMenuService implements IMenuService {
   async getMenu(kioskId: string, isStaff = false): Promise<{ categories: MenuCategory[]; items: MenuItem[] }> {
-    const endpoint = isStaff
-      ? `/kiosks/${kioskId}/menu/staff`
-      : `/kiosks/${kioskId}/menu`;
-
-    const data = await apiClient.get<ApiMenuResponse>(endpoint, { skipAuth: !isStaff });
+    let data: ApiMenuResponse | null = null;
+    if (isStaff) {
+      try {
+        data = await apiClient.get<ApiMenuResponse>(`/kiosks/${kioskId}/menu/staff`, { skipAuth: false });
+      } catch {
+        data = await apiClient.get<ApiMenuResponse>(`/kiosks/${kioskId}/menu`, { skipAuth: true });
+      }
+    } else {
+      data = await apiClient.get<ApiMenuResponse>(`/kiosks/${kioskId}/menu`, { skipAuth: true });
+    }
 
     const categories = Array.isArray(data?.categories)
       ? data.categories.map(adaptMenuCategoryFromApi)
@@ -66,6 +71,10 @@ export class ApiMenuService implements IMenuService {
         name: itemData.name,
         description: itemData.description,
         price: egpToPiasters(itemData.price),
+        originalPrice: itemData.originalPrice ? egpToPiasters(itemData.originalPrice) : null,
+        offerTag: itemData.offerTag || null,
+        isCombo: !!itemData.isCombo,
+        comboItems: itemData.comboItems || null,
         preparationTimeMins: itemData.preparationTimeMins || 5,
         imageUrl: itemData.imageUrl,
       }
@@ -80,6 +89,10 @@ export class ApiMenuService implements IMenuService {
         name: item.name,
         description: item.description,
         price: egpToPiasters(item.price),
+        originalPrice: item.originalPrice ? egpToPiasters(item.originalPrice) : null,
+        offerTag: item.offerTag || null,
+        isCombo: item.isCombo !== undefined ? item.isCombo : undefined,
+        comboItems: item.comboItems || undefined,
         categoryId: item.categoryId,
         preparationTimeMins: item.preparationTimeMins,
         imageUrl: item.imageUrl,

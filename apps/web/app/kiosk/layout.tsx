@@ -8,7 +8,7 @@ import { CashierHeader } from '@/components/layout/CashierHeader';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useKioskStore } from '@/stores/useKioskStore';
-import { LayoutDashboard, Inbox, Clock, UtensilsCrossed, Settings, Store } from 'lucide-react';
+import { LayoutDashboard, Inbox, Clock, UtensilsCrossed, Settings, Store, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 
@@ -22,7 +22,7 @@ export default function CashierLayout({
 }) {
   const pathname = usePathname();
   const { cashier, logout } = useAuthStore();
-  const { decrementTimers, getKioskIncomingOrders, getKioskActiveOrders, startKioskPolling } = useOrderStore();
+  const { decrementTimers, getKioskIncomingOrders, getKioskActiveOrders, getKioskFinishedOrders, startKioskPolling } = useOrderStore();
   const { activeKioskId, fetchKiosks } = useKioskStore();
   const { startNotificationsPolling } = useNotificationStore();
 
@@ -90,11 +90,13 @@ export default function CashierLayout({
 
   const incomingCount = getKioskIncomingOrders(activeKioskId).length;
   const activeCount = getKioskActiveOrders(activeKioskId).length;
+  const finishedCount = getKioskFinishedOrders(activeKioskId).length;
 
   const mobileTabs = [
     { href: '/kiosk', label: 'الرئيسية', icon: LayoutDashboard },
     { href: '/kiosk/incoming', label: 'الواردة', icon: Inbox, count: incomingCount },
     { href: '/kiosk/active', label: 'النشطة', icon: Clock, count: activeCount },
+    { href: '/kiosk/history', label: 'أوردرات اليوم', icon: Archive, count: finishedCount },
     { href: '/kiosk/menu', label: 'المنيو', icon: UtensilsCrossed },
     { href: '/kiosk/settings', label: 'الإعدادات', icon: Settings },
   ];

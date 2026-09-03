@@ -68,33 +68,33 @@ export default function StudentProfilePage() {
           href="/student/orders"
           className="flex items-center justify-between p-3.5 hover:bg-canvas rounded-2xl transition-colors select-none"
         >
-          <div className="flex items-center gap-3 text-sm font-body font-medium text-ink">
-            <Clock className="w-4 h-4 text-ink-soft" />
+          <div className="flex items-center gap-3 text-sm font-body font-semibold text-ink">
+            <Clock className="w-4 h-4 stroke-[2.2] text-ink/75" />
             <span>طلباتي السابقة</span>
           </div>
-          <ChevronLeft className="w-4 h-4 text-ink-soft" />
+          <ChevronLeft className="w-4 h-4 stroke-[2.2] text-ink/60" />
         </Link>
 
         <Link
           href="/student/notifications"
           className="flex items-center justify-between p-3.5 hover:bg-canvas rounded-2xl transition-colors select-none"
         >
-          <div className="flex items-center gap-3 text-sm font-body font-medium text-ink">
-            <Bell className="w-4 h-4 text-ink-soft" />
+          <div className="flex items-center gap-3 text-sm font-body font-semibold text-ink">
+            <Bell className="w-4 h-4 stroke-[2.2] text-ink/75" />
             <span>الإشعارات</span>
           </div>
-          <ChevronLeft className="w-4 h-4 text-ink-soft" />
+          <ChevronLeft className="w-4 h-4 stroke-[2.2] text-ink/60" />
         </Link>
 
         <Link
           href="/student/settings"
           className="flex items-center justify-between p-3.5 hover:bg-canvas rounded-2xl transition-colors select-none"
         >
-          <div className="flex items-center gap-3 text-sm font-body font-medium text-ink">
-            <Settings className="w-4 h-4 text-ink-soft" />
+          <div className="flex items-center gap-3 text-sm font-body font-semibold text-ink">
+            <Settings className="w-4 h-4 stroke-[2.2] text-ink/75" />
             <span>إعدادات الحساب</span>
           </div>
-          <ChevronLeft className="w-4 h-4 text-ink-soft" />
+          <ChevronLeft className="w-4 h-4 stroke-[2.2] text-ink/60" />
         </Link>
 
         <button
@@ -103,7 +103,7 @@ export default function StudentProfilePage() {
           className="w-full flex items-center justify-between p-3.5 hover:bg-danger-soft/60 rounded-2xl transition-colors text-right select-none"
         >
           <div className="flex items-center gap-3 text-sm font-body font-bold text-danger">
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4 stroke-[2.2]" />
             <span>تسجيل الخروج</span>
           </div>
         </button>

@@ -56,21 +56,35 @@ export const StudentBottomNav: React.FC = () => {
               className={cn(
                 'relative flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all select-none',
                 item.isActive
-                  ? 'text-primary-ink font-bold'
-                  : 'text-ink-soft hover:text-ink font-medium'
+                  ? 'text-primary font-bold'
+                  : 'text-ink/75 hover:text-ink font-semibold'
               )}
             >
               <div className="relative">
-                <Icon className={cn('w-5 h-5', item.isActive && 'stroke-[2.5] text-primary-ink')} />
+                <Icon
+                  className={cn(
+                    'w-5 h-5 transition-transform duration-150',
+                    item.isActive
+                      ? 'stroke-[2.5] text-primary scale-105'
+                      : 'stroke-[2.2] text-ink/75'
+                  )}
+                />
                 {item.badge !== undefined && (
                   <span className="absolute -top-1.5 -left-2 bg-primary text-primary-ink text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full min-w-[18px] text-center border border-white">
                     {item.badge}
                   </span>
                 )}
               </div>
-              <span className="text-[11px] font-body mt-0.5">{item.label}</span>
+              <span
+                className={cn(
+                  'text-[11px] font-body mt-0.5',
+                  item.isActive ? 'font-bold text-primary' : 'font-semibold text-ink/80'
+                )}
+              >
+                {item.label}
+              </span>
               {item.isActive && (
-                <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary mt-0.5" />
               )}
             </Link>
           );

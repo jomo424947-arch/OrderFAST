@@ -15,13 +15,14 @@ import {
   Settings,
   Bell,
   LogOut,
+  Archive,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const CashierSidebar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { getKioskIncomingOrders, getKioskActiveOrders } = useOrderStore();
+  const { getKioskIncomingOrders, getKioskActiveOrders, getKioskFinishedOrders } = useOrderStore();
   const { activeKioskId, kiosks, fetchKiosks } = useKioskStore();
   const { cashier, logout } = useAuthStore();
 
@@ -40,6 +41,7 @@ export const CashierSidebar: React.FC = () => {
     };
   const incomingCount = getKioskIncomingOrders(activeKioskId).length;
   const activeCount = getKioskActiveOrders(activeKioskId).length;
+  const finishedCount = getKioskFinishedOrders(activeKioskId).length;
 
   const navLinks = [
     {
@@ -62,6 +64,13 @@ export const CashierSidebar: React.FC = () => {
       icon: Clock,
       count: activeCount,
       isActive: pathname === '/kiosk/active',
+    },
+    {
+      href: '/kiosk/history',
+      label: 'أوردرات اليوم',
+      icon: Archive,
+      count: finishedCount,
+      isActive: pathname === '/kiosk/history',
     },
     {
       href: '/kiosk/menu',

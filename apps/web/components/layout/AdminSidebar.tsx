@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   Users,
   LogOut,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -48,6 +49,12 @@ export const AdminSidebar: React.FC = () => {
       label: 'حسابات الطلاب',
       icon: Users,
       isActive: pathname.startsWith('/admin/students'),
+    },
+    {
+      href: '/admin/analytics',
+      label: 'الإحصائيات والأرباح',
+      icon: TrendingUp,
+      isActive: pathname.startsWith('/admin/analytics'),
     },
   ];
 

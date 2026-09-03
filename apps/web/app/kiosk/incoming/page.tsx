@@ -7,16 +7,17 @@ import { CashierIncomingOrderCard } from '@/components/orders/CashierIncomingOrd
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Inbox, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Inbox, CheckCircle2, XCircle, AlertCircle, CheckCheck } from 'lucide-react';
 
 export default function CashierIncomingOrdersPage() {
   const { activeKioskId, kiosks } = useKioskStore();
-  const { getKioskIncomingOrders, fetchKioskOrders, acceptOrder, rejectOrder } = useOrderStore();
+  const { getKioskIncomingOrders, fetchKioskOrders, acceptOrder, rejectOrder, batchAcceptOrders } = useOrderStore();
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [targetOrderId, setTargetOrderId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('نفاد بعض المكونات المطلوبة');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [isAcceptingAll, setIsAcceptingAll] = useState(false);
 
   useEffect(() => {
     if (activeKioskId) {
@@ -37,6 +38,23 @@ export default function CashierIncomingOrdersPage() {
     acceptOrder(orderId);
     setActionFeedback('تم قبول الأوردر ونقله لقائمة التحضير!');
     setTimeout(() => setActionFeedback(null), 3000);
+  };
+
+  const handleAcceptAll = async () => {
+    if (!incomingOrders.length) return;
+    const kioskId = activeKioskId || currentKiosk.id;
+    try {
+      setIsAcceptingAll(true);
+      const orderIds = incomingOrders.map((o) => o.id);
+      await batchAcceptOrders(kioskId, orderIds);
+      setActionFeedback(`تم بنجاح قبول جميع الأوردرات (${orderIds.length}) ونقلها للمطبخ! 🎉`);
+      setTimeout(() => setActionFeedback(null), 3500);
+    } catch (err: any) {
+      setActionFeedback(err.message || 'حدث خطأ أثناء قبول الأوردرات');
+      setTimeout(() => setActionFeedback(null), 3500);
+    } finally {
+      setIsAcceptingAll(false);
+    }
   };
 
   const handleOpenReject = (orderId: string) => {
@@ -73,11 +91,27 @@ export default function CashierIncomingOrdersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="font-body text-xs text-ink-soft">العدد في الانتظار:</span>
-          <span className="font-mono text-sm font-bold bg-primary-soft text-primary-ink px-2.5 py-0.5 rounded-full font-mono-nums">
-            {incomingOrders.length}
-          </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-xl border border-line">
+            <span className="font-body text-xs text-ink-soft">العدد في الانتظار:</span>
+            <span className="font-mono text-sm font-bold bg-primary-soft text-primary-ink px-2 py-0.5 rounded-full font-mono-nums">
+              {incomingOrders.length}
+            </span>
+          </div>
+
+          {incomingOrders.length > 0 && (
+            <Button
+              variant="accent"
+              size="sm"
+              onClick={handleAcceptAll}
+              isLoading={isAcceptingAll}
+              disabled={isAcceptingAll}
+              className="font-bold text-xs py-2 px-4 shadow-sm hover:scale-[1.02] transition-transform"
+            >
+              <CheckCheck className="w-4 h-4 ml-1.5" />
+              <span>قبول كل الأوردرات ({incomingOrders.length})</span>
+            </Button>
+          )}
         </div>
       </div>
 

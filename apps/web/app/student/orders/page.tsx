@@ -9,7 +9,7 @@ import { Tabs } from '@/components/ui/Tabs';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatEGP, formatArabicTime } from '@/lib/formatters';
-import { Clock, Store, ChevronLeft, ArrowLeft, ShoppingBag, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Clock, Store, ChevronLeft, ArrowLeft, ShoppingBag, CheckCircle2, AlertCircle, Star } from 'lucide-react';
 
 export default function StudentOrdersPage() {
   const router = useRouter();
@@ -98,7 +98,22 @@ export default function StudentOrdersPage() {
                       · {order.kioskName}
                     </span>
                   </div>
-                  <StatusPill status={order.status} />
+                  <div className="flex items-center gap-1.5">
+                    {order.status === 'COMPLETED' && (
+                      order.rating ? (
+                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                          <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-500" />
+                          <span>{order.rating}★</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[10px] font-bold animate-pulse">
+                          <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                          <span>قيّم الطلب</span>
+                        </span>
+                      )
+                    )}
+                    <StatusPill status={order.status} />
+                  </div>
                 </div>
 
                 <p className="font-body text-xs text-ink-soft leading-relaxed line-clamp-1 mb-2">
@@ -117,7 +132,7 @@ export default function StudentOrdersPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 text-accent font-bold group-hover:-translate-x-1 transition-transform">
-                    <span>عرض التذكرة</span>
+                    <span>عرض الفاتورة</span>
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </div>
                 </div>

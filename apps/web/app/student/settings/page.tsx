@@ -86,7 +86,7 @@ export default function StudentSettingsPage() {
           />
 
           <Input
-            label="البريد الجامعي (غير قابل للتعديل)"
+            label="البريد الإلكتروني (غير قابل للتعديل)"
             value={student?.email || ''}
             disabled
             className="opacity-70 bg-canvas cursor-not-allowed"

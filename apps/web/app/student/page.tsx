@@ -169,7 +169,7 @@ export default function StudentDashboardPage() {
           <Card className="p-4 sm:p-5 h-full">
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-2xl bg-accent-soft text-accent flex items-center justify-center">
-                <Wallet className="w-5 h-5" />
+                <Wallet className="w-5 h-5 stroke-[2.2]" />
               </div>
               <span className="text-[11px] font-body font-bold text-accent bg-accent-soft px-2 py-0.5 rounded-md">
                 مكتمل
@@ -178,7 +178,7 @@ export default function StudentDashboardPage() {
             <p className="font-display font-black text-xl sm:text-2xl text-ink font-mono-nums">
               {formatEGP(totalSpent)}
             </p>
-            <p className="font-body text-xs text-ink-soft mt-1">
+            <p className="font-body text-xs text-ink-soft font-medium mt-1">
               إجمالي المصروفات ({completedOrders.length} طلب مستلم)
             </p>
           </Card>
@@ -188,16 +188,16 @@ export default function StudentDashboardPage() {
             <Card hoverable className="p-4 sm:p-5 h-full">
               <div className="flex items-center justify-between mb-3">
                 <div className="w-10 h-10 rounded-2xl bg-primary-soft text-primary-ink flex items-center justify-center">
-                  <ShoppingBag className="w-5 h-5" />
+                  <ShoppingBag className="w-5 h-5 stroke-[2.2]" />
                 </div>
-                <span className="text-[11px] font-body font-bold text-ink-soft bg-canvas px-2 py-0.5 rounded-md border border-line">
+                <span className="text-[11px] font-body font-bold text-ink bg-canvas px-2 py-0.5 rounded-md border border-line">
                   السجل
                 </span>
               </div>
               <p className="font-display font-black text-xl sm:text-2xl text-ink font-mono-nums">
                 {totalOrdersCount}
               </p>
-              <p className="font-body text-xs text-ink-soft mt-1">
+              <p className="font-body text-xs text-ink-soft font-medium mt-1">
                 إجمالي كل الطلبات
               </p>
             </Card>
@@ -208,7 +208,7 @@ export default function StudentDashboardPage() {
             <Card hoverable className="p-4 sm:p-5 h-full">
               <div className="flex items-center justify-between mb-3">
                 <div className="w-10 h-10 rounded-2xl bg-primary-soft text-primary-ink flex items-center justify-center">
-                  <Clock className="w-5 h-5" />
+                  <Clock className="w-5 h-5 stroke-[2.2]" />
                 </div>
                 <span className="text-[11px] font-body font-bold text-primary-ink bg-primary px-2 py-0.5 rounded-md">
                   نشط
@@ -217,7 +217,7 @@ export default function StudentDashboardPage() {
               <p className="font-display font-black text-xl sm:text-2xl text-ink font-mono-nums">
                 {activeOrder ? 1 : 0}
               </p>
-              <p className="font-body text-xs text-ink-soft mt-1">
+              <p className="font-body text-xs text-ink-soft font-medium mt-1">
                 الطلبات النشطة حالياً
               </p>
             </Card>
@@ -295,7 +295,7 @@ export default function StudentDashboardPage() {
                         {formatEGP(order.total)}
                       </span>
                       <div className="flex items-center gap-1 text-accent font-bold group-hover:-translate-x-1 transition-transform">
-                        <span>تفاصيل التذكرة</span>
+                        <span>تفاصيل الفاتورة</span>
                         <ChevronLeft className="w-3.5 h-3.5" />
                       </div>
                     </div>

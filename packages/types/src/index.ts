@@ -79,6 +79,7 @@ export interface Kiosk {
   openingHours: string;
   phone?: string | null;
   rating: number;
+  ratingCount?: number;
   defaultPrepTimeMins: number;
   acceptanceTimeoutSecs: number;
   imageUrl?: string | null;
@@ -184,6 +185,8 @@ export interface Order {
   cancelledAt?: string | null;
   expiredAt?: string | null;
   noShowAt?: string | null;
+  rating?: number | null;
+  ratedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 
@@ -257,3 +260,55 @@ export interface KioskDashboardStats {
   unavailableItemsCount: number;
   totalMenuItemsCount: number;
 }
+
+export interface AdminAnalyticsSummary {
+  totalOrdersCount: number;
+  completedOrdersCount: number;
+  totalKioskSalesPiasters: number;
+  totalFeeRevenuePiasters: number;
+  totalGrossVolumePiasters: number;
+  avgFeePiasters: number;
+  avgOrderTotalPiasters: number;
+  todayCompletedCount: number;
+  todaySalesPiasters: number;
+  todayFeeRevenuePiasters: number;
+  monthFeeRevenuePiasters: number;
+}
+
+export interface AdminKioskAnalytics {
+  kioskId: string;
+  kioskName: string;
+  kioskCategory: string;
+  kioskRating: number;
+  kioskRatingCount: number;
+  completedOrdersCount: number;
+  kioskSalesPiasters: number;
+  feeRevenuePiasters: number;
+  grossVolumePiasters: number;
+}
+
+export interface AdminPaymentAnalytics {
+  paymentMethod: string;
+  ordersCount: number;
+  kioskSalesPiasters: number;
+  feeRevenuePiasters: number;
+  grossVolumePiasters: number;
+}
+
+export interface AdminDailyAnalytics {
+  date: string;
+  completedOrders: number;
+  kioskSalesPiasters: number;
+  feeRevenuePiasters: number;
+  grossVolumePiasters: number;
+}
+
+export interface AdminAnalyticsResponse {
+  timeframe: 'all' | 'today' | 'week' | 'month';
+  summary: AdminAnalyticsSummary;
+  statusDistribution: Record<string, number>;
+  kioskBreakdown: AdminKioskAnalytics[];
+  paymentBreakdown: AdminPaymentAnalytics[];
+  dailyTimeline: AdminDailyAnalytics[];
+}
+

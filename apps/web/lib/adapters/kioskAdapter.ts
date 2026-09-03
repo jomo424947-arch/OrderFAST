@@ -11,6 +11,7 @@ export interface ApiKioskRaw {
   openingHours?: string | null;
   phone?: string | null;
   rating?: string | number | null;
+  ratingCount?: number | null;
   imageUrl?: string | null;
   acceptsOnlineOrders?: boolean;
   isRushMode?: boolean;
@@ -27,6 +28,10 @@ export interface ApiMenuItemRaw {
   name: string;
   description?: string | null;
   price: number; // in Piasters
+  originalPrice?: number | null; // in Piasters
+  offerTag?: string | null;
+  isCombo?: boolean;
+  comboItems?: { itemId: string; name: string; quantity: number }[] | null;
   isAvailable: boolean;
   isUnderReview?: boolean;
   preparationTimeMins?: number;
@@ -45,7 +50,7 @@ export interface ApiMenuCategoryRaw {
 }
 
 export function adaptKioskFromApi(raw: ApiKioskRaw): Kiosk {
-  const ratingNum = typeof raw.rating === 'string' ? parseFloat(raw.rating) : (raw.rating ?? 5.0);
+  const ratingNum = typeof raw.rating === 'string' ? parseFloat(raw.rating) : (raw.rating ?? 0.0);
   
   return {
     id: raw.id,
@@ -57,7 +62,8 @@ export function adaptKioskFromApi(raw: ApiKioskRaw): Kiosk {
     openingHours: raw.openingHours || '8:00 ص - 4:00 م',
     estimatedWaitMins: raw.estimatedWaitMins ?? (raw.defaultPrepTimeMins || 15),
     ordersAheadCount: raw.ordersAheadCount ?? 0,
-    rating: isNaN(ratingNum) ? 5.0 : ratingNum,
+    rating: isNaN(ratingNum) ? 0.0 : ratingNum,
+    ratingCount: raw.ratingCount ?? 0,
     imageUrl: raw.imageUrl || undefined,
     acceptsOnlineOrders: raw.acceptsOnlineOrders !== undefined ? raw.acceptsOnlineOrders : true,
     isRushMode: !!raw.isRushMode,
@@ -75,6 +81,10 @@ export function adaptMenuItemFromApi(raw: ApiMenuItemRaw): MenuItem & { kioskNam
     name: raw.name,
     description: raw.description || undefined,
     price: piastersToEgp(raw.price),
+    originalPrice: raw.originalPrice ? piastersToEgp(raw.originalPrice) : undefined,
+    offerTag: raw.offerTag || undefined,
+    isCombo: !!raw.isCombo,
+    comboItems: Array.isArray(raw.comboItems) ? raw.comboItems : undefined,
     isAvailable: !!raw.isAvailable,
     isUnderReview: raw.isUnderReview !== undefined ? !!raw.isUnderReview : false,
     preparationTimeMins: raw.preparationTimeMins || 5,

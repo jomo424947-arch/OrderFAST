@@ -12,21 +12,21 @@ module.exports = {
       colors: {
         canvas: "#F0EEE8",
         surface: "#FAF8F3",
-        line: "#D8CFBE",
+        line: "#CEC2AE",
         ink: {
-          DEFAULT: "#241F1A",
-          soft: "#6B6255",
+          DEFAULT: "#181512",
+          soft: "#3E372E",
         },
         primary: {
           DEFAULT: "#E8992A",
-          ink: "#5C3B08",
+          ink: "#3B2202",
           soft: "#FBEBD1",
           hover: "#D68619",
         },
         accent: {
-          DEFAULT: "#2F5233",
-          soft: "#E3ECE1",
-          hover: "#254228",
+          DEFAULT: "#234727",
+          soft: "#E1ECE0",
+          hover: "#1B381F",
         },
         danger: {
           DEFAULT: "#B23A2E",

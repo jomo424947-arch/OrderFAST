@@ -27,6 +27,7 @@ import {
   ChefHat,
   PackageCheck,
   CheckCheck,
+  Archive,
 } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -37,17 +38,20 @@ export default function CashierDashboardPage() {
   const {
     getKioskIncomingOrders,
     getKioskActiveOrders,
+    getKioskFinishedOrders,
     orders,
     fetchKioskOrders,
     acceptOrder,
     rejectOrder,
     setOrderStatus,
+    batchAcceptOrders,
   } = useOrderStore();
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [targetOrderId, setTargetOrderId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('نفاد بعض المكونات المطلوبة');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [isAcceptingAll, setIsAcceptingAll] = useState(false);
 
   const isUnassigned = cashier && !cashier.kioskId && (!activeKioskId || !kiosks.some((k) => k.id === activeKioskId));
 
@@ -76,6 +80,7 @@ export default function CashierDashboardPage() {
 
   const incomingOrders = getKioskIncomingOrders(activeKioskId);
   const activeOrders = getKioskActiveOrders(activeKioskId);
+  const finishedOrders = getKioskFinishedOrders(activeKioskId);
 
   // Kiosk menu items
   const kioskMenuItems = useMemo(() => {
@@ -114,6 +119,23 @@ export default function CashierDashboardPage() {
     acceptOrder(orderId);
     setActionFeedback('تم قبول الأوردر ونقله لقائمة التحضير!');
     setTimeout(() => setActionFeedback(null), 3000);
+  };
+
+  const handleAcceptAll = async () => {
+    if (!incomingOrders.length) return;
+    const kioskId = activeKioskId || currentKiosk.id;
+    try {
+      setIsAcceptingAll(true);
+      const orderIds = incomingOrders.map((o) => o.id);
+      await batchAcceptOrders(kioskId, orderIds);
+      setActionFeedback(`تم بنجاح قبول جميع الأوردرات (${orderIds.length}) ونقلها لقائمة التحضير! 🎉`);
+      setTimeout(() => setActionFeedback(null), 3500);
+    } catch (err: any) {
+      setActionFeedback(err.message || 'حدث خطأ أثناء قبول الأوردرات');
+      setTimeout(() => setActionFeedback(null), 3500);
+    } finally {
+      setIsAcceptingAll(false);
+    }
   };
 
   const handleOpenReject = (orderId: string) => {
@@ -313,20 +335,35 @@ export default function CashierDashboardPage() {
 
       {/* Urgent Incoming Orders Preview Section */}
       <div className="bg-surface border border-line/80 rounded-3xl p-5 sm:p-6 shadow-warm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-line/60">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-line/60">
           <div className="flex items-center gap-2">
             <Inbox className="w-5 h-5 text-danger" />
             <h3 className="font-display font-bold text-base text-ink">
               معاينة الأوردرات الواردة العاجلة
             </h3>
           </div>
-          <Link
-            href="/kiosk/incoming"
-            className="text-xs font-body font-bold text-accent hover:underline flex items-center gap-1"
-          >
-            <span>عرض كل الواردة ({incomingOrders.length})</span>
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex items-center gap-3">
+            {incomingOrders.length > 0 && (
+              <Button
+                variant="accent"
+                size="sm"
+                onClick={handleAcceptAll}
+                isLoading={isAcceptingAll}
+                disabled={isAcceptingAll}
+                className="font-bold text-xs py-1 px-3.5 h-8 shadow-sm hover:scale-[1.02] transition-transform"
+              >
+                <CheckCheck className="w-3.5 h-3.5 ml-1.5" />
+                <span>قبول كل الواردة ({incomingOrders.length})</span>
+              </Button>
+            )}
+            <Link
+              href="/kiosk/incoming"
+              className="text-xs font-body font-bold text-accent hover:underline flex items-center gap-1"
+            >
+              <span>عرض كل الواردة ({incomingOrders.length})</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         {incomingOrders.length > 0 ? (
@@ -370,8 +407,10 @@ export default function CashierDashboardPage() {
 
       {/* Two Columns: Active Orders Quick Glimpse + Quick Shortcuts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Active Orders Summary (2 cols on lg) */}
-        <div className="lg:col-span-2 bg-surface border border-line/80 rounded-3xl p-5 sm:p-6 shadow-warm space-y-4">
+        {/* Left Column (2 cols on lg) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Active Orders Summary */}
+          <div className="bg-surface border border-line/80 rounded-3xl p-5 sm:p-6 shadow-warm space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-line/60">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-primary-ink" />
@@ -445,36 +484,110 @@ export default function CashierDashboardPage() {
           )}
         </div>
 
-        {/* Quick Shortcuts (1 col on lg) */}
-        <div className="space-y-4">
-          <div className="bg-surface border border-line/80 rounded-3xl p-5 sm:p-6 shadow-warm space-y-3">
-            <h3 className="font-display font-bold text-base text-ink pb-2 border-b border-line/60 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-primary-ink" />
-              <span>إجراءات سريعة</span>
+        {/* Today's Finished Orders Preview */}
+        <div className="bg-surface border border-line/80 rounded-3xl p-5 sm:p-6 shadow-warm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-line/60">
+            <h3 className="font-display font-bold text-base text-ink flex items-center gap-2">
+              <Archive className="w-4 h-4 text-ink-soft" />
+              <span>أوردرات اليوم</span>
+              <span className="text-xs font-mono font-bold bg-canvas px-2 py-0.5 rounded-full border border-line">
+                {finishedOrders.length}
+              </span>
             </h3>
 
-            <div className="space-y-2.5">
-              <Link
-                href="/kiosk/incoming"
-                className="flex items-center justify-between p-3 bg-canvas hover:bg-primary-soft/30 border border-line rounded-2xl transition-all group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Inbox className="w-4 h-4 text-danger" />
-                  <span className="font-body font-bold text-xs text-ink">استقبال الأوردرات</span>
-                </div>
-                <ChevronLeft className="w-4 h-4 text-ink-soft group-hover:-translate-x-1 transition-transform" />
-              </Link>
+            <Link
+              href="/kiosk/history"
+              className="text-xs font-body font-bold text-accent hover:text-primary transition-colors flex items-center gap-1 group"
+            >
+              <span>عرض أوردرات اليوم ({finishedOrders.length})</span>
+              <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+            </Link>
+          </div>
 
-              <Link
-                href="/kiosk/active"
-                className="flex items-center justify-between p-3 bg-canvas hover:bg-primary-soft/30 border border-line rounded-2xl transition-all group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Clock className="w-4 h-4 text-primary-ink" />
-                  <span className="font-body font-bold text-xs text-ink">شاشة التحضير والتسليم</span>
+          {finishedOrders.length > 0 ? (
+            <div className="divide-y divide-line/60">
+              {finishedOrders.slice(0, 4).map((order) => (
+                <div
+                  key={order.id}
+                  className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-3 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-mono font-bold text-sm text-ink font-mono-nums">
+                        {order.orderNumber}
+                      </span>
+                      <span className="font-body text-xs text-ink font-medium">
+                        · {order.studentName || 'طالب'}
+                      </span>
+                    </div>
+                    <p className="font-body text-[11px] text-ink-soft truncate max-w-xs">
+                      {order.items.map((it) => `${it.name} × ${it.quantity}`).join('، ')}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 flex-shrink-0">
+                    <span className="font-mono font-bold text-ink font-mono-nums">
+                      {formatEGP(order.total)}
+                    </span>
+                    <StatusPill status={order.status} />
+                  </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs font-body text-ink-soft text-center py-4">
+              لا توجد أوردرات منتهية اليوم حتى الآن. الطلبات المكتملة أو الملغية ستظهر هنا.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Shortcuts (1 col on lg) */}
+      <div className="space-y-4">
+        <div className="bg-surface border border-line/80 rounded-3xl p-5 sm:p-6 shadow-warm space-y-3">
+          <h3 className="font-display font-bold text-base text-ink pb-2 border-b border-line/60 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary-ink" />
+            <span>إجراءات سريعة</span>
+          </h3>
+
+          <div className="space-y-2.5">
+            <Link
+              href="/kiosk/incoming"
+              className="flex items-center justify-between p-3 bg-canvas hover:bg-primary-soft/30 border border-line rounded-2xl transition-all group"
+            >
+              <div className="flex items-center gap-2.5">
+                <Inbox className="w-4 h-4 text-danger" />
+                <span className="font-body font-bold text-xs text-ink">استقبال الأوردرات</span>
+              </div>
+              <ChevronLeft className="w-4 h-4 text-ink-soft group-hover:-translate-x-1 transition-transform" />
+            </Link>
+
+            <Link
+              href="/kiosk/active"
+              className="flex items-center justify-between p-3 bg-canvas hover:bg-primary-soft/30 border border-line rounded-2xl transition-all group"
+            >
+              <div className="flex items-center gap-2.5">
+                <Clock className="w-4 h-4 text-primary-ink" />
+                <span className="font-body font-bold text-xs text-ink">شاشة التحضير والتسليم</span>
+              </div>
+              <ChevronLeft className="w-4 h-4 text-ink-soft group-hover:-translate-x-1 transition-transform" />
+            </Link>
+
+            <Link
+              href="/kiosk/history"
+              className="flex items-center justify-between p-3 bg-canvas hover:bg-primary-soft/30 border border-line rounded-2xl transition-all group"
+            >
+              <div className="flex items-center gap-2.5">
+                <Archive className="w-4 h-4 text-accent" />
+                <span className="font-body font-bold text-xs text-ink">أوردرات اليوم</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold bg-surface px-2 py-0.5 rounded-full border border-line">
+                  {finishedOrders.length}
+                </span>
                 <ChevronLeft className="w-4 h-4 text-ink-soft group-hover:-translate-x-1 transition-transform" />
-              </Link>
+              </div>
+            </Link>
 
               <Link
                 href="/kiosk/menu"

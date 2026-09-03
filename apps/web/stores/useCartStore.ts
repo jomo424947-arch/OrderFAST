@@ -10,6 +10,7 @@ interface CartState {
   clearCart: () => void;
   getSubtotal: () => number;
   getTotalItems: () => number;
+  getItemQuantity: (itemId: string) => number;
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -69,4 +70,11 @@ export const useCartStore = create<CartState>((set, get) => ({
     const { items } = get();
     return items.reduce((sum, ci) => sum + ci.quantity, 0);
   },
+
+  getItemQuantity: (itemId: string) => {
+    const { items } = get();
+    const found = items.find((ci) => ci.menuItem.id === itemId);
+    return found ? found.quantity : 0;
+  },
 }));
+

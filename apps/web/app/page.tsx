@@ -96,7 +96,7 @@ export default function LandingPage() {
               ٢. اعرف دورك ووقتك
             </h3>
             <p className="font-body text-xs sm:text-sm text-ink-soft leading-relaxed">
-              تابع عدد الأوردرات اللي قدامك ووقت الانتظار المتوقع لحظة بلحظة برقم أوردر واضح وتذكرة مخصصة.
+              تابع عدد الأوردرات اللي قدامك ووقت الانتظار المتوقع لحظة بلحظة برقم أوردر واضح وفاتورة مخصصة.
             </p>
           </div>
 
@@ -121,7 +121,7 @@ export default function LandingPage() {
             <span className="bg-accent-soft text-accent px-2 py-0.5 rounded-md font-semibold">مفتوح</span>
           </div>
           <div className="text-center my-4">
-            <span className="text-[11px] font-body text-ink-soft block mb-1">تذكرة تجريبية</span>
+            <span className="text-[11px] font-body text-ink-soft block mb-1">فاتورة تجريبية</span>
             <h3 className="font-mono text-4xl sm:text-5xl font-black text-ink">#0247</h3>
           </div>
           <div className="ticket-divider my-4" />
