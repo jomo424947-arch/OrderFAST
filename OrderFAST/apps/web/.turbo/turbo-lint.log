@@ -1,0 +1,15 @@
+
+> @orderfast/web@0.1.0 lint
+> next lint
+
+? How would you like to configure ESLint? https://nextjs.org/docs/basic-features/eslint
+[?25l❯  Strict (recommended)
+   Base
+ ⚠ If you set up ESLint yourself, we recommend adding the Next.js ESLint plugin. See https://nextjs.org/docs/basic-features/eslint#migrating-existing-config
+npm error Lifecycle script `lint` failed with error:
+npm error code 1
+npm error path C:\Users\moham\OneDrive\Desktop\OrderFAST\OrderFAST\apps\web
+npm error workspace @orderfast/web@0.1.0
+npm error location C:\Users\moham\OneDrive\Desktop\OrderFAST\OrderFAST\apps\web
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c next lint
