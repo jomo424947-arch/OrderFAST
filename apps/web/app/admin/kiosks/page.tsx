@@ -556,7 +556,7 @@ export default function AdminKiosksPage() {
                 لا يوجد موظفون مسجلون في النظام حالياً
               </p>
               <p className="font-body text-[11px] text-ink-soft leading-relaxed">
-                اطلب من الكاشير إنشاء حسابه أولاً من صفحة التسجيل <code>/auth/register</code> باختيار تبويب "كاشير"، وسيظهر في هذه القائمة فوراً لتعيينه.
+                اطلب من الكاشير إنشاء حسابه أولاً من صفحة التسجيل <code>/auth/register</code> باختيار تبويب &quot;كاشير&quot;، وسيظهر في هذه القائمة فوراً لتعيينه.
               </p>
               <Button
                 type="button"

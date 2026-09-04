@@ -6,6 +6,60 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Verify Authentication Token
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, error: 'غير مصرح بالوصول - يجب تسجيل الدخول أولاً' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '').trim();
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'رمز الدخول غير صالح' },
+        { status: 401 }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Verify token with Supabase Auth
+    const { data: userData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return NextResponse.json(
+        { success: false, error: 'جلسة تسجيل الدخول منتهية أو غير صالحة' },
+        { status: 401 }
+      );
+    }
+
+    // Verify User Role (Must be staff or admin to upload kiosk/menu images)
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('system_role, is_active')
+      .eq('id', userData.user.id)
+      .single();
+
+    if (profileError || !profile || !profile.is_active) {
+      return NextResponse.json(
+        { success: false, error: 'الحساب غير موجود أو تم تعطيله' },
+        { status: 403 }
+      );
+    }
+
+    if (profile.system_role !== 'admin' && profile.system_role !== 'staff') {
+      return NextResponse.json(
+        { success: false, error: 'ليس لديك صلاحية رفع الصور (تتطلب حساب موظف أو مشرف)' },
+        { status: 403 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 
@@ -35,13 +89,6 @@ export async function POST(req: NextRequest) {
     const rawExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const ext = ['png', 'jpg', 'jpeg', 'webp'].includes(rawExt) ? rawExt : 'jpg';
     const fileName = `kiosk_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from('kiosk-images')

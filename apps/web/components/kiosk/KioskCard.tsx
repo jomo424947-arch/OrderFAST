@@ -85,7 +85,7 @@ function getKioskIcon(kiosk: Kiosk) {
   return <Store className="w-6 h-6 text-accent" />;
 }
 
-export const KioskCard: React.FC<KioskCardProps> = React.memo(({ kiosk }) => {
+export const KioskCard = React.memo(function KioskCard({ kiosk }: KioskCardProps) {
   const [imageError, setImageError] = useState(false);
   const coverUrl = getKioskCover(kiosk);
   const ratingValue =
@@ -235,4 +235,6 @@ export const KioskCard: React.FC<KioskCardProps> = React.memo(({ kiosk }) => {
     </Link>
   );
 });
+
+KioskCard.displayName = 'KioskCard';
 

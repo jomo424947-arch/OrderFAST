@@ -228,7 +228,7 @@ export class KioskService {
   }
 
   /**
-   * Admin: Get all kiosks with assigned cashiers and menu item counts
+   * Admin: Get all kiosks with assigned cashiers and menu item counts (Batch optimized - 3 queries total)
    */
   async getAdminKiosksWithStaff() {
     const kioskList = await db
@@ -236,38 +236,71 @@ export class KioskService {
       .from(kiosks)
       .orderBy(desc(kiosks.createdAt));
 
-    const populated = await Promise.all(
-      kioskList.map(async (k) => {
-        // Staff assigned
-        const staffMembers = await db
-          .select({
-            id: kioskStaff.id,
-            userId: kioskStaff.userId,
-            name: profiles.fullName,
-            phone: profiles.phone,
-            role: kioskStaff.role,
-            isActive: kioskStaff.isActive,
-          })
-          .from(kioskStaff)
-          .innerJoin(profiles, eq(kioskStaff.userId, profiles.id))
-          .where(and(eq(kioskStaff.kioskId, k.id), eq(kioskStaff.isActive, true)));
+    if (kioskList.length === 0) {
+      return [];
+    }
 
-        // Items count
-        const [itemsCount] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(menuItems)
-          .where(and(eq(menuItems.kioskId, k.id), eq(menuItems.isDeleted, false)));
+    const kioskIds = kioskList.map((k) => k.id);
 
-        return {
-          ...k,
-          rating: Number(k.rating),
-          staff: staffMembers,
-          menuItemsCount: itemsCount?.count || 0,
-        };
+    // 1. Fetch all active staff for all kiosks in one query
+    const allStaff = await db
+      .select({
+        id: kioskStaff.id,
+        kioskId: kioskStaff.kioskId,
+        userId: kioskStaff.userId,
+        name: profiles.fullName,
+        phone: profiles.phone,
+        role: kioskStaff.role,
+        isActive: kioskStaff.isActive,
       })
-    );
+      .from(kioskStaff)
+      .innerJoin(profiles, eq(kioskStaff.userId, profiles.id))
+      .where(and(inArray(kioskStaff.kioskId, kioskIds), eq(kioskStaff.isActive, true)));
 
-    return populated;
+    // 2. Fetch menu items count for all kiosks in one query
+    const allItemCounts = await db
+      .select({
+        kioskId: menuItems.kioskId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(menuItems)
+      .where(and(inArray(menuItems.kioskId, kioskIds), eq(menuItems.isDeleted, false)))
+      .groupBy(menuItems.kioskId);
+
+    // 3. In-memory mappings
+    const staffByKiosk = new Map<string, Array<{
+      id: string;
+      userId: string;
+      name: string;
+      phone: string | null;
+      role: any;
+      isActive: boolean;
+    }>>();
+
+    for (const member of allStaff) {
+      const list = staffByKiosk.get(member.kioskId) || [];
+      list.push({
+        id: member.id,
+        userId: member.userId,
+        name: member.name,
+        phone: member.phone,
+        role: member.role,
+        isActive: member.isActive,
+      });
+      staffByKiosk.set(member.kioskId, list);
+    }
+
+    const countsByKiosk = new Map<string, number>();
+    for (const row of allItemCounts) {
+      countsByKiosk.set(row.kioskId, row.count);
+    }
+
+    return kioskList.map((k) => ({
+      ...k,
+      rating: Number(k.rating),
+      staff: staffByKiosk.get(k.id) || [],
+      menuItemsCount: countsByKiosk.get(k.id) || 0,
+    }));
   }
 
   /**

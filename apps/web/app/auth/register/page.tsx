@@ -112,7 +112,7 @@ export default function RegisterPage() {
             <ol className="list-decimal list-inside space-y-1 text-[11px] pr-1">
               <li>افتح بريدك الإلكتروني الآن.</li>
               <li>تفقد صندوق الوارد (أو مجلد الرسائل غير المرغوب فيها Spam/Junk).</li>
-              <li>اضغط على رابط "تأكيد الحساب" لتفعيله فوراً.</li>
+              <li>اضغط على رابط &quot;تأكيد الحساب&quot; لتفعيله فوراً.</li>
             </ol>
           </div>
 

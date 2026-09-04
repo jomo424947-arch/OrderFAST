@@ -1062,7 +1062,12 @@ export class OrderService {
 
       for (const orderId of input.orderIds) {
         const [existing] = await tx
-          .select({ status: orders.status, expiresAt: orders.expiresAt })
+          .select({
+            status: orders.status,
+            expiresAt: orders.expiresAt,
+            studentId: orders.studentId,
+            orderNumber: orders.orderNumber,
+          })
           .from(orders)
           .where(and(eq(orders.id, orderId), eq(orders.kioskId, kioskId)))
           .limit(1);
@@ -1107,6 +1112,16 @@ export class OrderService {
             actorId: requestingUser.id,
             actorType: 'staff',
             metadata: { batchAction: true },
+          });
+
+          // Notify Student
+          await tx.insert(notifications).values({
+            id: generateId(),
+            userId: existing.studentId,
+            orderId,
+            type: 'order_status',
+            title: 'تم قبول طلبك! ☕',
+            body: `تم قبول طلبك رقم ${existing.orderNumber}. طلبك قيد التحضير الآن.`,
           });
         }
       }
@@ -1161,6 +1176,16 @@ export class OrderService {
             actorId: requestingUser.id,
             actorType: 'staff',
             metadata: { batchAction: true },
+          });
+
+          // Notify Student
+          await tx.insert(notifications).values({
+            id: generateId(),
+            userId: updated.studentId,
+            orderId,
+            type: 'order_status',
+            title: 'طلبك جاهز للاستلام! 🎉',
+            body: `طلبك رقم ${updated.orderNumber} جاهز للاستلام الآن من الكشك.`,
           });
         } else {
           failed.push({ id: orderId, reason: 'الطلب ليس قيد التحضير', code: 'INVALID_STATE' });
@@ -1303,18 +1328,18 @@ export class OrderService {
    * Calculates real platform revenue from orders.fees permanently stored in database
    */
   async getAdminAnalytics(timeframe: 'all' | 'today' | 'week' | 'month' = 'all') {
-    // 1. Base date filter condition for the requested timeframe
-    let dateFilterSql = "1=1";
-    if (timeframe === 'today') {
-      dateFilterSql = "o.order_date = CURRENT_DATE";
-    } else if (timeframe === 'week') {
-      dateFilterSql = "o.order_date >= CURRENT_DATE - INTERVAL '7 days'";
-    } else if (timeframe === 'month') {
-      dateFilterSql = "o.order_date >= CURRENT_DATE - INTERVAL '30 days'";
+    const validTimeframe: 'all' | 'today' | 'week' | 'month' =
+      ['all', 'today', 'week', 'month'].includes(timeframe) ? timeframe : 'all';
+
+    const cacheKey = `admin:analytics:${validTimeframe}`;
+    const cached = await cacheService.get<any>(cacheKey);
+    if (cached) {
+      return cached;
     }
 
-    // 2. Summary stats across completed orders
-    const summaryRes = await pool.query(`
+    // 1. Parameterized queries to prevent SQL injection and enable parallel execution
+    const summaryQuery = pool.query(
+      `
       SELECT
         COUNT(*)::int AS "completedOrdersCount",
         COALESCE(SUM(subtotal), 0)::int AS "totalKioskSalesPiasters",
@@ -1323,12 +1348,18 @@ export class OrderService {
         COALESCE(ROUND(AVG(fees)), 0)::int AS "avgFeePiasters",
         COALESCE(ROUND(AVG(total)), 0)::int AS "avgOrderTotalPiasters"
       FROM orders o
-      WHERE o.status = 'COMPLETED' AND ${dateFilterSql};
-    `);
-    const summaryRow = summaryRes.rows[0] || {};
+      WHERE o.status = 'COMPLETED'
+        AND (
+          $1::text = 'all'
+          OR ($1::text = 'today' AND o.order_date = CURRENT_DATE)
+          OR ($1::text = 'week' AND o.order_date >= CURRENT_DATE - INTERVAL '7 days')
+          OR ($1::text = 'month' AND o.order_date >= CURRENT_DATE - INTERVAL '30 days')
+        );
+      `,
+      [validTimeframe]
+    );
 
-    // Today completed fee stats
-    const todayRes = await pool.query(`
+    const todayQuery = pool.query(`
       SELECT
         COUNT(*)::int AS "todayCompletedCount",
         COALESCE(SUM(subtotal), 0)::int AS "todaySalesPiasters",
@@ -1336,36 +1367,33 @@ export class OrderService {
       FROM orders
       WHERE status = 'COMPLETED' AND order_date = CURRENT_DATE;
     `);
-    const todayRow = todayRes.rows[0] || {};
 
-    // Month completed fee stats
-    const monthRes = await pool.query(`
+    const monthQuery = pool.query(`
       SELECT
         COALESCE(SUM(fees), 0)::int AS "monthFeeRevenuePiasters"
       FROM orders
       WHERE status = 'COMPLETED' AND order_date >= date_trunc('month', CURRENT_DATE);
     `);
-    const monthRow = monthRes.rows[0] || {};
 
-    // Total orders across all statuses in the timeframe
-    const statusCountsRes = await pool.query(`
+    const statusCountsQuery = pool.query(
+      `
       SELECT
         status,
         COUNT(*)::int AS count
       FROM orders o
-      WHERE ${dateFilterSql}
+      WHERE (
+        $1::text = 'all'
+        OR ($1::text = 'today' AND o.order_date = CURRENT_DATE)
+        OR ($1::text = 'week' AND o.order_date >= CURRENT_DATE - INTERVAL '7 days')
+        OR ($1::text = 'month' AND o.order_date >= CURRENT_DATE - INTERVAL '30 days')
+      )
       GROUP BY status;
-    `);
+      `,
+      [validTimeframe]
+    );
 
-    const statusDistribution: Record<string, number> = {};
-    let totalOrdersCount = 0;
-    for (const r of statusCountsRes.rows) {
-      statusDistribution[r.status] = r.count;
-      totalOrdersCount += r.count;
-    }
-
-    // 3. Breakdown per Kiosk (food sales, fees earned for admin, completed orders count)
-    const kioskBreakdownRes = await pool.query(`
+    const kioskBreakdownQuery = pool.query(
+      `
       SELECT
         k.id AS "kioskId",
         k.name AS "kioskName",
@@ -1377,13 +1405,20 @@ export class OrderService {
         COALESCE(SUM(o.fees), 0)::int AS "feeRevenuePiasters",
         COALESCE(SUM(o.total), 0)::int AS "grossVolumePiasters"
       FROM kiosks k
-      LEFT JOIN orders o ON o.kiosk_id = k.id AND o.status = 'COMPLETED' AND ${dateFilterSql}
+      LEFT JOIN orders o ON o.kiosk_id = k.id AND o.status = 'COMPLETED' AND (
+        $1::text = 'all'
+        OR ($1::text = 'today' AND o.order_date = CURRENT_DATE)
+        OR ($1::text = 'week' AND o.order_date >= CURRENT_DATE - INTERVAL '7 days')
+        OR ($1::text = 'month' AND o.order_date >= CURRENT_DATE - INTERVAL '30 days')
+      )
       GROUP BY k.id, k.name, k.category, k.rating, k.rating_count
       ORDER BY "feeRevenuePiasters" DESC, "kioskSalesPiasters" DESC;
-    `);
+      `,
+      [validTimeframe]
+    );
 
-    // 4. Breakdown per Payment Method (Cash vs Digital Wallet)
-    const paymentBreakdownRes = await pool.query(`
+    const paymentBreakdownQuery = pool.query(
+      `
       SELECT
         COALESCE(payment_method, 'cash') AS "paymentMethod",
         COUNT(*)::int AS "ordersCount",
@@ -1391,13 +1426,19 @@ export class OrderService {
         COALESCE(SUM(fees), 0)::int AS "feeRevenuePiasters",
         COALESCE(SUM(total), 0)::int AS "grossVolumePiasters"
       FROM orders o
-      WHERE o.status = 'COMPLETED' AND ${dateFilterSql}
+      WHERE o.status = 'COMPLETED' AND (
+        $1::text = 'all'
+        OR ($1::text = 'today' AND o.order_date = CURRENT_DATE)
+        OR ($1::text = 'week' AND o.order_date >= CURRENT_DATE - INTERVAL '7 days')
+        OR ($1::text = 'month' AND o.order_date >= CURRENT_DATE - INTERVAL '30 days')
+      )
       GROUP BY payment_method
       ORDER BY "ordersCount" DESC;
-    `);
+      `,
+      [validTimeframe]
+    );
 
-    // 5. Daily Timeline (last 30 days)
-    const dailyTimelineRes = await pool.query(`
+    const dailyTimelineQuery = pool.query(`
       SELECT
         to_char(order_date, 'YYYY-MM-DD') AS "date",
         COUNT(*)::int AS "completedOrders",
@@ -1411,8 +1452,38 @@ export class OrderService {
       ORDER BY order_date ASC;
     `);
 
-    return {
-      timeframe,
+    // Execute all analytical queries concurrently
+    const [
+      summaryRes,
+      todayRes,
+      monthRes,
+      statusCountsRes,
+      kioskBreakdownRes,
+      paymentBreakdownRes,
+      dailyTimelineRes,
+    ] = await Promise.all([
+      summaryQuery,
+      todayQuery,
+      monthQuery,
+      statusCountsQuery,
+      kioskBreakdownQuery,
+      paymentBreakdownQuery,
+      dailyTimelineQuery,
+    ]);
+
+    const summaryRow = summaryRes.rows[0] || {};
+    const todayRow = todayRes.rows[0] || {};
+    const monthRow = monthRes.rows[0] || {};
+
+    const statusDistribution: Record<string, number> = {};
+    let totalOrdersCount = 0;
+    for (const r of statusCountsRes.rows) {
+      statusDistribution[r.status] = r.count;
+      totalOrdersCount += r.count;
+    }
+
+    const result = {
+      timeframe: validTimeframe,
       summary: {
         totalOrdersCount,
         completedOrdersCount: summaryRow.completedOrdersCount || 0,
@@ -1434,6 +1505,11 @@ export class OrderService {
       paymentBreakdown: paymentBreakdownRes.rows,
       dailyTimeline: dailyTimelineRes.rows,
     };
+
+    // Cache the aggregated analytics for 60 seconds
+    await cacheService.set(cacheKey, result, 60);
+
+    return result;
   }
 }
 

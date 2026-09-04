@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
 import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
@@ -20,6 +21,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     logger: false,
     genReqId: () => generateId(),
     disableRequestLogging: true,
+    bodyLimit: 1048576, // 1MB maximum body payload
+    connectionTimeout: 30000, // 30s connection timeout
   });
 
   // Custom clean, colorized single-line HTTP logger
@@ -44,7 +47,12 @@ export async function buildApp(): Promise<FastifyInstance> {
     );
   });
 
-  // 1. Register Core Plugins
+  // 1. Register Core Security & Utility Plugins
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  });
+
   await app.register(cors, {
     origin: env.CORS_ORIGIN,
     credentials: true,
