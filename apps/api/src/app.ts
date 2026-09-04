@@ -54,7 +54,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(cors, {
-    origin: env.CORS_ORIGIN,
+    origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN,
     credentials: true,
   });
 
