@@ -3,7 +3,7 @@ import { Order, OrderStatus, CartItem, Kiosk, AdminAnalyticsResponse } from '@/t
 import { orderService } from '@/lib/services/orderService';
 import { ApiOrderService } from '@/lib/services/api/apiOrderService';
 import { isValidUUID } from '@/lib/utils';
-import { playNewOrderChime } from '@/lib/utils/sound';
+import { playNewOrderChime, playOrderPlacedSuccessSound } from '@/lib/utils/sound';
 import { useKioskStore } from './useKioskStore';
 
 interface OrderState {
@@ -280,6 +280,8 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         orders: [newOrder, ...state.orders.filter((o) => o.id !== newOrder.id)],
         isLoading: false,
       }));
+
+      playOrderPlacedSuccessSound();
 
       return newOrder;
     } catch (err: any) {

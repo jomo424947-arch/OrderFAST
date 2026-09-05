@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1024px;
+    height: 1024px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .icon-box {
+    width: 1024px;
+    height: 1024px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* 66% safe area for Android Adaptive Icons (676px inside 1024px) */
+  svg {
+    width: 660px;
+    height: 660px;
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35));
+  }
+</style>
+</head>
+<body>
+  <div class="icon-box">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="clocheGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#FFAE34" />
+          <stop offset="100%" stop-color="#D97A08" />
+        </linearGradient>
+      </defs>
+
+      <!-- Speed motion lines on left -->
+      <rect x="6" y="26" width="22" height="5" rx="2.5" fill="#E8992A" />
+      <rect x="2" y="44" width="26" height="6.5" rx="3.25" fill="#E8992A" />
+      <rect x="8" y="62" width="20" height="5" rx="2.5" fill="#E8992A" />
+
+      <!-- Top Cloche (Food Dome) -->
+      <circle cx="70" cy="12" r="4.5" fill="#E8992A" />
+      <path d="M50 25 C50 14, 90 14, 90 25 Z" fill="url(#clocheGrad)" />
+      <rect x="47" y="25" width="46" height="5" rx="2.5" fill="#FFFFFF" />
+
+      <!-- Alarm Clock Body -->
+      <circle cx="62" cy="58" r="30" fill="#FFFFFF" stroke="#241F1A" stroke-width="6.5" />
+
+      <!-- Clock inner face -->
+      <circle cx="62" cy="58" r="22" fill="#241F1A" />
+
+      <!-- Clock hands pointing at 10:10/motion -->
+      <line x1="62" y1="58" x2="62" y2="42" stroke="#E8992A" stroke-width="4.5" stroke-linecap="round" />
+      <line x1="62" y1="58" x2="48" y2="50" stroke="#E8992A" stroke-width="4.5" stroke-linecap="round" />
+      <circle cx="62" cy="58" r="4" fill="#FFFFFF" />
+
+      <!-- Speed splash droplet top right -->
+      <circle cx="86" cy="18" r="2.5" fill="#E8992A" />
+      <path d="M92 14 C92 12, 95 10, 96 8 C97 10, 98 12, 98 14 C98 15.6, 95.3 17, 92 14 Z" fill="#E8992A" />
+    </svg>
+  </div>
+</body>
+</html>

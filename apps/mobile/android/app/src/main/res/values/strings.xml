@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FastOrder</string>
+    <string name="title_activity_main">FastOrder</string>
+    <string name="package_name">com.fastorder.app</string>
+    <string name="custom_url_scheme">com.fastorder.app</string>
+</resources>

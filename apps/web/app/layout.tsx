@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import '@/styles/globals.css';
+import { IntroAnimation } from '@/components/branding/IntroAnimation';
 
 export const metadata: Metadata = {
   title: 'FastOrder — ORDER • WAIT • ENJOY',
@@ -24,6 +25,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-canvas text-ink antialiased flex flex-col font-body selection:bg-primary-soft selection:text-primary-ink">
+        <IntroAnimation />
         {children}
       </body>
     </html>

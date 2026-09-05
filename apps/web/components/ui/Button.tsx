@@ -1,6 +1,7 @@
 import React, { ButtonHTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+import { playButtonTapSound } from '@/lib/utils/sound';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'accent';
@@ -51,6 +52,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || isLoading}
         className={cn(baseStyles, variants[variant], sizes[size], className)}
         {...props}
+        onClick={(e) => {
+          playButtonTapSound();
+          props.onClick?.(e);
+        }}
       >
         {isLoading && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />}
         {children}

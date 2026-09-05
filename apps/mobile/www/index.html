@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>FastOrder</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #161920;
+      color: #FFFBF5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .ambient-glow {
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      background: rgba(255, 164, 28, 0.12);
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      animation: pulseGlow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseGlow {
+      from { transform: scale(0.9); opacity: 0.7; }
+      to { transform: scale(1.15); opacity: 1; }
+    }
+
+    .stage {
+      position: relative;
+      width: 100%;
+      max-width: 360px;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 10;
+    }
+
+    /* PHASE 1: RINGING BELL */
+    .phase-ring {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: bellRing 0.7s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+    }
+
+    .ring-waves {
+      position: absolute;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+      pointer-events: none;
+    }
+
+    .wave {
+      width: 12px;
+      height: 28px;
+      border: 2.5px solid #FFA41C;
+      border-radius: 50%;
+      animation: wavePing 0.6s ease-out infinite;
+      opacity: 0.8;
+    }
+    .wave.left { border-right: none; }
+    .wave.right { border-left: none; }
+
+    @keyframes wavePing {
+      0% { transform: scale(0.8); opacity: 0.3; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1.7); opacity: 0; }
+    }
+
+    @keyframes bellRing {
+      0% { transform: rotate(0deg) scale(0.95); }
+      15% { transform: rotate(-14deg) scale(1.05); }
+      30% { transform: rotate(14deg) scale(1.05); }
+      45% { transform: rotate(-10deg) scale(1.02); }
+      60% { transform: rotate(10deg) scale(1.02); }
+      75% { transform: rotate(-4deg) scale(1); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+
+    /* PHASE 2: SPRINTING DASH */
+    .phase-dash {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      animation: sprintDash 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .speed-lines {
+      position: absolute;
+      right: 100%;
+      margin-right: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .speed-line {
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(to left, #FFA41C, transparent);
+    }
+
+    @keyframes sprintDash {
+      0% { transform: translateX(-140px) scale(0.85) skewX(-15deg); opacity: 0; }
+      25% { opacity: 1; }
+      50% { transform: translateX(0px) scale(1.1) skewX(-20deg); }
+      75% { transform: translateX(70px) scale(1.05) skewX(-12deg); opacity: 1; }
+      100% { transform: translateX(160px) scale(0.9) skewX(-6deg); opacity: 0.8; }
+    }
+
+    /* PHASE 3: BRAND REVEAL */
+    .phase-reveal {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: brandPop 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .logo-title {
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-top: 12px;
+      line-height: 1;
+    }
+
+    .logo-title .fast {
+      background: linear-gradient(135deg, #FFA41C 0%, #FF6B00 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 2px 14px rgba(255, 164, 28, 0.4));
+    }
+
+    .tagline {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: rgba(255, 251, 245, 0.7);
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .badge-slogan {
+      margin-top: 14px;
+      padding: 6px 16px;
+      background: rgba(255, 164, 28, 0.15);
+      border: 1px solid rgba(255, 164, 28, 0.3);
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #FFA41C;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      background: #FFA41C;
+      border-radius: 50%;
+      animation: pulseGlow 0.8s infinite alternate;
+    }
+
+    @keyframes brandPop {
+      0% { transform: scale(0.7) translateY(20px); opacity: 0; filter: blur(10px); }
+      60% { transform: scale(1.05) translateY(-4px); opacity: 1; filter: blur(0px); }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <div class="stage">
+    <!-- PHASE 1: RINGING BELL -->
+    <div id="phaseRing" class="phase-ring">
+      <div class="ring-waves">
+        <div class="wave left"></div>
+        <div class="wave right"></div>
+      </div>
+      <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="bellGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFAE34" />
+            <stop offset="50%" stopColor="#FFA41C" />
+            <stop offset="100%" stopColor="#D97A08" />
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="18" r="7" fill="#FFA41C" />
+        <rect x="47" y="24" width="6" height="6" rx="2" fill="#FFA41C" />
+        <path d="M20 54 C20 30, 80 30, 80 54 Z" fill="url(#bellGrad)" />
+        <rect x="14" y="54" width="72" height="8" rx="4" fill="#FFFBF5" />
+        <circle cx="50" cy="65" r="4.5" fill="#FFA41C" />
+      </svg>
+      <span style="color:#FFA41C; font-size: 11px; font-weight: bold; margin-top: 12px; letter-spacing: 2px;">
+        🔔 Ringing...
+      </span>
+    </div>
+
+    <!-- PHASE 2: SPRINTING BELL -->
+    <div id="phaseDash" class="phase-dash hidden">
+      <div class="speed-lines">
+        <div class="speed-line" style="width: 70px;"></div>
+        <div class="speed-line" style="width: 110px; height: 6px; background: linear-gradient(to left, #FF6B00, transparent);"></div>
+        <div class="speed-line" style="width: 50px;"></div>
+      </div>
+      <svg width="110" height="110" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="dashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFAE34" />
+            <stop offset="100%" stopColor="#FF6B00" />
+          </linearGradient>
+        </defs>
+        <rect x="2" y="32" width="22" height="4.5" rx="2.2" fill="#FFA41C" />
+        <rect x="6" y="48" width="18" height="4" rx="2" fill="#FFA41C" />
+        <circle cx="50" cy="18" r="7" fill="#FFA41C" />
+        <rect x="47" y="24" width="6" height="6" rx="2" fill="#FFA41C" />
+        <path d="M20 54 C20 30, 80 30, 80 54 Z" fill="url(#dashGrad)" />
+        <rect x="14" y="54" width="72" height="8" rx="4" fill="#FFFBF5" />
+        <circle cx="34" cy="67" r="5.5" fill="#FFA41C" />
+        <circle cx="66" cy="67" r="5.5" fill="#FFA41C" />
+      </svg>
+    </div>
+
+    <!-- PHASE 3: BRAND REVEAL -->
+    <div id="phaseReveal" class="phase-reveal hidden">
+      <svg width="84" height="84" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <linearGradient id="clocheGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFAE34" />
+            <stop offset="100%" stopColor="#D97A08" />
+          </linearGradient>
+        </defs>
+        <rect x="6" y="26" width="22" height="5" rx="2.5" fill="#FFA41C" />
+        <rect x="2" y="44" width="26" height="6.5" rx="3.25" fill="#FFA41C" />
+        <rect x="8" y="62" width="20" height="5" rx="2.5" fill="#FFA41C" />
+        <circle cx="70" cy="12" r="4.5" fill="#FFA41C" />
+        <path d="M50 25 C50 14, 90 14, 90 25 Z" fill="url(#clocheGrad)" />
+        <rect x="47" y="25" width="46" height="5" rx="2.5" fill="#FFFFFF" />
+        <circle cx="62" cy="58" r="30" fill="#FFFFFF" stroke="#241F1A" strokeWidth="6.5" />
+        <circle cx="62" cy="58" r="22" fill="#241F1A" />
+        <line x1="62" y1="58" x2="62" y2="42" stroke="#FFA41C" strokeWidth="4" strokeLinecap="round" />
+        <line x1="62" y1="58" x2="48" y2="50" stroke="#FFA41C" strokeWidth="4" strokeLinecap="round" />
+        <circle cx="62" cy="58" r="3.5" fill="#FFFFFF" />
+      </svg>
+      <div class="logo-title">
+        <span class="fast">FAST</span><span>Order</span>
+      </div>
+      <span class="tagline">ORDER • WAIT • ENJOY</span>
+      <div class="badge-slogan">
+        <span class="dot"></span>
+        <span>أسرع طلب في حرم جامعتك ⚡</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Audio Synthesis for offline native intro
+    function playAudioTone(freq, duration, type='sine', gainVal=0.25) {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // Sound sequence
+    function playIntroSound() {
+      // Bell strike 1
+      playAudioTone(2093, 0.4, 'sine', 0.25);
+      setTimeout(() => playAudioTone(2200, 0.35, 'sine', 0.2), 200);
+
+      // Dash whoosh at 700ms
+      setTimeout(() => {
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          const ctx = new AudioCtx();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(250, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.2);
+          osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.4);
+          gain.gain.setValueAtTime(0.18, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.4);
+        } catch(e) {}
+      }, 700);
+
+      // Brand chord at 1400ms
+      setTimeout(() => {
+        [659, 830, 987, 1318].forEach((f, i) => {
+          setTimeout(() => playAudioTone(f, 0.7, 'sine', 0.2), i * 50);
+        });
+      }, 1400);
+    }
+
+    // Sequence state machine
+    window.addEventListener('load', () => {
+      const ring = document.getElementById('phaseRing');
+      const dash = document.getElementById('phaseDash');
+      const reveal = document.getElementById('phaseReveal');
+
+      playIntroSound();
+
+      // Phase 2: Dash at 700ms
+      setTimeout(() => {
+        ring.classList.add('hidden');
+        dash.classList.remove('hidden');
+      }, 700);
+
+      // Phase 3: Reveal at 1400ms
+      setTimeout(() => {
+        dash.classList.add('hidden');
+        reveal.classList.remove('hidden');
+      }, 1400);
+
+      // Redirect to live site at 2300ms
+      setTimeout(() => {
+        window.location.href = 'https://www.fast0rder.online';
+      }, 2300);
+    });
+  </script>
+</body>
+</html>

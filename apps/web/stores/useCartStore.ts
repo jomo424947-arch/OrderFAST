@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { CartItem, MenuItem, Kiosk } from '@/types';
+import { playAddToCartSound, playRemoveFromCartSound } from '@/lib/utils/sound';
 
 interface CartState {
   items: CartItem[];
@@ -36,11 +37,13 @@ export const useCartStore = create<CartState>((set, get) => ({
       updatedItems.push({ menuItem: item, quantity: 1 });
     }
 
+    playAddToCartSound();
     set({ items: updatedItems, kiosk });
   },
 
   removeItem: (itemId: string) => {
     const { items } = get();
+    playRemoveFromCartSound();
     const updated = items.filter((ci) => ci.menuItem.id !== itemId);
     set({ items: updated, kiosk: updated.length === 0 ? null : get().kiosk });
   },
@@ -50,6 +53,14 @@ export const useCartStore = create<CartState>((set, get) => ({
     if (quantity <= 0) {
       get().removeItem(itemId);
       return;
+    }
+    const current = items.find((ci) => ci.menuItem.id === itemId);
+    if (current) {
+      if (quantity > current.quantity) {
+        playAddToCartSound();
+      } else if (quantity < current.quantity) {
+        playRemoveFromCartSound();
+      }
     }
     const updated = items.map((ci) =>
       ci.menuItem.id === itemId ? { ...ci, quantity } : ci
