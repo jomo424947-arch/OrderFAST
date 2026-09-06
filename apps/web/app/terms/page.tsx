@@ -105,6 +105,7 @@ export default function TermsPage() {
       content: [
         'تلتزم منصة FastOrder بالحفاظ على سرية بياناتك الشخصية واستخدامها حصرياً داخل نطاق تيسير عمليات الطلب وإشعارات الخدمة.',
         'لا نقوم ببيع أو مشاركة بيانات الطلاب مع أي جهات خارجية أو إعلانية خارج نطاق الحرم الجامعي.',
+        'للاطلاع على الوثيقة المفصلة لسياسة الخصوصية وسياسة حماية بيانات Google API، يُرجى مراجعة صفحة سياسة الخصوصية الرسمية عبر الرابط /privacy.',
       ],
     },
   ];
@@ -237,6 +238,12 @@ export default function TermsPage() {
             >
               العودة إلى إنشاء الحساب
             </Button>
+            <Link
+              href="/privacy"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-ink-soft hover:text-ink hover:bg-line/40 transition-colors border border-line"
+            >
+              عرض سياسة الخصوصية
+            </Link>
           </div>
         </div>
 

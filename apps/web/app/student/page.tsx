@@ -136,8 +136,8 @@ export default function StudentDashboardPage() {
                       activeOrder.status === 'READY'
                         ? 'READY'
                         : activeOrder.status === 'PREPARING'
-                        ? 'PREPARING'
-                        : 'PENDING_KIOSK'
+                          ? 'PREPARING'
+                          : 'PENDING_KIOSK'
                     }
                   />
                 </div>
@@ -309,7 +309,7 @@ export default function StudentDashboardPage() {
               title="لم تقم بأي طلبات بعد"
               description="اختر من أكشاك الحرم الجامعي واطلب أكلك ومشروباتك واستلمها بدون طوابير."
               actionLabel="تصفح الأكشاك الآن"
-              onAction={() => {}}
+              onAction={() => { }}
             />
           )}
         </div>

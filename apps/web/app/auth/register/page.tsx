@@ -7,7 +7,8 @@ import { Logo } from '@/components/branding/Logo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { COLLEGES } from '@/lib/constants';
-import { Eye, EyeOff, User, Store, Phone as PhoneIcon, MailCheck } from 'lucide-react';
+import { Eye, EyeOff, User, Store, Phone as PhoneIcon, MailCheck, RefreshCw } from 'lucide-react';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { UserRole } from '@/types';
 
@@ -24,7 +25,7 @@ const ROLE_REDIRECT: Record<UserRole, string> = {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register } = useAuthStore();
+  const { register, resendConfirmation } = useAuthStore();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
   const [name, setName] = useState('');
@@ -34,10 +35,42 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [termsErrorHighlight, setTermsErrorHighlight] = useState(false);
   const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Resend confirmation email cooldown states
+  const [isResending, setIsResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => {
+        setResendCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleResendInSuccess = async () => {
+    if (!submittedEmail || resendCooldown > 0) return;
+    setIsResending(true);
+    setResendMessage(null);
+
+    const res = await resendConfirmation(submittedEmail);
+    setIsResending(false);
+
+    if (res.success) {
+      setResendMessage('تم إرسال رابط تفعيل جديد بنجاح! تفقد بريدك.');
+      setResendCooldown(60);
+    } else {
+      setResendMessage(res.error || 'فشل في إعادة إرسال الرابط.');
+    }
+  };
 
   const handleTabSwitch = (role: UserRole) => {
     setSelectedRole(role);
@@ -126,6 +159,29 @@ export default function RegisterPage() {
               الانتقال لتسجيل الدخول
             </Button>
 
+            {/* Resend confirmation button in success screen */}
+            {resendMessage && (
+              <div className="bg-accent-soft border border-accent/30 text-accent rounded-xl p-2.5 text-xs font-bold animate-in fade-in">
+                {resendMessage}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleResendInSuccess}
+              disabled={isResending || resendCooldown > 0}
+              className="w-full py-2.5 px-3 bg-canvas hover:bg-surface border border-line text-ink rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isResending ? 'animate-spin' : ''}`} />
+              <span>
+                {isResending
+                  ? 'جاري إرسال الرابط...'
+                  : resendCooldown > 0
+                    ? `إعادة الإرسال بعد (${resendCooldown}ث)`
+                    : 'لم يصلك البريد؟ إعادة إرسال الرابط'}
+              </span>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsSubmittedSuccess(false)}
@@ -168,8 +224,8 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => handleTabSwitch(tab.key)}
                 className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-body font-semibold transition-all ${isActive
-                    ? 'bg-surface text-ink font-bold shadow-sm'
-                    : 'text-ink-soft hover:text-ink'
+                  ? 'bg-surface text-ink font-bold shadow-sm'
+                  : 'text-ink-soft hover:text-ink'
                   }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -282,14 +338,22 @@ export default function RegisterPage() {
 
           {/* Terms & Conditions Agreement Checkbox */}
           <div className="pt-1">
-            <label className="flex items-start gap-2.5 cursor-pointer select-none text-right">
+            <label
+              className={`flex items-start gap-2.5 cursor-pointer select-none text-right transition-all p-2 rounded-xl border ${termsErrorHighlight
+                  ? 'bg-danger-soft/50 border-danger'
+                  : 'border-transparent hover:bg-canvas'
+                }`}
+            >
               <input
                 type="checkbox"
                 checked={agreeTerms}
                 onChange={(e) => {
                   setAgreeTerms(e.target.checked);
-                  if (e.target.checked && error?.includes('الشروط والأحكام')) {
-                    setError(null);
+                  if (e.target.checked) {
+                    setTermsErrorHighlight(false);
+                    if (error?.includes('الشروط والأحكام')) {
+                      setError(null);
+                    }
                   }
                 }}
                 className="mt-0.5 w-4 h-4 rounded border-line text-primary focus:ring-primary/30 accent-primary cursor-pointer shrink-0"
@@ -305,7 +369,17 @@ export default function RegisterPage() {
                 >
                   الشروط والأحكام
                 </Link>{' '}
-                وسياسة الاستخدام (بما فيها الحظر الفوري والمباشر للحساب في حال عدم استلام الأوردر)
+                و
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-primary hover:text-primary-ink underline inline-flex items-center mx-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  سياسة الخصوصية
+                </Link>{' '}
+                (بما فيها الحظر الفوري والمباشر للحساب في حال عدم استلام الأوردر)
               </span>
             </label>
           </div>
@@ -320,6 +394,25 @@ export default function RegisterPage() {
             إنشاء الحساب
           </Button>
         </form>
+
+        {/* Divider */}
+        <div className="relative flex py-3 my-1 items-center">
+          <div className="flex-grow border-t border-line"></div>
+          <span className="flex-shrink mx-3 text-ink-soft text-xs font-body font-semibold">أو</span>
+          <div className="flex-grow border-t border-line"></div>
+        </div>
+
+        {/* Google Registration */}
+        <div className="space-y-2">
+          <GoogleAuthButton
+            isTermsAgreed={agreeTerms}
+            onTermsValidationFailed={() => {
+              setError('يجب الموافقة على الشروط والأحكام وسياسة الاستخدام أولاً للمتابعة عبر Google');
+              setTermsErrorHighlight(true);
+            }}
+            text="التسجيل السريع بواسطة Google"
+          />
+        </div>
 
         {/* Bottom Link */}
         <p className="text-center font-body text-xs text-ink-soft mt-6">

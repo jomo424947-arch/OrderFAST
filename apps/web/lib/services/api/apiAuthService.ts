@@ -176,4 +176,34 @@ export class ApiAuthService implements IAuthService {
   async logout(): Promise<void> {
     tokenStorage.clearTokens();
   }
+
+  async resendConfirmationEmail(email: string): Promise<void> {
+    const redirectUrl =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/callback`
+        : undefined;
+
+    await apiClient.post(
+      '/auth/resend-confirmation',
+      { email, redirectTo: redirectUrl },
+      { skipAuth: true }
+    );
+  }
+
+  async syncOAuthUser(college?: string): Promise<{ user: User; isNewUser: boolean }> {
+    const res = await apiClient.post<{
+      profile: ApiAuthResponse['user'];
+      isNewUser: boolean;
+    }>('/auth/oauth-sync', { college });
+
+    const user = mapApiUserToFrontendUser(res.profile, '');
+    return {
+      user,
+      isNewUser: res.isNewUser,
+    };
+  }
+
+  async updateStudentCollege(college: string): Promise<void> {
+    await apiClient.patch('/auth/student/college', { college });
+  }
 }

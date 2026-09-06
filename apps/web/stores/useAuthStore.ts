@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { UserRole, AccountStatus, Student, Cashier, Admin } from '@/types';
+import { User, UserRole, AccountStatus, Student, Cashier, Admin } from '@/types';
 import { authService, RegisterPayload } from '@/lib/services/authService';
 import { tokenStorage } from '@/lib/api/client';
 import { useKioskStore } from './useKioskStore';
@@ -27,6 +27,18 @@ interface AuthState {
     data: RegisterPayload,
     role: UserRole
   ) => Promise<{ success: boolean; error?: string; requiresConfirmation?: boolean }>;
+
+  resendConfirmation: (
+    email: string
+  ) => Promise<{ success: boolean; error?: string }>;
+
+  syncOAuthUser: (
+    college?: string
+  ) => Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }>;
+
+  updateStudentCollege: (
+    college: string
+  ) => Promise<{ success: boolean; error?: string }>;
 
   initializeAuth: () => Promise<void>;
   logout: () => void;
@@ -219,6 +231,85 @@ export const useAuthStore = create<AuthState>()(
             return { success: true, requiresConfirmation: true };
           }
 
+          return { success: false, error: message };
+        }
+      },
+
+      resendConfirmation: async (email) => {
+        try {
+          await authService.resendConfirmationEmail(email);
+          return { success: true };
+        } catch (err: unknown) {
+          const message =
+            err instanceof Error ? err.message : 'فشل في إعادة إرسال رابط التفعيل';
+          return { success: false, error: message };
+        }
+      },
+
+      syncOAuthUser: async (college) => {
+        try {
+          set({ isLoading: true });
+          const { user, isNewUser } = await authService.syncOAuthUser(college);
+
+          if (user.role === 'student') {
+            const s = user as Student;
+            set({
+              role: 'student',
+              isAuthenticated: true,
+              isAuthInitialized: true,
+              student: s,
+              cashier: null,
+              admin: null,
+              studentStatus: s.status ?? 'active',
+              isLoading: false,
+            });
+          } else if (user.role === 'cashier') {
+            set({
+              role: 'cashier',
+              isAuthenticated: true,
+              isAuthInitialized: true,
+              student: null,
+              cashier: user as Cashier,
+              admin: null,
+              isLoading: false,
+            });
+          } else {
+            set({
+              role: 'admin',
+              isAuthenticated: true,
+              isAuthInitialized: true,
+              student: null,
+              cashier: null,
+              admin: user as Admin,
+              isLoading: false,
+            });
+          }
+
+          return { success: true, user, isNewUser };
+        } catch (err: unknown) {
+          set({ isLoading: false });
+          const message =
+            err instanceof Error ? err.message : 'فشل مزامنة بيانات الحساب';
+          return { success: false, error: message };
+        }
+      },
+
+      updateStudentCollege: async (college) => {
+        try {
+          await authService.updateStudentCollege(college);
+          const currentStudent = get().student;
+          if (currentStudent) {
+            set({
+              student: {
+                ...currentStudent,
+                college,
+              },
+            });
+          }
+          return { success: true };
+        } catch (err: unknown) {
+          const message =
+            err instanceof Error ? err.message : 'فشل تحديث الكلية';
           return { success: false, error: message };
         }
       },

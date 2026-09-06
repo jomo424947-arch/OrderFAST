@@ -21,6 +21,9 @@ export interface IAuthService {
   login(email: string, password: string, role: UserRole): Promise<User>;
   register(data: RegisterPayload, role: UserRole): Promise<User>;
   logout(): Promise<void>;
+  resendConfirmationEmail(email: string): Promise<void>;
+  syncOAuthUser(college?: string): Promise<{ user: User; isNewUser: boolean }>;
+  updateStudentCollege(college: string): Promise<void>;
 }
 
 export class MockAuthService implements IAuthService {
@@ -96,6 +99,26 @@ export class MockAuthService implements IAuthService {
 
   async logout(): Promise<void> {
     // Mock logout — nothing to clean server-side
+  }
+
+  async resendConfirmationEmail(_email: string): Promise<void> {
+    // Mock resend
+  }
+
+  async syncOAuthUser(college?: string): Promise<{ user: User; isNewUser: boolean }> {
+    return {
+      user: {
+        ...this.students[0],
+        college: college || this.students[0].college,
+      },
+      isNewUser: false,
+    };
+  }
+
+  async updateStudentCollege(college: string): Promise<void> {
+    if (this.students[0]) {
+      this.students[0].college = college;
+    }
   }
 
   /** Helper used by register cashier flow to get new kiosk data */

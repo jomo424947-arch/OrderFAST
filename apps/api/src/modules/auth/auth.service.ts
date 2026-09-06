@@ -353,6 +353,101 @@ export class AuthService {
     }
     return { success: true };
   }
+
+  /**
+   * Resends signup confirmation email via Supabase
+   */
+  async resendConfirmationEmail(email: string, redirectTo?: string) {
+    const supabase = getSupabase();
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: redirectTo,
+      },
+    });
+
+    if (error) {
+      if (error.message.includes('60 seconds') || error.message.includes('rate limit')) {
+        throw AppError.badRequest('لأسباب أمنية، يمكنك طلب إعادة الإرسال مرة واحدة كل 60 ثانية');
+      }
+      throw AppError.badRequest(error.message || 'فشل في إعادة إرسال رابط التفعيل');
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Synchronizes an authenticated OAuth user (Google) with PostgreSQL profiles & students tables
+   */
+  async syncOAuthUser(
+    userId: string,
+    email: string,
+    metadata: { fullName?: string; avatarUrl?: string },
+    college?: string
+  ) {
+    // 1. Check if profile exists
+    const [existingProfile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1);
+
+    let isNewUser = false;
+
+    if (!existingProfile) {
+      isNewUser = true;
+      const fullName =
+        metadata.fullName?.trim() ||
+        (email ? email.split('@')[0] : 'طالب FastOrder');
+      const avatarUrl = metadata.avatarUrl || null;
+
+      await db.transaction(async (tx) => {
+        await tx.insert(profiles).values({
+          id: userId,
+          fullName,
+          avatarUrl,
+          phone: null,
+          systemRole: 'student',
+          isActive: true,
+        });
+
+        const randomSuffix = Math.floor(100000 + Math.random() * 900000).toString();
+        const universityId = `U${randomSuffix}`;
+
+        await tx.insert(students).values({
+          id: userId,
+          universityId,
+          college: college || 'كلية الحاسبات والذكاء الاصطناعي',
+          accountStatus: 'active',
+          noShowCount: 0,
+        });
+      });
+    }
+
+    const fullProfile = await this.getProfileById(userId);
+    return {
+      profile: fullProfile,
+      isNewUser,
+    };
+  }
+
+  /**
+   * Updates college for an authenticated student
+   */
+  async updateStudentCollege(userId: string, college: string) {
+    const [updated] = await db
+      .update(students)
+      .set({ college, updatedAt: new Date() })
+      .where(eq(students.id, userId))
+      .returning();
+
+    if (!updated) {
+      throw AppError.notFound('الطالب غير موجود');
+    }
+
+    return updated;
+  }
 }
 
 export const authService = new AuthService();
