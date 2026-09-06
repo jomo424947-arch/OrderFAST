@@ -73,7 +73,7 @@ export default function RegisterPage() {
         setSubmittedEmail(email.trim());
         setIsSubmittedSuccess(true);
       } else {
-        router.push(ROLE_REDIRECT[selectedRole]);
+        router.replace(ROLE_REDIRECT[selectedRole]);
       }
     } else {
       setError(result.error || 'حدث خطأ أثناء إنشاء الحساب');

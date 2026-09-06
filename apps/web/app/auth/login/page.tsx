@@ -60,7 +60,7 @@ export default function LoginPage() {
 
     if (result.success) {
       const activeRole = useAuthStore.getState().role || 'student';
-      router.push(ROLE_REDIRECT[activeRole]);
+      router.replace(ROLE_REDIRECT[activeRole]);
     } else {
       setError(result.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }

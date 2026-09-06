@@ -12,11 +12,13 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { AuthRedirectHandler } from '@/components/auth/AuthRedirectHandler';
+import { StartupGateway } from '@/components/auth/StartupGateway';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-canvas text-ink">
-      <AuthRedirectHandler />
+    <StartupGateway>
+      <div className="min-h-screen flex flex-col bg-canvas text-ink">
+        <AuthRedirectHandler />
 
       {/* Top Navbar */}
       <header className="sticky top-0 z-30 bg-surface/90 backdrop-blur-md border-b border-line/70 px-4 sm:px-8 py-3.5">
@@ -153,5 +155,6 @@ export default function LandingPage() {
         <p className="font-mono text-[11px] opacity-75">ORDER • WAIT • ENJOY</p>
       </footer>
     </div>
+  </StartupGateway>
   );
 }

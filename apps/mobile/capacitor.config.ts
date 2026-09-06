@@ -15,17 +15,17 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchAutoHide: true,
-      launchShowDuration: 2500,
-      launchFadeOutDuration: 500,
-      backgroundColor: '#1A1612',
+      launchShowDuration: 2000,
+      launchFadeOutDuration: 300,
+      backgroundColor: '#161920',
       androidSplashResourceName: 'splash',
       showSpinner: false,
       splashFullScreen: true,
       splashImmersive: true,
     },
     StatusBar: {
-      style: 'LIGHT',
-      backgroundColor: '#FFFBF5',
+      style: 'DARK',
+      backgroundColor: '#161920',
       overlaysWebView: false,
     },
     PushNotifications: {
@@ -35,7 +35,7 @@ const config: CapacitorConfig = {
 
   android: {
     allowMixedContent: false,
-    backgroundColor: '#FFFBF5',
+    backgroundColor: '#161920',
     captureInput: true,
     webContentsDebuggingEnabled: false,
     overrideUserAgent: 'FastOrder-Android/1.0',

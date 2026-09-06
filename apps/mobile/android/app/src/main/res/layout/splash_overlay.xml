@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/splash_overlay_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:elevation="100dp">
+
+    <!-- Ambient Glow behind the logo -->
+    <View
+        android:id="@+id/splash_ambient_glow"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="36dp"
+        android:background="@drawable/ambient_glow" />
+
+    <!-- Centered Brand Content -->
+    <LinearLayout
+        android:id="@+id/splash_content_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="24dp"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <!-- Official FASTorder Logo -->
+        <ImageView
+            android:id="@+id/splash_logo"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:layout_gravity="center_horizontal"
+            android:contentDescription="FASTorder Logo"
+            android:scaleType="fitCenter"
+            android:src="@drawable/splash_logo" />
+
+        <!-- FASTorder Typography -->
+        <TextView
+            android:id="@+id/splash_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="16dp"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.02"
+            android:textSize="36sp"
+            android:textStyle="bold" />
+
+        <!-- Tagline -->
+        <TextView
+            android:id="@+id/splash_tagline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.22"
+            android:text="ORDER • WAIT • ENJOY"
+            android:textColor="#A0A6B2"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</FrameLayout>
