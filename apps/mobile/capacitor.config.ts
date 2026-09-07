@@ -41,7 +41,7 @@ const config: CapacitorConfig = {
     allowMixedContent: false,
     backgroundColor: '#161920',
     captureInput: true,
-    webContentsDebuggingEnabled: false,
+    webContentsDebuggingEnabled: true,
     appendUserAgent: 'FastOrder-Android/1.0',
   },
 };

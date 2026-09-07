@@ -20,7 +20,9 @@ if (-not $env:JAVA_HOME -or -not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
     }
 }
 if (-not $env:ANDROID_HOME -or -not (Test-Path $env:ANDROID_HOME)) {
-    if (Test-Path "$env:LOCALAPPDATA\Android\Sdk") {
+    if (Test-Path "C:\Android\Sdk") {
+        $env:ANDROID_HOME = "C:\Android\Sdk"
+    } elseif (Test-Path "$env:LOCALAPPDATA\Android\Sdk") {
         $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
     } elseif (Test-Path "C:\Users\jomo4\AppData\Local\Android\Sdk") {
         $env:ANDROID_HOME = "C:\Users\jomo4\AppData\Local\Android\Sdk"
