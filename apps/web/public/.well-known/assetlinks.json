@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.fastorder.app",
+      "sha256_cert_fingerprints": [
+        "84:E4:3A:7A:54:77:B0:3B:17:08:4D:E4:D8:E5:1A:D3:21:4C:4E:A2:83:4D:1E:3B:8D:9B:B9:31:FD:E0:0A:A7",
+        "1E:DF:44:B0:E3:54:3E:B8:A6:13:89:B5:90:C3:72:53:93:96:05:EE:3D:AF:2D:23:81:09:84:18:75:4B:41:A1"
+      ]
+    }
+  }
+]

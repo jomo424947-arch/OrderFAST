@@ -31,6 +31,10 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
+    Browser: {
+      presentationStyle: 'popover',
+      toolbarColor: '#161920',
+    },
   },
 
   android: {
@@ -38,7 +42,6 @@ const config: CapacitorConfig = {
     backgroundColor: '#161920',
     captureInput: true,
     webContentsDebuggingEnabled: false,
-    overrideUserAgent: 'FastOrder-Android/1.0',
     appendUserAgent: 'FastOrder-Android/1.0',
   },
 };

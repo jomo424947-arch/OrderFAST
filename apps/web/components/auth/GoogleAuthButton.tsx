@@ -4,6 +4,10 @@ import React, { useState } from 'react';
 import { GoogleIcon } from '@/components/icons/GoogleIcon';
 import { supabase } from '@/lib/supabase/client';
 
+import { useRouter } from 'next/navigation';
+import { tokenStorage } from '@/lib/api/client';
+import { useAuthStore } from '@/stores/useAuthStore';
+
 interface GoogleAuthButtonProps {
   isTermsAgreed: boolean;
   onTermsValidationFailed: () => void;
@@ -17,6 +21,7 @@ export function GoogleAuthButton({
   text = 'المتابعة باستخدام Google',
   className = '',
 }: GoogleAuthButtonProps) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -32,25 +37,101 @@ export function GoogleAuthButton({
     try {
       setIsLoading(true);
 
-      const redirectUrl =
-        typeof window !== 'undefined'
-          ? `${window.location.origin}/auth/callback`
-          : undefined;
+      const isNative =
+        typeof window !== 'undefined' &&
+        (Boolean((window as any).Capacitor?.isNativePlatform?.()) ||
+          navigator.userAgent.includes('FastOrder-Android'));
 
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'select_account',
+      if (isNative) {
+        // Option A: Try native GoogleAuth plugin if available
+        const googleAuthPlugin = (window as any).Capacitor?.Plugins?.GoogleAuth;
+        if (googleAuthPlugin?.signIn) {
+          try {
+            const googleUser = await googleAuthPlugin.signIn();
+            const idToken = googleUser?.authentication?.idToken || googleUser?.idToken;
+            if (idToken) {
+              const { data: tokenSessionData, error: tokenError } =
+                await supabase.auth.signInWithIdToken({
+                  provider: 'google',
+                  token: idToken,
+                });
+
+              if (tokenError) throw tokenError;
+
+              if (tokenSessionData?.session) {
+                tokenStorage.setTokens(
+                  tokenSessionData.session.access_token,
+                  tokenSessionData.session.refresh_token
+                );
+                const syncResult = await useAuthStore.getState().syncOAuthUser();
+                if (syncResult.isNewUser) {
+                  router.replace('/auth/callback');
+                } else {
+                  router.replace('/student');
+                }
+                return;
+              }
+            }
+          } catch (nativeErr: any) {
+            console.warn('[GoogleAuth] Native One-Tap failed or not configured, using In-App Custom Tab fallback:', nativeErr);
+          }
+        }
+
+        // Option B: In-App Browser (Chrome Custom Tab) with fastorder:// deep link
+        // This keeps the user inside the app and brings them right back!
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: 'fastorder://auth/callback',
+            skipBrowserRedirect: true,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'select_account',
+            },
           },
-        },
-      });
+        });
 
-      if (error) {
-        setIsLoading(false);
-        setAuthError(error.message || 'فشل الاتصال بخدمة Google');
+        if (error) {
+          setIsLoading(false);
+          setAuthError(error.message || 'فشل الاتصال بخدمة Google');
+          return;
+        }
+
+        if (data?.url) {
+          const capacitorBrowser = (window as any).Capacitor?.Plugins?.Browser;
+          if (capacitorBrowser?.open) {
+            await capacitorBrowser.open({
+              url: data.url,
+              windowName: '_blank',
+              presentationStyle: 'popover',
+              toolbarColor: '#161920',
+            });
+          } else {
+            window.location.href = data.url;
+          }
+        }
+      } else {
+        // Standard Web Browser (Desktop / Mobile Browser)
+        const redirectUrl =
+          typeof window !== 'undefined'
+            ? `${window.location.origin}/auth/callback`
+            : undefined;
+
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'select_account',
+            },
+          },
+        });
+
+        if (error) {
+          setIsLoading(false);
+          setAuthError(error.message || 'فشل الاتصال بخدمة Google');
+        }
       }
     } catch (err: any) {
       setIsLoading(false);

@@ -3,5 +3,5 @@
     <string name="app_name">FastOrder</string>
     <string name="title_activity_main">FastOrder</string>
     <string name="package_name">com.fastorder.app</string>
-    <string name="custom_url_scheme">com.fastorder.app</string>
+    <string name="custom_url_scheme">fastorder</string>
 </resources>

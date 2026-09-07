@@ -9,9 +9,26 @@ $androidDir = "$mobileDir\android"
 $outputDir = "$workspaceRoot\release_builds"
 
 # Setup Environment
-$env:JAVA_HOME = "C:\Users\jomo4\.jdks\jbr-21.0.11"
-$env:ANDROID_HOME = "C:\Users\jomo4\AppData\Local\Android\Sdk"
-$env:ANDROID_SDK_ROOT = "C:\Users\jomo4\AppData\Local\Android\Sdk"
+if (-not $env:JAVA_HOME -or -not (Test-Path "$env:JAVA_HOME\bin\java.exe")) {
+    if (Test-Path "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot") {
+        $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
+    } elseif (Test-Path "C:\Users\jomo4\.jdks\jbr-21.0.11") {
+        $env:JAVA_HOME = "C:\Users\jomo4\.jdks\jbr-21.0.11"
+    } elseif (Get-Command java -ErrorAction SilentlyContinue) {
+        $javaCmd = (Get-Command java).Source
+        $env:JAVA_HOME = Split-Path (Split-Path $javaCmd -Parent) -Parent
+    }
+}
+if (-not $env:ANDROID_HOME -or -not (Test-Path $env:ANDROID_HOME)) {
+    if (Test-Path "$env:LOCALAPPDATA\Android\Sdk") {
+        $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+    } elseif (Test-Path "C:\Users\jomo4\AppData\Local\Android\Sdk") {
+        $env:ANDROID_HOME = "C:\Users\jomo4\AppData\Local\Android\Sdk"
+    }
+}
+if ($env:ANDROID_HOME) {
+    $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+}
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 
 Write-Host "==============================================" -ForegroundColor Cyan

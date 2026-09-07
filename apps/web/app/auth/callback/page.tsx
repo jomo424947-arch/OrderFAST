@@ -19,6 +19,7 @@ export default function AuthCallbackPage() {
   const [statusMessage, setStatusMessage] = useState('جاري معالجة تسجيل الدخول...');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string>('');
+  const [appDeepLink, setAppDeepLink] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -116,6 +117,23 @@ export default function AuthCallbackPage() {
       // Save tokens in API storage
       tokenStorage.setTokens(session.access_token, session.refresh_token);
 
+      // Check if opened from an external mobile browser to provide a bridge back to the APK
+      const isMobileBrowser =
+        typeof window !== 'undefined' &&
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) &&
+        !navigator.userAgent.includes('FastOrder-Android') &&
+        !(window as any).Capacitor?.isNativePlatform?.();
+
+      if (isMobileBrowser) {
+        const deepLink = `fastorder://auth/callback#access_token=${session.access_token}&refresh_token=${session.refresh_token}`;
+        setAppDeepLink(deepLink);
+        try {
+          window.location.href = deepLink;
+        } catch (e) {
+          console.warn('[FastOrder Callback] Auto deep link navigation error:', e);
+        }
+      }
+
       // Synchronize with backend PostgreSQL
       const syncResult = await syncOAuthUser();
       if (!syncResult.success) {
@@ -137,10 +155,14 @@ export default function AuthCallbackPage() {
         // Returning user: redirect directly
         if (!isMounted) return;
         setStatus('success');
-        setStatusMessage('تم تسجيل الدخول بنجاح! جاري تحويلك...');
+        setStatusMessage(
+          isMobileBrowser
+            ? 'تم تسجيل الدخول بنجاح! جاري إعادتك لتطبيق FastOrder...'
+            : 'تم تسجيل الدخول بنجاح! جاري تحويلك...'
+        );
         setTimeout(() => {
           router.replace('/student');
-        }, 500);
+        }, isMobileBrowser ? 1200 : 500);
       }
     }
 
@@ -196,6 +218,16 @@ export default function AuthCallbackPage() {
                 {statusMessage}
               </p>
             </div>
+            {appDeepLink && (
+              <div className="pt-2">
+                <a
+                  href={appDeepLink}
+                  className="inline-flex items-center justify-center gap-2 w-full py-3 px-4 bg-primary hover:bg-primary-ink text-ink font-bold text-xs rounded-2xl shadow-warm transition-all"
+                >
+                  العودة لتطبيق FastOrder 📱
+                </a>
+              </div>
+            )}
           </div>
         )}
 

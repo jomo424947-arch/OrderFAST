@@ -1,11 +1,21 @@
 import type { Metadata } from 'next';
 import '@/styles/globals.css';
 import { IntroAnimation } from '@/components/branding/IntroAnimation';
+import { CapacitorDeepLinkHandler } from '@/components/auth/CapacitorDeepLinkHandler';
 
 export const metadata: Metadata = {
-  title: 'FastOrder — ORDER • WAIT • ENJOY',
+  title: 'FastOrder',
   description: 'منصة طلب وتتبع أوردرات أكشاك الحرم الجامعي — اطلب من مكانك واعرف دورك قبل ما تنزل.',
   keywords: ['FastOrder', 'جامعة', 'كشك', 'أوردر', 'طابور', 'حرم جامعي'],
+  icons: {
+    icon: [
+      { url: '/logo.png', sizes: '32x32', type: 'image/png' },
+      { url: '/logo.png', sizes: '192x192', type: 'image/png' },
+      { url: '/logo.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({
@@ -17,6 +27,8 @@ export default function RootLayout({
     <html lang="ar" dir="rtl">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <link rel="icon" href="/logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -25,6 +37,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-canvas text-ink antialiased flex flex-col font-body selection:bg-primary-soft selection:text-primary-ink">
+        <CapacitorDeepLinkHandler />
         <IntroAnimation />
         {children}
       </body>
