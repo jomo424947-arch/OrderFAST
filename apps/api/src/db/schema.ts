@@ -291,6 +291,24 @@ export const notifications = pgTable('notifications', {
 }));
 
 // ==========================================
+// 12b. User Device Tokens Table (FCM Push)
+// ==========================================
+
+export const userDeviceTokens = pgTable('user_device_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  token: text('token').notNull(),
+  platform: text('platform').notNull().default('android'),
+  isActive: boolean('is_active').notNull().default(true),
+  lastUsedAt: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userTokenIdx: index('idx_user_device_tokens_user_id').on(table.userId),
+  tokenUniqueIdx: uniqueIndex('idx_user_device_tokens_token').on(table.token),
+}));
+
+// ==========================================
 // 13. Drizzle Relations Mapping
 // ==========================================
 
@@ -302,6 +320,14 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   kioskStaff: many(kioskStaff),
   orders: many(orders),
   notifications: many(notifications),
+  deviceTokens: many(userDeviceTokens),
+}));
+
+export const userDeviceTokensRelations = relations(userDeviceTokens, ({ one }) => ({
+  profile: one(profiles, {
+    fields: [userDeviceTokens.userId],
+    references: [profiles.id],
+  }),
 }));
 
 export const kiosksRelations = relations(kiosks, ({ many }) => ({

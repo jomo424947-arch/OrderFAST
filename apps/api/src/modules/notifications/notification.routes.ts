@@ -48,4 +48,53 @@ export async function notificationRoutes(app: FastifyInstance) {
       });
     }
   );
+
+  // Register device for FCM push notifications
+  app.post<{ Body: { token: string; platform?: string } }>(
+    '/devices',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const { token, platform } = request.body || {};
+      const result = await notificationService.registerDevice(
+        request.user!.id,
+        token,
+        platform || 'android'
+      );
+      return reply.status(200).send({
+        success: true,
+        data: result,
+      });
+    }
+  );
+
+  // Unregister device token
+  app.delete<{ Body: { token: string } }>(
+    '/devices',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const { token } = (request.body as any) || (request.query as any) || {};
+      if (token) {
+        await notificationService.unregisterDevice(request.user!.id, token);
+      }
+      return reply.status(200).send({
+        success: true,
+        message: 'تم إلغاء تسجيل الجهاز بنجاح',
+      });
+    }
+  );
+
+  app.post<{ Body: { token: string } }>(
+    '/devices/unregister',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const { token } = request.body || {};
+      if (token) {
+        await notificationService.unregisterDevice(request.user!.id, token);
+      }
+      return reply.status(200).send({
+        success: true,
+        message: 'تم إلغاء تسجيل الجهاز بنجاح',
+      });
+    }
+  );
 }

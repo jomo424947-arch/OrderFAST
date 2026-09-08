@@ -15,6 +15,7 @@ import {
 import { AppError } from '../../shared/errors/index.js';
 import { generateId } from '../../shared/id/index.js';
 import { cacheService } from '../../shared/cache/index.js';
+import { pushService } from '../notifications/push.service.js';
 import type {
   CreateOrderInput,
   AcceptOrderInput,
@@ -29,6 +30,38 @@ import type {
 import type { AuthenticatedUser } from '../../shared/middleware/auth.js';
 
 export class OrderService {
+  /**
+   * Helper: Sends push notification safely in the background
+   */
+  private notifyPush(
+    userIds: string[],
+    payload: {
+      title: string;
+      body: string;
+      channelId?: 'fastorder_orders' | 'fastorder_status';
+      priority?: 'high' | 'normal';
+      orderId?: string;
+      url?: string;
+      type?: string;
+    }
+  ) {
+    pushService
+      .sendToUsers(userIds, {
+        title: payload.title,
+        body: payload.body,
+        channelId: payload.channelId,
+        priority: payload.priority,
+        data: {
+          ...(payload.orderId ? { orderId: payload.orderId } : {}),
+          ...(payload.url ? { url: payload.url } : {}),
+          ...(payload.type ? { type: payload.type } : {}),
+        },
+      })
+      .catch((err) => {
+        console.warn('[Push] Error dispatching push notification:', err);
+      });
+  }
+
   /**
    * Helper: Verifies that the staff member belongs to the specific kiosk
    */
@@ -312,6 +345,19 @@ export class OrderService {
             body: `أوردر جديد رقم ${orderNumber} من الطالب ${studentProfile.fullName} (${studentProfile.college}).`,
           }))
         );
+
+        this.notifyPush(
+          staffMembers.map((s) => s.userId),
+          {
+            title: 'أوردر جديد وارد! 🔔',
+            body: `أوردر جديد رقم #${orderNumber} من الطالب ${studentProfile.fullName}.`,
+            channelId: 'fastorder_orders',
+            priority: 'high',
+            orderId,
+            url: '/cashier',
+            type: 'new_order',
+          }
+        );
       }
 
       return {
@@ -580,6 +626,16 @@ export class OrderService {
         body: `${existingOrder.kioskName} قبل طلبك رقم ${existingOrder.orderNumber}. الوقت المتوقع: ${prepMins} دقيقة.`,
       });
 
+      this.notifyPush([existingOrder.studentId], {
+        title: 'تم قبول طلبك! ☕',
+        body: `${existingOrder.kioskName} قبل طلبك رقم #${existingOrder.orderNumber}. الوقت المتوقع: ${prepMins} دقيقة.`,
+        channelId: 'fastorder_status',
+        priority: 'high',
+        orderId,
+        url: `/orders/${orderId}`,
+        type: 'order_accepted',
+      });
+
       return updatedOrder;
     });
   }
@@ -645,6 +701,15 @@ export class OrderService {
         type: 'order_status',
         title: 'نعتذر، تم رفض الطلب ❌',
         body: `اعتذر ${updatedOrder.kioskNameSnapshot} عن تنفيذ الطلب رقم ${updatedOrder.orderNumber}. السبب: ${input.reason}`,
+      });
+
+      this.notifyPush([updatedOrder.studentId], {
+        title: 'نعتذر، تم رفض الطلب ❌',
+        body: `اعتذر ${updatedOrder.kioskNameSnapshot} عن تنفيذ الطلب رقم #${updatedOrder.orderNumber}. السبب: ${input.reason}`,
+        channelId: 'fastorder_status',
+        orderId,
+        url: `/orders/${orderId}`,
+        type: 'order_rejected',
       });
 
       return updatedOrder;
@@ -762,6 +827,16 @@ export class OrderService {
         body: `طلبك رقم ${updatedOrder.orderNumber} جاهز الآن في ${updatedOrder.kioskNameSnapshot}. اتفضل بالاستلام والدفع.`,
       });
 
+      this.notifyPush([updatedOrder.studentId], {
+        title: 'أوردرك جاهز للاستلام! 🎉',
+        body: `طلبك رقم #${updatedOrder.orderNumber} جاهز الآن في ${updatedOrder.kioskNameSnapshot}. اتفضل بالاستلام!`,
+        channelId: 'fastorder_status',
+        priority: 'high',
+        orderId,
+        url: `/orders/${orderId}`,
+        type: 'order_ready',
+      });
+
       return updatedOrder;
     });
   }
@@ -821,6 +896,15 @@ export class OrderService {
         type: 'order_status',
         title: 'تم استلام الأوردر بنجاح',
         body: `شكراً لطلبك من ${updatedOrder.kioskNameSnapshot}. بالهنا والشفا!`,
+      });
+
+      this.notifyPush([updatedOrder.studentId], {
+        title: 'تم استلام الأوردر بنجاح ✅',
+        body: `شكراً لطلبك من ${updatedOrder.kioskNameSnapshot}. بالهنا والشفا!`,
+        channelId: 'fastorder_status',
+        orderId,
+        url: `/orders/${orderId}`,
+        type: 'order_completed',
       });
 
       return updatedOrder;
@@ -994,6 +1078,16 @@ export class OrderService {
           : `تم تسجيل عدم الحضور لاستلام الأوردر رقم #${updatedOrder.orderNumber}. تم توجيه تحذير لحسابك، ونرجو الالتزام بالاستلام حيث سيتم حظر الحساب وتقييده مباشرة في حال عدم استلام الطلب القادم.`,
       });
 
+      this.notifyPush([updatedOrder.studentId], {
+        title: isRestrictedNow ? 'تم تقييد حسابك 🚫' : 'تحذير: عدم استلام الأوردر ⚠️',
+        body: `تم تسجيل عدم الحضور للاستلام للطلب رقم #${updatedOrder.orderNumber}.`,
+        channelId: 'fastorder_status',
+        priority: 'high',
+        orderId,
+        url: `/orders/${orderId}`,
+        type: 'no_show_warning',
+      });
+
       return updatedOrder;
     });
   }
@@ -1123,6 +1217,16 @@ export class OrderService {
             title: 'تم قبول طلبك! ☕',
             body: `تم قبول طلبك رقم ${existing.orderNumber}. طلبك قيد التحضير الآن.`,
           });
+
+          this.notifyPush([existing.studentId], {
+            title: 'تم قبول طلبك! ☕',
+            body: `تم قبول طلبك رقم #${existing.orderNumber}. طلبك قيد التحضير الآن.`,
+            channelId: 'fastorder_status',
+            priority: 'high',
+            orderId,
+            url: `/orders/${orderId}`,
+            type: 'order_accepted',
+          });
         }
       }
 
@@ -1186,6 +1290,16 @@ export class OrderService {
             type: 'order_status',
             title: 'طلبك جاهز للاستلام! 🎉',
             body: `طلبك رقم ${updated.orderNumber} جاهز للاستلام الآن من الكشك.`,
+          });
+
+          this.notifyPush([updated.studentId], {
+            title: 'طلبك جاهز للاستلام! 🎉',
+            body: `طلبك رقم #${updated.orderNumber} جاهز للاستلام الآن من الكشك.`,
+            channelId: 'fastorder_status',
+            priority: 'high',
+            orderId,
+            url: `/orders/${orderId}`,
+            type: 'order_ready',
           });
         } else {
           failed.push({ id: orderId, reason: 'الطلب ليس قيد التحضير', code: 'INVALID_STATE' });

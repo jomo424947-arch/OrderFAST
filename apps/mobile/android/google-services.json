@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "816559838581",
-    "project_id": "fastorder-9757b",
-    "storage_bucket": "fastorder-9757b.firebasestorage.app"
+    "project_number": "350439194522",
+    "project_id": "fastorder-82d24",
+    "storage_bucket": "fastorder-82d24.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:816559838581:android:b6eee6dab11907c46daf3c",
+        "mobilesdk_app_id": "1:350439194522:android:fd330180c00151812c0423",
         "android_client_info": {
           "package_name": "com.fastorder.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCih_2f7UpH8-fspI7IJGqEg0QVlAlA7eA"
+          "current_key": "AIzaSyBEDUzwLEJBZBrG5bFwF6oiSg5Zth9OOyk"
         }
       ],
       "services": {

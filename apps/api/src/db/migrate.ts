@@ -8,15 +8,20 @@ const __dirname = path.dirname(__filename);
 
 export async function runMigrations() {
   console.log('🚀 Running OrderFAST Database Schema Migrations...');
-  const migrationPath = path.resolve(__dirname, 'migrations/0000_initial_schema.sql');
-  const sqlContent = fs.readFileSync(migrationPath, 'utf-8');
+  const migrationsDir = path.resolve(__dirname, 'migrations');
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
 
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-    await client.query(sqlContent);
-    await client.query('COMMIT');
-    console.log('✅ Migration 0000_initial_schema.sql executed successfully!');
+    for (const file of files) {
+      const migrationPath = path.join(migrationsDir, file);
+      const sqlContent = fs.readFileSync(migrationPath, 'utf-8');
+      console.log(`⏳ Executing migration ${file}...`);
+      await client.query('BEGIN');
+      await client.query(sqlContent);
+      await client.query('COMMIT');
+      console.log(`✅ Migration ${file} executed successfully!`);
+    }
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Migration failed:', error);

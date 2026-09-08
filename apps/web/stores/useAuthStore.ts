@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User, UserRole, AccountStatus, Student, Cashier, Admin } from '@/types';
 import { authService, RegisterPayload } from '@/lib/services/authService';
-import { tokenStorage } from '@/lib/api/client';
+import { apiClient, tokenStorage } from '@/lib/api/client';
 import { useKioskStore } from './useKioskStore';
 
 interface AuthState {
@@ -315,6 +315,14 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        try {
+          const fcmToken = typeof window !== 'undefined' ? localStorage.getItem('fastorder_fcm_token') : null;
+          if (fcmToken) {
+            apiClient.post('/notifications/devices/unregister', { token: fcmToken }).catch(() => {});
+          }
+        } catch {
+          // ignore
+        }
         authService.logout();
         set({
           role: null,
