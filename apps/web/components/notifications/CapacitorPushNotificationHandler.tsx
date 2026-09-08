@@ -54,27 +54,39 @@ export function CapacitorPushNotificationHandler() {
           return;
         }
 
-        // 1. Create Android Notification Channels (High Priority for Orders)
+        // 1. Create Android Notification Channels with Custom Sound
         try {
           if (pushPlugin.createChannel) {
+            // Delete legacy channels if exists
+            if (pushPlugin.deleteChannel) {
+              try {
+                await pushPlugin.deleteChannel({ id: 'fastorder_orders' });
+                await pushPlugin.deleteChannel({ id: 'fastorder_status' });
+              } catch {}
+            }
+
             await pushPlugin.createChannel({
-              id: 'fastorder_orders',
+              id: 'fastorder_orders_v3',
               name: 'طلبات جديدة (كاشير)',
               description: 'إشعارات الطلبات الجديدة الواردة للكشك مع صوت ورنين مميز',
               importance: 5, // High / Heads-up
               visibility: 1, // Public
-              sound: 'default',
+              sound: 'fastorder_bell',
               vibration: true,
+              lights: true,
+              lightColor: '#FFA41C',
             });
 
             await pushPlugin.createChannel({
-              id: 'fastorder_status',
+              id: 'fastorder_status_v3',
               name: 'تحديثات حالة الطلب',
-              description: 'إشعارات تغير حالة الطلب (جاهز، قيد التحضير، تم القبول)',
-              importance: 4,
-              visibility: 1,
-              sound: 'default',
+              description: 'إشعارات تغير حالة الطلب للطلاب مع نغمة تنبيه',
+              importance: 5, // High / Heads-up
+              visibility: 1, // Public
+              sound: 'fastorder_bell',
               vibration: true,
+              lights: true,
+              lightColor: '#FFA41C',
             });
           }
         } catch (channelErr) {
@@ -83,7 +95,7 @@ export function CapacitorPushNotificationHandler() {
 
         // 2. Check and request notification permissions
         let permStatus = await pushPlugin.checkPermissions();
-        if (permStatus.receive === 'prompt') {
+        if (permStatus.receive !== 'granted') {
           permStatus = await pushPlugin.requestPermissions();
         }
 

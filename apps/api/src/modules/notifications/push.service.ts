@@ -51,8 +51,8 @@ export class PushService {
       // Deduplicate tokens
       const uniqueTokens = Array.from(new Set(devices.map((d) => d.token)));
 
-      const channelId = payload.channelId || 'fastorder_status';
-      const isHighPriority = payload.priority === 'high' || channelId === 'fastorder_orders';
+      const baseChannel = payload.channelId || 'fastorder_status';
+      const channelId = baseChannel.includes('orders') ? 'fastorder_orders_v3' : 'fastorder_status_v3';
 
       const multicastMessage: MulticastMessage = {
         tokens: uniqueTokens,
@@ -67,14 +67,21 @@ export class PushService {
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
         },
         android: {
-          priority: isHighPriority ? 'high' : 'normal',
+          priority: 'high',
           notification: {
             channelId,
-            sound: 'default',
-            priority: isHighPriority ? 'high' : 'default',
-            defaultSound: true,
+            sound: 'fastorder_bell',
+            priority: 'high',
+            defaultSound: false,
             defaultVibrateTimings: true,
             visibility: 'public',
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'fastorder_bell.wav',
+            },
           },
         },
       };

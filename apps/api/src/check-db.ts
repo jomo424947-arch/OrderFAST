@@ -1,5 +1,5 @@
 import { db } from './db/client.js';
-import { kiosks, orders, orderItems, menuItems, profiles, kioskStaff } from './db/schema.js';
+import { kiosks, orders, orderItems, menuItems, profiles, kioskStaff, userDeviceTokens } from './db/schema.js';
 
 import { eq } from 'drizzle-orm';
 
@@ -31,14 +31,10 @@ async function checkDb() {
     expiresAt: o.expiresAt,
   })));
 
-  console.log('\n=== MENU ITEMS COUNT PER KIOSK ===');
-  const items = await db.select().from(menuItems);
-  console.log(`Total menu items: ${items.length}`);
-  const perKiosk: Record<string, number> = {};
-  for (const it of items) {
-    perKiosk[it.kioskId] = (perKiosk[it.kioskId] || 0) + 1;
-  }
-  console.log('Per kiosk:', perKiosk);
+  console.log('\n=== USER DEVICE TOKENS IN DB ===');
+  const tokens = await db.select().from(userDeviceTokens);
+  console.log(`Total registered device tokens: ${tokens.length}`);
+  console.log(tokens);
 
   process.exit(0);
 }
