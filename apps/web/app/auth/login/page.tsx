@@ -49,19 +49,25 @@ export default function LoginPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const hash = window.location.hash;
+
+      // If user landed on /auth/login with OAuth tokens in hash, forward to callback immediately
+      if (hash.includes('access_token')) {
+        router.replace(`/auth/callback${hash}`);
+        return;
+      }
+
       if (urlParams.get('reset') === 'true') {
         setSuccessMessage('تم تعيين كلمة المرور بنجاح! 🎉 يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.');
         window.history.replaceState(null, '', '/auth/login');
       } else if (
         urlParams.get('verified') === 'true' ||
-        hash.includes('type=signup') ||
-        hash.includes('access_token')
+        (hash.includes('type=signup') && !hash.includes('access_token'))
       ) {
         setSuccessMessage('تم تأكيد وتفعيل بريدك الإلكتروني بنجاح! 🎉 يمكنك الآن تسجيل الدخول.');
         window.history.replaceState(null, '', '/auth/login');
       }
     }
-  }, []);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

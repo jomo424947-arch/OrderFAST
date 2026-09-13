@@ -68,8 +68,29 @@ export default function AuthCallbackPage() {
           }
         }
 
-        // 3. Check for signup email verification
-        if (hash.includes('type=signup') || searchParams.get('type') === 'signup') {
+        // 3. Check for existing session or hash tokens with access_token (Google OAuth / Implicit flow)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (session) {
+          await handleActiveSession(session);
+          return;
+        }
+
+        if (hash.includes('access_token=')) {
+          setStatusMessage('جاري معالجة الجلسة النشطة...');
+          // Give Supabase client a brief moment to finish parsing URL hash tokens
+          await new Promise((resolve) => setTimeout(resolve, 400));
+          const { data: { session: retrySession } } = await supabase.auth.getSession();
+          if (retrySession) {
+            await handleActiveSession(retrySession);
+            return;
+          }
+        }
+
+        // 4. Check for pure signup email verification (ONLY when there is no active session/token)
+        if (
+          !hash.includes('access_token=') &&
+          (hash.includes('type=signup') || searchParams.get('type') === 'signup')
+        ) {
           if (!isMounted) return;
           setStatus('success');
           setStatusMessage('تم تأكيد وتفعيل بريدك الإلكتروني بنجاح! 🎉');
@@ -79,8 +100,6 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // 4. Check existing session or hash tokens
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) {
           if (!isMounted) return;
           setStatus('error');
