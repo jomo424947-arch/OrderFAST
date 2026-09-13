@@ -9,7 +9,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.string().transform(Number).default('4000'),
+  PORT: z.coerce.number().default(4000),
   HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:54322/postgres'),
   SUPABASE_URL: z.string().default('https://placeholder.supabase.co'),

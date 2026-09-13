@@ -54,7 +54,29 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   await app.register(cors, {
-    origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN,
+    origin: (origin, cb) => {
+      // Allow requests with no origin (mobile apps, server-to-server, curl)
+      if (!origin) return cb(null, true);
+
+      if (env.CORS_ORIGIN === '*') return cb(null, true);
+
+      const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+
+      // Automatically allow Vercel domains and local environments
+      try {
+        const parsed = new URL(origin);
+        if (
+          parsed.hostname.endsWith('.vercel.app') ||
+          parsed.hostname === 'localhost' ||
+          parsed.hostname === '127.0.0.1'
+        ) {
+          return cb(null, true);
+        }
+      } catch {}
+
+      return cb(new Error('Not allowed by CORS'), false);
+    },
     credentials: true,
   });
 

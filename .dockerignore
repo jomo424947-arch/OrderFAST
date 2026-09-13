@@ -1,0 +1,9 @@
+node_modules
+.next
+apps/web/.next
+apps/api/dist
+.turbo
+.git
+.env*
+!*.example
+release_builds
