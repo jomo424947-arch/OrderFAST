@@ -12,8 +12,8 @@ COPY apps/api ./apps/api
 # Install all dependencies across the monorepo (including workspace packages)
 RUN npm ci
 
-# Build the API service
-RUN npm run build --workspace=apps/api
+# Build packages and API service
+RUN npm run build --workspace=packages/validation && npm run build --workspace=apps/api
 
 # Set runtime environment
 ENV NODE_ENV=production
