@@ -170,8 +170,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
   });
 
-  // 3. Health Check Route
-  app.get('/api/health', async (_req, reply) => {
+  // 3. Health Check Routes (supports both /api/health and /health)
+  const healthCheckHandler = async (_req: any, reply: any) => {
     const isDbConnected = await testDbConnection();
     const status = isDbConnected ? 'healthy' : 'degraded';
     return reply.status(isDbConnected ? 200 : 503).send({
@@ -181,14 +181,19 @@ export async function buildApp(): Promise<FastifyInstance> {
       version: '1.0.0',
       database: isDbConnected ? 'connected' : 'disconnected',
     });
-  });
+  };
 
-  // 4. Register Module Routes
-  await app.register(authRoutes, { prefix: '/api/auth' });
-  await app.register(kioskRoutes, { prefix: '/api/kiosks' });
-  await app.register(catalogRoutes, { prefix: '/api' });
-  await app.register(orderRoutes, { prefix: '/api/orders' });
-  await app.register(notificationRoutes, { prefix: '/api/notifications' });
+  app.get('/api/health', healthCheckHandler);
+  app.get('/health', healthCheckHandler);
+
+  // 4. Register Module Routes (supports both /api/* and root /* to prevent 404s if /api was omitted in frontend config)
+  for (const prefix of ['/api', '']) {
+    await app.register(authRoutes, { prefix: `${prefix}/auth` });
+    await app.register(kioskRoutes, { prefix: `${prefix}/kiosks` });
+    await app.register(catalogRoutes, { prefix: `${prefix}` });
+    await app.register(orderRoutes, { prefix: `${prefix}/orders` });
+    await app.register(notificationRoutes, { prefix: `${prefix}/notifications` });
+  }
 
   return app;
 }

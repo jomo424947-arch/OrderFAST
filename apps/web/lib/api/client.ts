@@ -1,7 +1,9 @@
 import { ApiResponse, ApiErrorResponse } from './types';
 
-const API_BASE_URL =
+const rawApiUrl =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const cleanApiUrl = rawApiUrl.replace(/\/+$/, '');
+const API_BASE_URL = cleanApiUrl.endsWith('/api') ? cleanApiUrl : `${cleanApiUrl}/api`;
 
 const TOKEN_KEY = 'orderfast_access_token';
 const REFRESH_TOKEN_KEY = 'orderfast_refresh_token';
