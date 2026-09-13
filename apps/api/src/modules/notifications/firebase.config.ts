@@ -23,9 +23,19 @@ function initFirebase(): void {
     // 1. Check environment variable FIREBASE_SERVICE_ACCOUNT_KEY
     const envKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
     if (envKey) {
-      if (envKey.trim().startsWith('{')) {
-        serviceAccount = JSON.parse(envKey);
-      } else {
+      const trimmed = envKey.trim();
+      if (trimmed.startsWith('{')) {
+        serviceAccount = JSON.parse(trimmed);
+      } else if (!trimmed.includes('\n') && (trimmed.startsWith('ey') || /^[A-Za-z0-9+/=]+$/.test(trimmed))) {
+        try {
+          const decoded = Buffer.from(trimmed, 'base64').toString('utf-8');
+          if (decoded.trim().startsWith('{')) {
+            serviceAccount = JSON.parse(decoded);
+          }
+        } catch {}
+      }
+
+      if (!serviceAccount) {
         const resolvedPath = path.resolve(process.cwd(), envKey);
         if (fs.existsSync(resolvedPath)) {
           serviceAccount = JSON.parse(fs.readFileSync(resolvedPath, 'utf-8'));
@@ -51,6 +61,11 @@ function initFirebase(): void {
     }
 
     if (serviceAccount && serviceAccount.project_id) {
+      // Fix potential escaped newlines in private_key when injected via env var
+      if (typeof serviceAccount.private_key === 'string') {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
+
       firebaseApp = initializeApp({
         credential: cert(serviceAccount),
       });

@@ -1,5 +1,5 @@
 # OrderFAST Backend API Dockerfile (Monorepo-compatible for Railway)
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
