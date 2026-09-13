@@ -23,15 +23,24 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     let isMounted = true;
+    let isHandled = false;
+
+    // 1. Subscribe to auth state change event (catches automatic Supabase session exchanges)
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session && !isHandled && isMounted) {
+        isHandled = true;
+        await handleActiveSession(session);
+      }
+    });
 
     async function processAuthCallback() {
       if (typeof window === 'undefined') return;
 
       try {
-        const hash = window.location.hash;
+        const hash = window.location.hash || '';
         const searchParams = new URLSearchParams(window.location.search);
 
-        // 1. Check for error in query or hash
+        // A. Check for error in query or hash
         const errorDesc =
           searchParams.get('error_description') ||
           searchParams.get('error') ||
@@ -48,47 +57,62 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // 2. Handle PKCE code exchange if present
-        const code = searchParams.get('code');
-        if (code) {
-          setStatusMessage('جاري التحقق من رمز المصادقة...');
-          const { data: exchangeData, error: exchangeError } =
-            await supabase.auth.exchangeCodeForSession(code);
+        // B. Handle manual hash tokens (access_token & refresh_token from OAuth implicit flow)
+        if (hash.includes('access_token=')) {
+          const cleanHash = hash.startsWith('#') ? hash.substring(1) : hash;
+          const hashParams = new URLSearchParams(cleanHash);
+          const accessToken = hashParams.get('access_token');
+          const refreshToken = hashParams.get('refresh_token') || '';
 
-          if (exchangeError) {
-            if (!isMounted) return;
-            setStatus('error');
-            setErrorMessage(exchangeError.message || 'فشل التحقق من رمز المصادقة');
-            return;
-          }
+          if (accessToken) {
+            setStatusMessage('جاري المصادقة وحفظ بيانات الجلسة...');
+            try {
+              const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
 
-          if (exchangeData.session) {
-            await handleActiveSession(exchangeData.session);
-            return;
+              if (!setSessionError && setSessionData?.session && !isHandled && isMounted) {
+                isHandled = true;
+                await handleActiveSession(setSessionData.session);
+                return;
+              }
+            } catch (e) {
+              console.warn('[AuthCallback] Manual setSession error:', e);
+            }
           }
         }
 
-        // 3. Check for existing session or hash tokens with access_token (Google OAuth / Implicit flow)
+        // C. Handle PKCE code exchange if present
+        const code = searchParams.get('code');
+        if (code) {
+          setStatusMessage('جاري التحقق من رمز المصادقة...');
+          try {
+            const { data: exchangeData, error: exchangeError } =
+              await supabase.auth.exchangeCodeForSession(code);
+
+            if (exchangeData?.session && !isHandled && isMounted) {
+              isHandled = true;
+              await handleActiveSession(exchangeData.session);
+              return;
+            }
+          } catch (e) {
+            console.warn('[AuthCallback] Exchange code error:', e);
+          }
+        }
+
+        // D. Check for existing session in storage
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (session) {
+        if (session && !isHandled && isMounted) {
+          isHandled = true;
           await handleActiveSession(session);
           return;
         }
 
-        if (hash.includes('access_token=')) {
-          setStatusMessage('جاري معالجة الجلسة النشطة...');
-          // Give Supabase client a brief moment to finish parsing URL hash tokens
-          await new Promise((resolve) => setTimeout(resolve, 400));
-          const { data: { session: retrySession } } = await supabase.auth.getSession();
-          if (retrySession) {
-            await handleActiveSession(retrySession);
-            return;
-          }
-        }
-
-        // 4. Check for pure signup email verification (ONLY when there is no active session/token)
+        // E. Check for pure signup email verification (ONLY when there is no active session/token)
         if (
           !hash.includes('access_token=') &&
+          !searchParams.has('code') &&
           (hash.includes('type=signup') || searchParams.get('type') === 'signup')
         ) {
           if (!isMounted) return;
@@ -100,28 +124,32 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        if (sessionError) {
-          if (!isMounted) return;
-          setStatus('error');
-          setErrorMessage(sessionError.message);
-          return;
-        }
+        // F. Wait up to 3 seconds for onAuthStateChange to fire before displaying error
+        let attempts = 0;
+        const interval = setInterval(async () => {
+          attempts++;
+          if (isHandled || !isMounted) {
+            clearInterval(interval);
+            return;
+          }
 
-        if (session) {
-          await handleActiveSession(session);
-        } else {
-          // Wait a short moment in case client is parsing hash
-          setTimeout(async () => {
-            const { data: { session: retrySession } } = await supabase.auth.getSession();
-            if (retrySession) {
-              await handleActiveSession(retrySession);
-            } else {
-              if (!isMounted) return;
+          const { data: { session: pollSession } } = await supabase.auth.getSession();
+          if (pollSession && !isHandled && isMounted) {
+            isHandled = true;
+            clearInterval(interval);
+            await handleActiveSession(pollSession);
+            return;
+          }
+
+          if (attempts >= 6) {
+            clearInterval(interval);
+            if (!isHandled && isMounted) {
               setStatus('error');
               setErrorMessage('تعذر استرداد جلسة الدخول. يرجى المحاولة مرة أخرى.');
             }
-          }, 800);
-        }
+          }
+        }, 500);
+
       } catch (err: any) {
         if (!isMounted) return;
         setStatus('error');
@@ -189,6 +217,7 @@ export default function AuthCallbackPage() {
 
     return () => {
       isMounted = false;
+      authListener?.subscription?.unsubscribe();
     };
   }, [router, syncOAuthUser]);
 
