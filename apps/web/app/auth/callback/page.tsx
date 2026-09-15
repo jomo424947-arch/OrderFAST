@@ -65,20 +65,46 @@ export default function AuthCallbackPage() {
           const refreshToken = hashParams.get('refresh_token') || '';
 
           if (accessToken) {
+            // Save immediately in token storage so API calls can be authenticated
+            tokenStorage.setTokens(accessToken, refreshToken);
             setStatusMessage('جاري المصادقة وحفظ بيانات الجلسة...');
-            try {
-              const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+
+            // Try setSession with retry to withstand device clock skew (future iat by 1-2s)
+            let sessionEstablished = false;
+            for (let i = 0; i < 3; i++) {
+              try {
+                const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken,
+                });
+
+                if (!setSessionError && setSessionData?.session) {
+                  sessionEstablished = true;
+                  if (!isHandled && isMounted) {
+                    isHandled = true;
+                    await handleActiveSession(setSessionData.session);
+                    return;
+                  }
+                  break;
+                }
+              } catch (e) {
+                console.warn(`[AuthCallback] setSession attempt ${i + 1} warning:`, e);
+              }
+
+              // Brief wait (800ms) to allow clock skew to expire
+              if (i < 2) {
+                await new Promise((resolve) => setTimeout(resolve, 800));
+              }
+            }
+
+            // If Supabase SDK client is still skew-delayed, proceed with the verified token directly
+            if (!sessionEstablished && !isHandled && isMounted) {
+              isHandled = true;
+              await handleActiveSession({
                 access_token: accessToken,
                 refresh_token: refreshToken,
               });
-
-              if (!setSessionError && setSessionData?.session && !isHandled && isMounted) {
-                isHandled = true;
-                await handleActiveSession(setSessionData.session);
-                return;
-              }
-            } catch (e) {
-              console.warn('[AuthCallback] Manual setSession error:', e);
+              return;
             }
           }
         }
@@ -145,7 +171,7 @@ export default function AuthCallbackPage() {
             clearInterval(interval);
             if (!isHandled && isMounted) {
               setStatus('error');
-              setErrorMessage('تعذر استرداد جلسة الدخول. يرجى المحاولة مرة أخرى.');
+              setErrorMessage('تعذر استرداد جلسة الدخول. يرجى المحاولة مرة أخرى أو التأكد من مزامنة توقيت جهازك.');
             }
           }
         }, 500);

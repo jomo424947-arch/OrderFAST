@@ -423,6 +423,26 @@ export class AuthService {
           noShowCount: 0,
         });
       });
+    } else if (existingProfile.systemRole === 'student') {
+      // Ensure student extension table record exists (self-healing)
+      const [existingStudent] = await db
+        .select({ id: students.id })
+        .from(students)
+        .where(eq(students.id, userId))
+        .limit(1);
+
+      if (!existingStudent) {
+        const randomSuffix = Math.floor(100000 + Math.random() * 900000).toString();
+        const universityId = `U${randomSuffix}`;
+
+        await db.insert(students).values({
+          id: userId,
+          universityId,
+          college: college || 'كلية الحاسبات والذكاء الاصطناعي',
+          accountStatus: 'active',
+          noShowCount: 0,
+        });
+      }
     }
 
     const fullProfile = await this.getProfileById(userId);

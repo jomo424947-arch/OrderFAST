@@ -1,7 +1,7 @@
 import { ApiResponse, ApiErrorResponse } from './types';
 
 const rawApiUrl =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+  (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').trim().replace(/^['"]|['"]$/g, '');
 const cleanApiUrl = rawApiUrl.replace(/\/+$/, '');
 const API_BASE_URL = cleanApiUrl.endsWith('/api') ? cleanApiUrl : `${cleanApiUrl}/api`;
 

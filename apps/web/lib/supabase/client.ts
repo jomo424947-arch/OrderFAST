@@ -11,11 +11,14 @@ let browserClient: SupabaseClient | null = null;
 export function getSupabaseBrowserClient(): SupabaseClient {
   if (browserClient) return browserClient;
 
-  // Safe fallback to prevent Next.js build-time static prerendering crash if env vars are pending
-  const effectiveUrl = supabaseUrl || 'https://placeholder.supabase.co';
-  const effectiveKey = supabaseAnonKey || 'placeholder-anon-key';
+  // Clean and sanitize env variables to prevent 401s from quotes or spaces in Vercel
+  const cleanUrl = supabaseUrl.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '');
+  const cleanKey = supabaseAnonKey.trim().replace(/^['"]|['"]$/g, '');
 
-  if (!supabaseUrl || !supabaseAnonKey) {
+  const effectiveUrl = cleanUrl || 'https://placeholder.supabase.co';
+  const effectiveKey = cleanKey || 'placeholder-anon-key';
+
+  if (!cleanUrl || !cleanKey) {
     if (typeof window !== 'undefined') {
       console.warn(
         'Supabase URL or Anon Key is missing. Please check your NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'

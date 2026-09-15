@@ -140,7 +140,7 @@ export class OrderService {
       }
 
       // Step 2: Verify Student Profile & Active Status
-      const [studentProfile] = await tx
+      let [studentProfile] = await tx
         .select({
           id: profiles.id,
           fullName: profiles.fullName,
@@ -153,7 +153,38 @@ export class OrderService {
         .limit(1);
 
       if (!studentProfile) {
-        throw AppError.notFound('بيانات الطالب غير موجودة');
+        // Self-healing: If user exists in profiles with systemRole='student', create missing students row
+        const [existingUserProfile] = await tx
+          .select({
+            id: profiles.id,
+            fullName: profiles.fullName,
+            systemRole: profiles.systemRole,
+            isActive: profiles.isActive,
+          })
+          .from(profiles)
+          .where(eq(profiles.id, studentId))
+          .limit(1);
+
+        if (existingUserProfile && existingUserProfile.systemRole === 'student' && existingUserProfile.isActive) {
+          const randomSuffix = Math.floor(100000 + Math.random() * 900000).toString();
+          const universityId = `U${randomSuffix}`;
+          await tx.insert(students).values({
+            id: studentId,
+            universityId,
+            college: 'كلية الحاسبات والذكاء الاصطناعي',
+            accountStatus: 'active',
+            noShowCount: 0,
+          });
+
+          studentProfile = {
+            id: existingUserProfile.id,
+            fullName: existingUserProfile.fullName,
+            college: 'كلية الحاسبات والذكاء الاصطناعي',
+            accountStatus: 'active',
+          };
+        } else {
+          throw AppError.notFound('بيانات الطالب غير موجودة');
+        }
       }
 
       if (studentProfile.accountStatus === 'restricted') {
