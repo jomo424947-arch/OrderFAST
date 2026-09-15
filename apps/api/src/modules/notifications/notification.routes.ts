@@ -97,4 +97,35 @@ export async function notificationRoutes(app: FastifyInstance) {
       });
     }
   );
+
+  // Test Push Notification Endpoint
+  app.post(
+    '/test-push',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const { pushService } = await import('./push.service.js');
+      const { isFirebaseConfigured } = await import('./firebase.config.js');
+
+      if (!isFirebaseConfigured()) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            message: 'Firebase Admin SDK غير مهيأ على السيرفر (FIREBASE_SERVICE_ACCOUNT_KEY مفقود في إعدادات Railway).',
+          },
+        });
+      }
+
+      await pushService.sendToUsers([request.user!.id], {
+        title: 'FastOrder 🔔 تجربة الإشعار',
+        body: 'تم استلام الإشعار التجريبي بنجاح من سيرفر FastOrder!',
+        channelId: 'fastorder_status',
+        priority: 'high',
+      });
+
+      return reply.status(200).send({
+        success: true,
+        message: 'تم إرسال إشعار تجريبي لهاتفك بنجاح عبر Firebase!',
+      });
+    }
+  );
 }

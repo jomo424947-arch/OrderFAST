@@ -154,6 +154,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   // 3. Health Check Routes (supports both /api/health and /health)
   const healthCheckHandler = async (_req: any, reply: any) => {
     const isDbConnected = await testDbConnection();
+    const { isFirebaseConfigured } = await import('./modules/notifications/firebase.config.js');
+    const isFbConfigured = isFirebaseConfigured();
     const status = isDbConnected ? 'healthy' : 'degraded';
     return reply.status(isDbConnected ? 200 : 503).send({
       status,
@@ -161,6 +163,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       service: 'orderfast-api',
       version: '1.0.0',
       database: isDbConnected ? 'connected' : 'disconnected',
+      firebasePush: isFbConfigured ? 'active' : 'standby_missing_key',
     });
   };
 
