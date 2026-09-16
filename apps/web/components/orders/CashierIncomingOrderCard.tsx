@@ -90,7 +90,7 @@ export const CashierIncomingOrderCard: React.FC<CashierIncomingOrderCardProps> =
               <div className="min-w-0 flex-1">
                 <span className="font-black block text-[11px] text-primary-ink">ملاحظة الطالب على الأوردر:</span>
                 <p className="font-bold text-xs text-ink mt-0.5 leading-relaxed">
-                  "{order.orderNotes}"
+                  &quot;{order.orderNotes}&quot;
                 </p>
               </div>
             </div>

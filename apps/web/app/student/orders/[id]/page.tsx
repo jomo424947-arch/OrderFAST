@@ -206,7 +206,7 @@ export default function OrderTrackingPage() {
         {order.orderNotes && (
           <div className="pt-2 border-t border-line/60 text-xs font-body text-ink">
             <span className="font-bold text-ink-soft block text-[11px]">ملاحظاتك للكشك:</span>
-            <p className="font-medium bg-canvas p-2 rounded-xl border border-line mt-1">"{order.orderNotes}"</p>
+            <p className="font-medium bg-canvas p-2 rounded-xl border border-line mt-1">&quot;{order.orderNotes}&quot;</p>
           </div>
         )}
 
