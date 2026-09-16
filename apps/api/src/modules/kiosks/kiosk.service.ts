@@ -1,6 +1,6 @@
 import { eq, and, sql, desc, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { kiosks, orders, menuItems, kioskStaff, profiles } from '../../db/schema.js';
+import { kiosks, orders, menuItems, menuCategories, kioskDailyCounters, kioskStaff, profiles } from '../../db/schema.js';
 import { cacheService } from '../../shared/cache/index.js';
 import { AppError } from '../../shared/errors/index.js';
 import { generateId } from '../../shared/id/index.js';
@@ -139,11 +139,23 @@ export class KioskService {
   async updateKioskSettings(
     kioskId: string,
     settings: {
+      name?: string;
+      collegeLocation?: string;
+      campusZone?: string | null;
+      category?: string;
       openingHours?: string;
       defaultPrepTimeMins?: number;
       acceptanceTimeoutSecs?: number;
       phone?: string;
       acceptsOnlineOrders?: boolean;
+      acceptsCash?: boolean;
+      acceptsOnline?: boolean;
+      paymentPolicy?: string;
+      walletNumber?: string | null;
+      instapayHandle?: string | null;
+      acceptsWallet?: boolean;
+      acceptsInstapay?: boolean;
+      imageUrl?: string | null;
     }
   ) {
     const [updated] = await db
@@ -464,6 +476,42 @@ export class KioskService {
       success: true,
       message: 'تم إلغاء تعيين الموظف من الكشك بنجاح',
     };
+  }
+
+  /**
+   * Admin: Delete a kiosk and all associated menus, staff, and records
+   */
+  async deleteKiosk(kioskId: string) {
+    return await db.transaction(async (tx) => {
+      const [kiosk] = await tx.select().from(kiosks).where(eq(kiosks.id, kioskId)).limit(1);
+      if (!kiosk) {
+        throw AppError.notFound('الكشك غير موجود');
+      }
+
+      // Delete daily counters
+      await tx.delete(kioskDailyCounters).where(eq(kioskDailyCounters.kioskId, kioskId));
+
+      // Delete orders for this kiosk
+      await tx.delete(orders).where(eq(orders.kioskId, kioskId));
+
+      // Delete menu items & categories
+      await tx.delete(menuItems).where(eq(menuItems.kioskId, kioskId));
+      await tx.delete(menuCategories).where(eq(menuCategories.kioskId, kioskId));
+
+      // Delete staff assignments
+      await tx.delete(kioskStaff).where(eq(kioskStaff.kioskId, kioskId));
+
+      // Delete kiosk itself
+      await tx.delete(kiosks).where(eq(kiosks.id, kioskId));
+
+      await cacheService.del('kiosks:all');
+      await cacheService.del(`kiosk:${kioskId}`);
+
+      return {
+        success: true,
+        message: `تم حذف كشك "${kiosk.name}" بنجاح`,
+      };
+    });
   }
 }
 

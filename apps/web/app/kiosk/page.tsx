@@ -289,22 +289,24 @@ export default function CashierDashboardPage() {
         </Link>
 
         {/* Today Sales Stat */}
-        <Card className="p-4 sm:p-5 h-full">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-2xl bg-accent-soft text-accent flex items-center justify-center">
-              <DollarSign className="w-5 h-5" />
+        <Link href="/kiosk/history">
+          <Card hoverable className="p-4 sm:p-5 h-full">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 rounded-2xl bg-accent-soft text-accent flex items-center justify-center">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] font-body font-bold text-ink-soft bg-canvas px-2 py-0.5 rounded-md border border-line">
+                اليوم
+              </span>
             </div>
-            <span className="text-[11px] font-body font-bold text-ink-soft bg-canvas px-2 py-0.5 rounded-md border border-line">
-              اليوم
-            </span>
-          </div>
-          <p className="font-display font-black text-xl sm:text-2xl text-ink font-mono-nums">
-            {formatEGP(todaySales)}
-          </p>
-          <p className="font-body text-xs text-ink-soft mt-1">
-            إجمالي مبيعات اليوم ({todayCompletedCount} طلب)
-          </p>
-        </Card>
+            <p className="font-display font-black text-xl sm:text-2xl text-ink font-mono-nums">
+              {formatEGP(todaySales)}
+            </p>
+            <p className="font-body text-xs text-ink-soft mt-1">
+              إجمالي مبيعات اليوم ({todayCompletedCount} طلب)
+            </p>
+          </Card>
+        </Link>
 
         {/* Unavailable Menu Items Stat */}
         <Link href="/kiosk/menu">

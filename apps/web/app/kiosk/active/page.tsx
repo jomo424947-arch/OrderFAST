@@ -97,9 +97,29 @@ export default function CashierActiveOrdersPage() {
                       <span className="font-body text-xs text-ink-soft">
                         ({order.studentName} - {order.studentCollege})
                       </span>
+                      {order.paymentMethod === 'digital_wallet' ? (
+                        <span className="text-[10px] font-body font-bold text-accent bg-accent-soft px-2 py-0.5 rounded-full">
+                          مدفوع أونلاين
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-body font-bold text-primary-ink bg-primary-soft px-2 py-0.5 rounded-full">
+                          كاش
+                        </span>
+                      )}
                     </div>
                     <StatusPill status={order.status} />
                   </div>
+
+                  {/* Student Order Notes */}
+                  {order.orderNotes && (
+                    <div className="bg-primary-soft/40 border border-primary/30 rounded-xl p-2.5 text-xs font-body text-primary-ink flex items-start gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-[11px] block">ملاحظة الطالب:</span>
+                        <p className="text-ink font-semibold mt-0.5">{order.orderNotes}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Items */}
                   <div className="bg-canvas/60 rounded-xl p-3 text-xs font-body text-ink space-y-1 border border-line/50">
@@ -110,8 +130,10 @@ export default function CashierActiveOrdersPage() {
                       </div>
                     ))}
                     <div className="pt-2 mt-2 border-t border-line/60 flex justify-between font-bold text-ink">
-                      <span>المطلوب تحصيله كاش / محفظة:</span>
-                      <span className="font-mono text-primary-ink">{formatEGP(order.total)}</span>
+                      <span>{order.paymentMethod === 'digital_wallet' ? 'حالة الحساب:' : 'المطلوب تحصيله عند الاستلام:'}</span>
+                      <span className={order.paymentMethod === 'digital_wallet' ? 'font-mono text-accent' : 'font-mono text-primary-ink'}>
+                        {order.paymentMethod === 'digital_wallet' ? 'مدفوع أونلاين ✓' : formatEGP(order.total)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -138,7 +160,7 @@ export default function CashierActiveOrdersPage() {
                       className="flex-1 shadow-sm"
                     >
                       <CheckCheck className="w-4 h-4 ml-1.5" />
-                      <span>تم تسليم الطلب وتحصيل المبلغ</span>
+                      <span>{order.paymentMethod === 'digital_wallet' ? 'تم تسليم الطلب للطالب' : 'تم تسليم الطلب وتحصيل المبلغ'}</span>
                     </Button>
                   )}
 

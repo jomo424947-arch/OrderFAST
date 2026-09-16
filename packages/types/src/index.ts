@@ -75,6 +75,13 @@ export interface Kiosk {
   category: string;
   isOpen: boolean;
   acceptsOnlineOrders: boolean;
+  acceptsCash: boolean;
+  acceptsOnline: boolean;
+  paymentPolicy: 'both' | 'cash_only' | 'online_only';
+  walletNumber?: string | null;
+  instapayHandle?: string | null;
+  acceptsWallet: boolean;
+  acceptsInstapay: boolean;
   isRushMode: boolean;
   openingHours: string;
   phone?: string | null;
@@ -167,6 +174,11 @@ export interface Order {
   paymentStatus: PaymentStatus;
 
   // Operational & Queue Snapshots
+  orderNotes?: string | null;
+  onlinePaymentType?: 'wallet' | 'instapay' | null;
+  transferSenderPhone?: string | null;
+  transferAmount?: number | null;
+  transferImageUrl?: string | null;
   rejectionReason?: string | null;
   cancellationReason?: string | null;
   ordersAheadSnapshot: number;
@@ -235,6 +247,11 @@ export interface CreateOrderPayload {
     specialInstructions?: string;
   }[];
   paymentMethod?: PaymentMethod;
+  orderNotes?: string | null;
+  onlinePaymentType?: 'wallet' | 'instapay' | null;
+  transferSenderPhone?: string | null;
+  transferAmount?: number | null;
+  transferImageUrl?: string | null;
 }
 
 export interface BatchActionPayload {

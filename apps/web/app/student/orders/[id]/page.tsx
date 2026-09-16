@@ -144,7 +144,9 @@ export default function OrderTrackingPage() {
               طلبك جاهز للاستلام! 🎉
             </h4>
             <p className="font-body text-xs text-white/90 mt-0.5 leading-relaxed">
-              توجه فوراً إلى كشك <strong className="text-white underline underline-offset-2">{order.kioskName}</strong> لاستلام أوردرك ودفع الحساب.
+              {order.paymentMethod === 'digital_wallet'
+                ? <>توجه فوراً إلى كشك <strong className="text-white underline underline-offset-2">{order.kioskName}</strong> واستلم أوردرك مباشرة بإظهار رقم الطلب (مدفوع أونلاين ✓).</>
+                : <>توجه فوراً إلى كشك <strong className="text-white underline underline-offset-2">{order.kioskName}</strong> لاستلام أوردرك ودفع الحساب ({formatEGP(order.total)}).</>}
             </p>
           </div>
         </div>
@@ -200,13 +202,25 @@ export default function OrderTrackingPage() {
           ))}
         </div>
 
+        {/* Student Order Notes */}
+        {order.orderNotes && (
+          <div className="pt-2 border-t border-line/60 text-xs font-body text-ink">
+            <span className="font-bold text-ink-soft block text-[11px]">ملاحظاتك للكشك:</span>
+            <p className="font-medium bg-canvas p-2 rounded-xl border border-line mt-1">"{order.orderNotes}"</p>
+          </div>
+        )}
+
         <div className="pt-3 border-t border-line/70 flex items-center justify-between font-body text-sm font-bold text-ink">
-          <span>المطلوب عند الاستلام</span>
-          <span className="font-mono text-base text-primary-ink font-mono-nums font-black">{formatEGP(order.total)}</span>
+          <span>{order.paymentMethod === 'digital_wallet' ? 'حالة الحساب' : 'المطلوب عند الاستلام'}</span>
+          <span className={`font-mono text-base font-black font-mono-nums ${order.paymentMethod === 'digital_wallet' ? 'text-accent' : 'text-primary-ink'}`}>
+            {order.paymentMethod === 'digital_wallet' ? 'مدفوع أونلاين بالكامل ✓' : formatEGP(order.total)}
+          </span>
         </div>
 
         <p className="text-[11px] font-body text-ink-soft text-center pt-1 leading-relaxed">
-          الدفع كاش أو محفظة إلكترونية وقت الاستلام من الكشك مباشرة
+          {order.paymentMethod === 'digital_wallet'
+            ? 'تم إرفاق إيصال التحويل مع طلبك وتأكيده للكشك.'
+            : 'يرجى تجهيز المبلغ المطلوب للدفع كاش وقت استلام الطلب من الكشك.'}
         </p>
       </div>
 

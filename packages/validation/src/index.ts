@@ -59,11 +59,22 @@ export const updateKioskStatusSchema = z.object({
 });
 
 export const updateKioskSettingsSchema = z.object({
+  name: z.string().min(2).optional(),
+  collegeLocation: z.string().optional(),
+  campusZone: z.string().optional().nullable(),
+  category: z.string().optional(),
   openingHours: z.string().min(2).optional(),
   defaultPrepTimeMins: z.number().int().min(1).max(120).optional(),
   acceptanceTimeoutSecs: z.number().int().min(60).max(1800).optional(),
   phone: z.string().optional(),
   acceptsOnlineOrders: z.boolean().optional(),
+  acceptsCash: z.boolean().optional(),
+  acceptsOnline: z.boolean().optional(),
+  paymentPolicy: z.enum(['both', 'cash_only', 'online_only']).optional(),
+  walletNumber: z.string().optional().nullable(),
+  instapayHandle: z.string().optional().nullable(),
+  acceptsWallet: z.boolean().optional(),
+  acceptsInstapay: z.boolean().optional(),
   imageUrl: z.string().optional().nullable(),
 });
 
@@ -127,6 +138,11 @@ export const createOrderSchema = z.object({
     .array(orderItemInputSchema)
     .min(1, { message: 'يجب اختيار صنف واحد على الأقل' }),
   paymentMethod: z.enum(['cash', 'digital_wallet']).default('cash'),
+  orderNotes: z.string().max(500).optional().nullable(),
+  onlinePaymentType: z.enum(['wallet', 'instapay']).optional().nullable(),
+  transferSenderPhone: z.string().max(50).optional().nullable(),
+  transferAmount: egpPiastersSchema.optional().nullable(),
+  transferImageUrl: z.string().url().optional().nullable(),
 });
 
 export const acceptOrderSchema = z.object({

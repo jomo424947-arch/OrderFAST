@@ -14,8 +14,11 @@ import {
   Zap,
   Tag,
   Sparkles,
+  Heart,
 } from 'lucide-react';
 import { formatWaitTime } from '@/lib/formatters';
+import { cn } from '@/lib/utils';
+import { useFavoriteStore } from '@/stores/useFavoriteStore';
 
 export interface KioskCardProps {
   kiosk: Kiosk;
@@ -88,6 +91,9 @@ function getKioskIcon(kiosk: Kiosk) {
 export const KioskCard = React.memo(function KioskCard({ kiosk }: KioskCardProps) {
   const [imageError, setImageError] = useState(false);
   const coverUrl = getKioskCover(kiosk);
+  const { isFavorite, toggleFavorite } = useFavoriteStore();
+  const isFav = isFavorite(kiosk.id);
+
   const ratingValue =
     kiosk.rating !== undefined && kiosk.rating !== null
       ? Number(kiosk.rating).toFixed(1)
@@ -121,29 +127,52 @@ export const KioskCard = React.memo(function KioskCard({ kiosk }: KioskCardProps
 
         {/* Top Badges Row */}
         <div className="absolute top-3 inset-x-3 flex items-center justify-between pointer-events-none">
-          {/* Status Badge with Glowing Indicator */}
-          {kiosk.isOpen ? (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 backdrop-blur-md shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-              </span>
-              <span>مفتوح الآن</span>
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-stone-900/80 text-stone-300 border border-stone-700/60 backdrop-blur-md shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-stone-400" />
-              <span>مغلق حالياً</span>
-            </div>
-          )}
+          {/* Status & Wait Time */}
+          <div className="flex items-center gap-1.5 pointer-events-none">
+            {kiosk.isOpen ? (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 backdrop-blur-md shadow-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                </span>
+                <span>مفتوح الآن</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-stone-900/80 text-stone-300 border border-stone-700/60 backdrop-blur-md shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-stone-400" />
+                <span>مغلق حالياً</span>
+              </div>
+            )}
 
-          {/* Wait Time Pill */}
-          {kiosk.isOpen && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-black/60 text-white border border-white/20 backdrop-blur-md shadow-sm">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span className="font-mono">{formatWaitTime(kiosk.estimatedWaitMins)}</span>
-            </div>
-          )}
+            {kiosk.isOpen && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-black/60 text-white border border-white/20 backdrop-blur-md shadow-sm">
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span className="font-mono">{formatWaitTime(kiosk.estimatedWaitMins)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Favorite Heart Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleFavorite(kiosk.id);
+            }}
+            className="pointer-events-auto w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-200 active:scale-90 shadow-sm"
+            aria-label="المفضلة"
+            title={isFav ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+          >
+            <Heart
+              className={cn(
+                'w-4 h-4 transition-all duration-200',
+                isFav
+                  ? 'fill-rose-500 text-rose-500 scale-110'
+                  : 'text-white stroke-[2]'
+              )}
+            />
+          </button>
         </div>
       </div>
 
@@ -164,21 +193,21 @@ export const KioskCard = React.memo(function KioskCard({ kiosk }: KioskCardProps
 
           {Boolean(kiosk.ratingCount && kiosk.ratingCount > 0 && Number(kiosk.rating) > 0) ? (
             <div
-              className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-lg text-xs font-bold text-amber-800 flex-shrink-0"
+              className="inline-flex items-center gap-1 bg-surface border border-line px-2 py-0.5 rounded-lg text-xs font-bold text-ink flex-shrink-0 shadow-xs"
               title={`${kiosk.ratingCount} تقييم`}
             >
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
+              <Star className="w-3.5 h-3.5 text-primary stroke-[2.2]" />
               <span className="font-mono">{ratingValue}</span>
-              <span className="text-[10px] text-amber-700/80 font-mono font-normal mr-0.5">
+              <span className="text-[10px] text-ink-soft font-mono font-normal mr-0.5">
                 ({kiosk.ratingCount})
               </span>
             </div>
           ) : (
             <div
-              className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-lg text-xs font-bold text-emerald-800 flex-shrink-0 shadow-sm"
+              className="inline-flex items-center gap-1 bg-surface border border-line px-2 py-0.5 rounded-lg text-xs font-bold text-ink-soft flex-shrink-0 shadow-xs"
               title="كشك جديد - لم يحصل على تقييمات بعد"
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600 fill-emerald-200" />
+              <Sparkles className="w-3.5 h-3.5 text-primary stroke-[2]" />
               <span>جديد</span>
             </div>
           )}

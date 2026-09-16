@@ -39,6 +39,7 @@ interface KioskState {
   deleteMenuItem: (itemId: string) => Promise<void>;
   addKiosk: (data: Omit<Kiosk, 'id'>) => Kiosk;
   createKiosk: (data: any) => Promise<Kiosk>;
+  deleteKiosk: (id: string) => Promise<void>;
   addCashier: (data: Omit<Cashier, 'id' | 'createdAt'>) => Cashier;
   approveMenuItem: (itemId: string) => Promise<void>;
   rejectMenuItem: (itemId: string) => Promise<void>;
@@ -227,6 +228,21 @@ export const useKioskStore = create<KioskState>((set, get) => ({
       return updated;
     } catch (err: any) {
       set({ error: err.message || 'فشل تعديل إعدادات الكشك' });
+      throw err;
+    }
+  },
+
+  deleteKiosk: async (id: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      await kioskService.deleteKiosk(id);
+      set((state) => ({
+        kiosks: state.kiosks.filter((k) => k.id !== id),
+        kiosksWithStaff: state.kiosksWithStaff.filter((k) => k.id !== id),
+        isLoading: false,
+      }));
+    } catch (err: any) {
+      set({ isLoading: false, error: err.message || 'فشل حذف الكشك' });
       throw err;
     }
   },

@@ -87,6 +87,19 @@ export async function kioskRoutes(app: FastifyInstance) {
     }
   );
 
+  // Admin: Delete Kiosk
+  app.delete<{ Params: { id: string } }>(
+    '/:id',
+    { preHandler: [authenticate, requireSystemRole(['admin'])] },
+    async (request, reply) => {
+      const result = await kioskService.deleteKiosk(request.params.id);
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
+    }
+  );
+
   // Public: List all kiosks with wait times and queue status
   app.get('/', async (_request, reply) => {
     const data = await kioskService.getAllKiosks();

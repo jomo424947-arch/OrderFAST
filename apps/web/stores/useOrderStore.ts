@@ -33,6 +33,11 @@ interface OrderState {
     kiosk: Kiosk;
     items: CartItem[];
     paymentMethod?: 'cash' | 'digital_wallet';
+    orderNotes?: string;
+    onlinePaymentType?: 'wallet' | 'instapay';
+    transferSenderPhone?: string;
+    transferAmount?: number;
+    transferImageUrl?: string;
   }) => Promise<Order>;
 
   acceptOrder: (orderId: string, customPrepTimeMins?: number) => Promise<void>;
@@ -263,7 +268,16 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     };
   },
 
-  placeOrder: async ({ kiosk, items, paymentMethod }) => {
+  placeOrder: async ({
+    kiosk,
+    items,
+    paymentMethod,
+    orderNotes,
+    onlinePaymentType,
+    transferSenderPhone,
+    transferAmount,
+    transferImageUrl,
+  }) => {
     set({ isLoading: true, error: null });
     try {
       const newOrder = await (orderService as any).createOrder({
@@ -274,6 +288,11 @@ export const useOrderStore = create<OrderState>((set, get) => ({
           specialInstructions: ci.specialInstructions,
         })),
         paymentMethod: paymentMethod || 'cash',
+        orderNotes: orderNotes || undefined,
+        onlinePaymentType: onlinePaymentType || undefined,
+        transferSenderPhone: transferSenderPhone || undefined,
+        transferAmount: transferAmount || undefined,
+        transferImageUrl: transferImageUrl || undefined,
       });
 
       set((state) => ({

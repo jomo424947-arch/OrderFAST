@@ -34,6 +34,13 @@ export interface Kiosk {
   ratingCount?: number;
   imageUrl?: string;
   acceptsOnlineOrders: boolean;
+  acceptsCash?: boolean;
+  acceptsOnline?: boolean;
+  paymentPolicy?: 'both' | 'cash_only' | 'online_only';
+  walletNumber?: string;
+  instapayHandle?: string;
+  acceptsWallet?: boolean;
+  acceptsInstapay?: boolean;
   isRushMode: boolean;
   defaultPrepTimeMins?: number;
   acceptanceTimeoutSecs?: number;
@@ -106,6 +113,11 @@ export interface Order {
   status: OrderStatus;
   paymentMethod?: 'cash' | 'digital_wallet';
   paymentStatus?: 'pending_at_pickup' | 'paid' | 'waived';
+  orderNotes?: string;
+  onlinePaymentType?: 'wallet' | 'instapay';
+  transferSenderPhone?: string;
+  transferAmount?: number; // in EGP
+  transferImageUrl?: string;
   estimatedWaitMins: number;
   approximateOrdersAhead: number;
   rejectionReason?: string;

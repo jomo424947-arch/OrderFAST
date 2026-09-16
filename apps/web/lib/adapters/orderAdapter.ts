@@ -29,6 +29,11 @@ export interface ApiOrderRaw {
   total: number;
   paymentMethod?: 'cash' | 'digital_wallet';
   paymentStatus?: 'pending_at_pickup' | 'paid' | 'waived';
+  orderNotes?: string | null;
+  onlinePaymentType?: 'wallet' | 'instapay' | null;
+  transferSenderPhone?: string | null;
+  transferAmount?: number | null;
+  transferImageUrl?: string | null;
   rejectionReason?: string | null;
   cancellationReason?: string | null;
   ordersAheadSnapshot?: number;
@@ -101,6 +106,11 @@ export function adaptOrderFromApi(raw: ApiOrderRaw): Order {
     status: raw.status,
     paymentMethod: raw.paymentMethod || 'cash',
     paymentStatus: raw.paymentStatus || 'pending_at_pickup',
+    orderNotes: raw.orderNotes || undefined,
+    onlinePaymentType: raw.onlinePaymentType || undefined,
+    transferSenderPhone: raw.transferSenderPhone || undefined,
+    transferAmount: raw.transferAmount ? piastersToEgp(raw.transferAmount) : undefined,
+    transferImageUrl: raw.transferImageUrl || undefined,
     estimatedWaitMins,
     approximateOrdersAhead: raw.ordersAhead ?? raw.ordersAheadSnapshot ?? 0,
     rejectionReason: raw.rejectionReason || undefined,

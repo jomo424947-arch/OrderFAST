@@ -89,6 +89,10 @@ export class ApiKioskService implements IKioskService {
     return adaptKioskFromApi(raw);
   }
 
+  async deleteKiosk(kioskId: string): Promise<any> {
+    return apiClient.delete(`/kiosks/${kioskId}`);
+  }
+
   async getStaffList(): Promise<any[]> {
     const list = await apiClient.get<any[]>('/kiosks/admin/staff-list');
     return Array.isArray(list) ? list : [];

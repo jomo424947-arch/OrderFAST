@@ -17,6 +17,11 @@ export class ApiOrderService implements IOrderService {
           specialInstructions: item.specialInstructions,
         })),
         paymentMethod: orderData.paymentMethod || 'cash',
+        orderNotes: orderData.orderNotes || undefined,
+        onlinePaymentType: orderData.onlinePaymentType || undefined,
+        transferSenderPhone: orderData.transferSenderPhone || undefined,
+        transferAmount: orderData.transferAmount ? Math.round(orderData.transferAmount * 100) : undefined, // Convert EGP to Piasters
+        transferImageUrl: orderData.transferImageUrl || undefined,
       },
       {
         idempotencyKey: orderData.idempotencyKey || generateUUID(),

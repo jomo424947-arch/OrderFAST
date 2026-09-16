@@ -214,6 +214,15 @@ export class OrderService {
         );
       }
 
+      // Verify payment method against kiosk settings
+      const method = input.paymentMethod || 'cash';
+      if (method === 'cash' && kiosk.acceptsCash === false) {
+        throw AppError.conflict('هذا الكشك لا يقبل الدفع كاش حالياً - يرجى اختيار الدفع الإلكتروني');
+      }
+      if (method === 'digital_wallet' && kiosk.acceptsOnline === false) {
+        throw AppError.conflict('هذا الكشك لا يقبل الدفع الإلكتروني حالياً - يرجى اختيار الدفع كاش');
+      }
+
       // Step 4: Lock Menu Items (FOR SHARE) & Verify Availability
       const requestedItemIds = input.items.map((i) => i.menuItemId);
       const dbMenuItems = await tx
@@ -316,6 +325,7 @@ export class OrderService {
       );
 
       // Step 8: Insert Order Row
+      const isOnline = input.paymentMethod === 'digital_wallet';
       const [newOrder] = await tx
         .insert(orders)
         .values({
@@ -330,7 +340,12 @@ export class OrderService {
           fees,
           total,
           paymentMethod: input.paymentMethod || 'cash',
-          paymentStatus: 'pending_at_pickup',
+          paymentStatus: isOnline ? 'paid' : 'pending_at_pickup',
+          orderNotes: input.orderNotes || null,
+          onlinePaymentType: input.onlinePaymentType || null,
+          transferSenderPhone: input.transferSenderPhone || null,
+          transferAmount: input.transferAmount || null,
+          transferImageUrl: input.transferImageUrl || null,
           ordersAheadSnapshot: activeQueueCount?.count || 0,
           studentNameSnapshot: studentProfile.fullName,
           studentCollegeSnapshot: studentProfile.college,
@@ -354,6 +369,9 @@ export class OrderService {
           itemsCount: orderItemsToInsert.length,
           totalPiasters: total,
           orderNumber,
+          paymentMethod: input.paymentMethod || 'cash',
+          orderNotes: input.orderNotes || null,
+          transferAmount: input.transferAmount || null,
         },
       });
 

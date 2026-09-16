@@ -53,9 +53,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (profile.system_role !== 'admin' && profile.system_role !== 'staff') {
+    // Verify User Role (Active students, staff, and admins can upload)
+    if (!profile.system_role) {
       return NextResponse.json(
-        { success: false, error: 'ليس لديك صلاحية رفع الصور (تتطلب حساب موظف أو مشرف)' },
+        { success: false, error: 'نوع الحساب غير محدد' },
         { status: 403 }
       );
     }
@@ -88,7 +89,8 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const rawExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const ext = ['png', 'jpg', 'jpeg', 'webp'].includes(rawExt) ? rawExt : 'jpg';
-    const fileName = `kiosk_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const prefix = profile.system_role === 'student' ? 'receipt' : 'kiosk';
+    const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from('kiosk-images')

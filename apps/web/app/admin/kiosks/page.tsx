@@ -21,6 +21,9 @@ import {
   Star,
   AlertCircle,
   Image as ImageIcon,
+  Edit,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function AdminKiosksPage() {
@@ -33,6 +36,7 @@ export default function AdminKiosksPage() {
     fetchStaffList,
     createKiosk,
     updateKioskSettings,
+    deleteKiosk,
     assignStaff,
     removeStaff,
   } = useKioskStore();
@@ -48,6 +52,24 @@ export default function AdminKiosksPage() {
   const [selectedKioskForImage, setSelectedKioskForImage] = useState<any>(null);
   const [editImageUrl, setEditImageUrl] = useState('');
   const [isSavingImage, setIsSavingImage] = useState(false);
+
+  // Edit Kiosk Modal State (Admin)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedKioskForEdit, setSelectedKioskForEdit] = useState<any>(null);
+  const [editName, setEditName] = useState('');
+  const [editCollegeLocation, setEditCollegeLocation] = useState(COLLEGES[0]);
+  const [editCampusZone, setEditCampusZone] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editOpeningHours, setEditOpeningHours] = useState('');
+  const [editPrepTime, setEditPrepTime] = useState('10');
+  const [editKioskImageUrl, setEditKioskImageUrl] = useState('');
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  // Delete Kiosk Modal State (Admin)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedKioskForDelete, setSelectedKioskForDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,6 +194,68 @@ export default function AdminKiosksPage() {
     }
   };
 
+  const handleOpenEditModal = (kiosk: any) => {
+    setSelectedKioskForEdit(kiosk);
+    setEditName(kiosk.name || '');
+    setEditCollegeLocation(kiosk.collegeLocation || COLLEGES[0]);
+    setEditCampusZone(kiosk.campusZone || '');
+    setEditCategory(kiosk.category || '');
+    setEditPhone(kiosk.phone || '');
+    setEditOpeningHours(kiosk.openingHours || '8:00 ص - 5:00 م');
+    setEditPrepTime(kiosk.defaultPrepTimeMins ? String(kiosk.defaultPrepTimeMins) : '10');
+    setEditKioskImageUrl(kiosk.imageUrl || '');
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditKioskSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedKioskForEdit || !editName.trim()) return;
+
+    try {
+      setIsSubmittingEdit(true);
+      await updateKioskSettings(selectedKioskForEdit.id, {
+        name: editName.trim(),
+        collegeLocation: editCollegeLocation,
+        campusZone: editCampusZone.trim() || undefined,
+        category: editCategory.trim() || undefined,
+        phone: editPhone.trim() || undefined,
+        openingHours: editOpeningHours.trim() || undefined,
+        defaultPrepTimeMins: parseInt(editPrepTime, 10) || 10,
+        imageUrl: editKioskImageUrl.trim() || undefined,
+      });
+
+      await fetchKiosksWithStaff();
+      setIsEditModalOpen(false);
+      setToastMessage(`تم تحديث بيانات كشك "${editName.trim()}" بنجاح!`);
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err: any) {
+      alert(err.message || 'فشل تحديث بيانات الكشك');
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  const handleOpenDeleteModal = (kiosk: any) => {
+    setSelectedKioskForDelete(kiosk);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedKioskForDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteKiosk(selectedKioskForDelete.id);
+      setIsDeleteModalOpen(false);
+      setToastMessage(`تم حذف كشك "${selectedKioskForDelete.name}" بنجاح!`);
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err: any) {
+      alert(err.message || 'فشل حذف الكشك');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20">
       {/* Header */}
@@ -226,16 +310,36 @@ export default function AdminKiosksPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => toggleKioskOpen(kiosk.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-body font-bold border transition-all ${kiosk.isOpen
-                      ? 'bg-accent-soft text-accent border-accent/30 hover:bg-accent-soft/80'
-                      : 'bg-danger-soft text-danger border-danger/30 hover:bg-danger-soft/80'
-                      }`}
-                  >
-                    {kiosk.isOpen ? 'مفتوح للطلب' : 'مغلق حالياً'}
-                  </button>
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    <button
+                      type="button"
+                      onClick={() => toggleKioskOpen(kiosk.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-body font-bold border transition-all ${kiosk.isOpen
+                        ? 'bg-accent-soft text-accent border-accent/30 hover:bg-accent-soft/80'
+                        : 'bg-danger-soft text-danger border-danger/30 hover:bg-danger-soft/80'
+                        }`}
+                    >
+                      {kiosk.isOpen ? 'مفتوح للطلب' : 'مغلق حالياً'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal(kiosk)}
+                      title="تعديل بيانات الكشك"
+                      className="p-1.5 rounded-xl border border-line bg-canvas hover:bg-surface hover:text-accent hover:border-accent/40 text-ink-soft transition-colors"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDeleteModal(kiosk)}
+                      title="حذف الكشك نهائياً"
+                      className="p-1.5 rounded-xl border border-line bg-canvas hover:bg-danger-soft hover:text-danger hover:border-danger/40 text-ink-soft transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Details list */}
@@ -607,6 +711,160 @@ export default function AdminKiosksPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* 4. Edit Kiosk Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={`تعديل كشك: ${selectedKioskForEdit?.name || ''}`}
+        description="تعديل بيانات الكشك وموقعه ومواعيد العمل ومتوسط وقت التحضير وصورته."
+      >
+        <form onSubmit={handleEditKioskSubmit} className="space-y-4 text-right">
+          <Input
+            label="اسم الكشك أو الكافيه"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            placeholder="مثال: كافيه الهندسة"
+            required
+          />
+
+          <div className="w-full text-right">
+            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+              موقع الكلية
+            </label>
+            <select
+              value={editCollegeLocation}
+              onChange={(e) => setEditCollegeLocation(e.target.value)}
+              className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer"
+            >
+              {COLLEGES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <Input
+            label="المنطقة داخل الكلية (اختياري)"
+            value={editCampusZone}
+            onChange={(e) => setEditCampusZone(e.target.value)}
+            placeholder="مثال: بجوار مبنى الورش - الساحة الرئيسية"
+          />
+
+          <Input
+            label="التصنيف"
+            value={editCategory}
+            onChange={(e) => setEditCategory(e.target.value)}
+            placeholder="مثال: مشروبات ساخنة وسناكس"
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="مواعيد العمل"
+              value={editOpeningHours}
+              onChange={(e) => setEditOpeningHours(e.target.value)}
+              placeholder="8:00 ص - 5:00 م"
+            />
+
+            <Input
+              label="متوسط وقت التحضير (بالدقائق)"
+              type="number"
+              min="1"
+              max="120"
+              value={editPrepTime}
+              onChange={(e) => setEditPrepTime(e.target.value)}
+              placeholder="10"
+            />
+          </div>
+
+          <Input
+            label="رقم هاتف الكشك للتواصل (اختياري)"
+            type="tel"
+            value={editPhone}
+            onChange={(e) => setEditPhone(e.target.value)}
+            placeholder="01012345678"
+            dir="ltr"
+          />
+
+          <div className="space-y-1.5 text-right">
+            <label className="block font-body text-xs font-medium text-ink-soft">
+              صورة غلاف الكشك (اختياري)
+            </label>
+            <ImageUploadDropzone
+              value={editKioskImageUrl}
+              onChange={(url) => setEditKioskImageUrl(url)}
+              onClear={() => setEditKioskImageUrl('')}
+            />
+          </div>
+
+          <div className="flex items-center gap-3 pt-3 border-t border-line/60">
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              isLoading={isSubmittingEdit}
+              className="flex-1"
+            >
+              حفظ التعديلات
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="md"
+              onClick={() => setIsEditModalOpen(false)}
+              className="flex-1"
+            >
+              إلغاء
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* 5. Delete Kiosk Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="تأكيد حذف الكشك"
+        description="هذا الإجراء نهائي وسيؤدي إلى إزالة الكشك وبياناته من المنصة."
+      >
+        <div className="space-y-4 text-right">
+          <div className="bg-danger-soft border border-danger/20 rounded-2xl p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-body font-bold text-sm text-danger">
+                تحذير: حذف كشك &quot;{selectedKioskForDelete?.name}&quot;
+              </p>
+              <p className="font-body text-xs text-ink-soft leading-relaxed">
+                سيتم مسح هذا الكشك نهائياً مع كافة قوائم الطعام والتصنيفات والطلبات المرتبطة به، وإلغاء تعيين موظفي الكاشير التابعين له. هذا الإجراء لا يمكن التراجع عنه.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-3 border-t border-line/60">
+            <Button
+              type="button"
+              variant="danger"
+              size="md"
+              isLoading={isDeleting}
+              onClick={handleConfirmDelete}
+              className="flex-1"
+            >
+              نعم، احذف الكشك نهائياً
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="md"
+              onClick={() => setIsDeleteModalOpen(false)}
+              disabled={isDeleting}
+              className="flex-1"
+            >
+              إلغاء
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

@@ -14,6 +14,13 @@ export interface ApiKioskRaw {
   ratingCount?: number | null;
   imageUrl?: string | null;
   acceptsOnlineOrders?: boolean;
+  acceptsCash?: boolean;
+  acceptsOnline?: boolean;
+  paymentPolicy?: 'both' | 'cash_only' | 'online_only';
+  walletNumber?: string | null;
+  instapayHandle?: string | null;
+  acceptsWallet?: boolean;
+  acceptsInstapay?: boolean;
   isRushMode?: boolean;
   defaultPrepTimeMins?: number;
   acceptanceTimeoutSecs?: number;
@@ -66,6 +73,13 @@ export function adaptKioskFromApi(raw: ApiKioskRaw): Kiosk {
     ratingCount: raw.ratingCount ?? 0,
     imageUrl: raw.imageUrl || undefined,
     acceptsOnlineOrders: raw.acceptsOnlineOrders !== undefined ? raw.acceptsOnlineOrders : true,
+    acceptsCash: raw.acceptsCash !== undefined ? raw.acceptsCash : true,
+    acceptsOnline: raw.acceptsOnline !== undefined ? raw.acceptsOnline : false,
+    paymentPolicy: raw.paymentPolicy || 'both',
+    walletNumber: raw.walletNumber || undefined,
+    instapayHandle: raw.instapayHandle || undefined,
+    acceptsWallet: raw.acceptsWallet !== undefined ? raw.acceptsWallet : true,
+    acceptsInstapay: raw.acceptsInstapay !== undefined ? raw.acceptsInstapay : true,
     isRushMode: !!raw.isRushMode,
     defaultPrepTimeMins: raw.defaultPrepTimeMins || 15,
     acceptanceTimeoutSecs: raw.acceptanceTimeoutSecs || 300,

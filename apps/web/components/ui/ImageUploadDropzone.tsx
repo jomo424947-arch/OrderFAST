@@ -2,7 +2,10 @@
 
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
-import { Upload, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
+import { Upload, Image as ImageIcon, Loader2, Trash2, Crop, Sliders } from 'lucide-react';
+import { compressImage } from '@/lib/utils/imageCompression';
+import { tokenStorage } from '@/lib/api/client';
+import { ImageCropModal } from './ImageCropModal';
 
 export interface ImageUploadDropzoneProps {
   value?: string;
@@ -22,6 +25,11 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Crop & Adjust modal state
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropFileName, setCropFileName] = useState<string>('kiosk_cover.jpg');
+
   const handleUploadFile = async (file: File) => {
     if (!file) return;
 
@@ -30,20 +38,25 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('حجم الصورة يجب ألا يتجاوز 5 ميجابايت');
-      return;
-    }
-
     try {
       setIsUploading(true);
       setUploadError(null);
 
+      // Compress image client-side to < 150 KB
+      const compressed = await compressImage(file);
+
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressed);
+
+      const token = tokenStorage.getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       const res = await fetch('/api/upload', {
         method: 'POST',
+        headers,
         body: formData,
       });
 
@@ -61,10 +74,37 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
     }
   };
 
+  const handleSelectFileForCrop = (file: File) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('الملف المختار يجب أن يكون صورة صالحة (PNG, JPG, WebP)');
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      setUploadError('حجم ملف الصورة يجب ألا يتجاوز 15 ميجابايت');
+      return;
+    }
+
+    setUploadError(null);
+    setCropFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setCropImageSrc(result);
+        setIsCropModalOpen(true);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleUploadFile(file);
+      handleSelectFileForCrop(file);
     }
   };
 
@@ -75,8 +115,32 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      handleUploadFile(file);
+      handleSelectFileForCrop(file);
     }
+  };
+
+  const handleCropConfirm = async (_blob: Blob, croppedFile: File) => {
+    setIsCropModalOpen(false);
+    setCropImageSrc(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    await handleUploadFile(croppedFile);
+  };
+
+  const handleCropClose = () => {
+    setIsCropModalOpen(false);
+    setCropImageSrc(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleEditCurrentCover = () => {
+    if (!value) return;
+    setCropFileName('current_cover.jpg');
+    setCropImageSrc(value);
+    setIsCropModalOpen(true);
   };
 
   return (
@@ -122,10 +186,13 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
               className="object-cover"
               unoptimized
             />
-            <div className="absolute inset-0 bg-black/40 hover:bg-black/50 transition-colors flex flex-col items-center justify-center text-white gap-2 opacity-0 hover:opacity-100 duration-200">
-              <Upload className="w-6 h-6" />
-              <span className="text-xs font-body font-bold">
-                انقر لاختيار صورة أخرى أو اسحب ملفاً هنا
+            <div className="absolute inset-0 bg-black/45 hover:bg-black/55 transition-colors flex flex-col items-center justify-center text-white gap-2 opacity-0 hover:opacity-100 duration-200">
+              <div className="flex items-center gap-2">
+                <Upload className="w-5 h-5" />
+                <Crop className="w-5 h-5 text-amber-400" />
+              </div>
+              <span className="text-xs font-body font-bold text-center px-4">
+                انقر لاختيار صورة أخرى وتعديلها أو اسحب ملفاً هنا
               </span>
             </div>
           </>
@@ -143,7 +210,7 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
                 اضغط لاختيار صورة من جهازك
               </p>
               <p className="font-body text-[11px] text-ink-soft mt-0.5">
-                أو اسحب وأفلت ملف الصورة هنا (PNG, JPG حتى 5 ميجابايت)
+                أو اسحب وأفلت ملف الصورة هنا (مع إمكانية التكبير والتحريك والقص قبل الرفع)
               </p>
             </div>
           </div>
@@ -154,7 +221,7 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
           <div className="absolute inset-0 bg-surface/90 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-20">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="font-body text-xs font-bold text-ink">
-              جاري رفع الصورة إلى السحابة...
+              جاري رفع ومعالجة الصورة إلى السحابة...
             </p>
           </div>
         )}
@@ -169,18 +236,32 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
 
       {/* Action buttons if image exists */}
       {value && (
-        <div className="flex items-center justify-between text-xs pt-0.5">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              fileInputRef.current?.click();
-            }}
-            className="inline-flex items-center gap-1.5 text-accent font-bold hover:underline"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>رفع صورة بديلة من جهازك</span>
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs pt-0.5">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              className="inline-flex items-center gap-1.5 text-accent font-bold hover:underline"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>رفع صورة جديدة</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditCurrentCover();
+              }}
+              className="inline-flex items-center gap-1.5 text-ink hover:text-accent font-bold hover:underline"
+            >
+              <Crop className="w-3.5 h-3.5 text-accent" />
+              <span>تعديل وضبط الكادر الحالي</span>
+            </button>
+          </div>
 
           {onClear && (
             <button
@@ -197,6 +278,16 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
           )}
         </div>
       )}
+
+      {/* Interactive Crop & Adjustment Modal */}
+      <ImageCropModal
+        isOpen={isCropModalOpen}
+        imageSrc={cropImageSrc}
+        fileName={cropFileName}
+        aspectRatio={16 / 9}
+        onClose={handleCropClose}
+        onConfirm={handleCropConfirm}
+      />
     </div>
   );
 };

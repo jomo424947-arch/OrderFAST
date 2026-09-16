@@ -17,6 +17,11 @@ export interface CreateOrderPayload {
   subtotal?: number;        // Mock-only: API calculates server-side
   total?: number;           // Mock-only: API calculates server-side
   paymentMethod?: 'cash' | 'digital_wallet';
+  orderNotes?: string | null;
+  onlinePaymentType?: 'wallet' | 'instapay' | null;
+  transferSenderPhone?: string | null;
+  transferAmount?: number | null;
+  transferImageUrl?: string | null;
   idempotencyKey?: string;
 }
 
@@ -86,6 +91,13 @@ export class MockOrderService implements IOrderService {
       fees,
       total: subtotal + fees,
       status: 'PENDING_KIOSK',
+      paymentMethod: orderData.paymentMethod || 'cash',
+      paymentStatus: orderData.paymentMethod === 'digital_wallet' ? 'paid' : 'pending_at_pickup',
+      orderNotes: orderData.orderNotes || undefined,
+      onlinePaymentType: orderData.onlinePaymentType || undefined,
+      transferSenderPhone: orderData.transferSenderPhone || undefined,
+      transferAmount: orderData.transferAmount || undefined,
+      transferImageUrl: orderData.transferImageUrl || undefined,
       estimatedWaitMins: 15,
       approximateOrdersAhead: 2,
       createdAt: new Date().toISOString(),
