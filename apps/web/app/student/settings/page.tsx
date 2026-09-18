@@ -6,7 +6,12 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { COLLEGES } from '@/lib/constants';
-import { ChevronRight, Save, BellRing, Phone, Mail, User } from 'lucide-react';
+import { ChevronRight, Save, BellRing, Phone, Mail, User, Smartphone, CheckCircle2, Bell, Send } from 'lucide-react';
+import {
+  isNotificationSupported,
+  requestNotificationPermission,
+  showBrowserNotification,
+} from '@/lib/notifications/webNotification';
 
 export default function StudentSettingsPage() {
   const router = useRouter();
@@ -18,6 +23,30 @@ export default function StudentSettingsPage() {
   const [orderReadyAlerts, setOrderReadyAlerts] = useState(true);
   const [delayAlerts, setDelayAlerts] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const [browserPerm, setBrowserPerm] = useState<NotificationPermission>('default');
+  const [testingNotif, setTestingNotif] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setBrowserPerm(Notification.permission);
+    }
+  }, []);
+
+  const handleTestBrowserNotification = async () => {
+    setTestingNotif(true);
+    let perm = browserPerm;
+    if (perm !== 'granted') {
+      perm = await requestNotificationPermission();
+      setBrowserPerm(perm);
+    }
+    if (perm === 'granted') {
+      await showBrowserNotification('FastOrder - تنبيه تجريبي', {
+        body: 'تم استقبال الإشعار بنجاح على هذا الجهاز.',
+        url: '/student/orders',
+      });
+    }
+    setTestingNotif(false);
+  };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +155,56 @@ export default function StudentSettingsPage() {
               className="w-4 h-4 accent-primary rounded cursor-pointer"
             />
           </label>
+
+          {/* Web Push Notification on Phone Toggle */}
+          <div className="pt-3 border-t border-line/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-primary" />
+                <p className="font-body text-xs font-bold text-ink">إشعارات المتصفح للجهاز</p>
+                {browserPerm === 'granted' ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>مفعلة</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                    <span>غير مفعلة</span>
+                  </span>
+                )}
+              </div>
+              <p className="font-body text-[11px] text-ink-soft mt-1 leading-relaxed">
+                {browserPerm === 'granted'
+                  ? 'تصلك التنبيهات الفورية لحالة الطلبات على شاشة جهازك بصوت واهتزاز'
+                  : 'تمكين الإشعارات لتصلك تحديثات الطلب مباشرة على هاتفك'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={testingNotif}
+              onClick={handleTestBrowserNotification}
+              className={`text-xs font-body font-bold px-3.5 py-2 rounded-xl transition-all shadow-xs active:scale-95 whitespace-nowrap self-start sm:self-auto flex items-center gap-1.5 ${
+                browserPerm === 'granted'
+                  ? 'bg-surface border border-line text-ink hover:bg-canvas'
+                  : 'bg-primary text-primary-ink hover:bg-primary-hover shadow-sm'
+              }`}
+            >
+              {testingNotif ? (
+                <span>جاري الإرسال...</span>
+              ) : browserPerm === 'granted' ? (
+                <>
+                  <Send className="w-3.5 h-3.5 text-primary" />
+                  <span>إرسال إشعار تجريبي</span>
+                </>
+              ) : (
+                <>
+                  <Bell className="w-3.5 h-3.5" />
+                  <span>تفعيل الإشعارات</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         <Button type="submit" variant="primary" size="lg" className="w-full">

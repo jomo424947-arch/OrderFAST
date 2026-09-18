@@ -1,0 +1,24 @@
+{
+  "name": "FastOrder - طلبات الحرم الجامعي",
+  "short_name": "FastOrder",
+  "description": "منصة طلب وتتبع أوردرات أكشاك الحرم الجامعي — اطلب من مكانك واعرف دورك قبل ما تنزل.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAFAFA",
+  "theme_color": "#FFA41C",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
