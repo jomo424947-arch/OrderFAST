@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -60,9 +60,6 @@ export const StudentBottomNav: React.FC = () => {
           if (item.isFloating) {
             return (
               <div key={item.href} className="relative flex justify-center items-center w-16 h-full">
-                {/* Dark scooped crescent notch directly under the button */}
-                <div className="absolute -top-3 w-16 h-6 bg-[#261507] rounded-b-full -z-0 pointer-events-none shadow-inner" />
-
                 {/* Floating Large Orange Cart Button */}
                 <Link
                   href={item.href}
@@ -71,8 +68,8 @@ export const StudentBottomNav: React.FC = () => {
                 >
                   <div
                     className={cn(
-                      'w-14 h-14 sm:w-15 sm:h-15 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 active:scale-95',
-                      'bg-[#FF5A1F] hover:bg-[#E84E16] text-white',
+                      'w-14 h-14 sm:w-15 sm:h-15 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95',
+                      'bg-[#FF5A1F] hover:bg-[#E84E16] text-white border-4 border-white shadow-[0_6px_20px_rgba(255,90,31,0.35)]',
                       item.isActive && 'ring-4 ring-[#FF5A1F]/25 shadow-glow'
                     )}
                   >
