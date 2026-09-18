@@ -7,6 +7,7 @@ import {
   batchActionSchema,
 } from '@orderfast/validation';
 import { orderService } from './order.service.js';
+import { AppError } from '../../shared/errors/index.js';
 import {
   authenticate,
   requireSystemRole,
@@ -21,8 +22,14 @@ export async function orderRoutes(app: FastifyInstance) {
     '/',
     { preHandler: [authenticate, requireSystemRole(['student']), requireStudentActive] },
     async (request, reply) => {
-      const idempotencyKey =
-        (request.headers['idempotency-key'] as string) || generateId();
+      let idempotencyKey = (request.headers['idempotency-key'] as string | undefined)?.trim();
+      if (idempotencyKey) {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+          throw AppError.badRequest('مفتاح عدم التكرار (Idempotency-Key) يجب أن يكون بصيغة UUID صالحة');
+        }
+      } else {
+        idempotencyKey = generateId();
+      }
 
       const body = createOrderSchema.parse(request.body);
       const result = await orderService.createOrder(

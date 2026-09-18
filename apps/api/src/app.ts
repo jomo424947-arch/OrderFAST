@@ -151,6 +151,31 @@ export async function buildApp(): Promise<FastifyInstance> {
       });
     }
 
+    // Handle PostgreSQL Driver Client Errors (e.g. 22P02 invalid input syntax for type uuid)
+    const errCode = (error as any).code || (error as any).originalError?.code;
+    if (errCode === '22P02' || error.message?.includes('invalid input syntax for type uuid')) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: 'INVALID_ID_FORMAT',
+          message: 'صيغة المعرف المرسل غير صالحة',
+          requestId: request.id,
+        },
+      });
+    }
+
+    // Handle PostgreSQL Unique Constraint Violation (23505)
+    if (errCode === '23505') {
+      return reply.status(409).send({
+        success: false,
+        error: {
+          code: 'RESOURCE_CONFLICT',
+          message: 'تعارض في البيانات: السجل أو المفتاح مستخدم مسبقاً',
+          requestId: request.id,
+        },
+      });
+    }
+
     // Fallback Internal Server Error
     return reply.status(500).send({
       success: false,
