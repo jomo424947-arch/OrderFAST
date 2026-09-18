@@ -1,9 +1,17 @@
 import { ApiResponse, ApiErrorResponse } from './types';
 
-const rawApiUrl =
-  (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').trim().replace(/^['"]|['"]$/g, '');
-const cleanApiUrl = rawApiUrl.replace(/\/+$/, '');
-const API_BASE_URL = cleanApiUrl.endsWith('/api') ? cleanApiUrl : `${cleanApiUrl}/api`;
+export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    // If running in browser on fast0rder.online, use current origin so all calls are same-origin (no CORS mismatch)
+    if (window.location.hostname.includes('fast0rder.online')) {
+      return `${window.location.origin}/api`;
+    }
+  }
+  const rawApiUrl =
+    (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').trim().replace(/^['"]|['"]$/g, '');
+  const cleanApiUrl = rawApiUrl.replace(/\/+$/, '');
+  return cleanApiUrl.endsWith('/api') ? cleanApiUrl : `${cleanApiUrl}/api`;
+}
 
 const TOKEN_KEY = 'orderfast_access_token';
 const REFRESH_TOKEN_KEY = 'orderfast_refresh_token';
@@ -65,7 +73,8 @@ async function tryRefreshToken(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
@@ -104,7 +113,8 @@ async function request<T>(
 ): Promise<T> {
   const { params, skipAuth = false, idempotencyKey, headers: customHeaders, ...restOptions } = options;
 
-  let url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const baseUrl = getApiBaseUrl();
+  let url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   if (params) {
     const searchParams = new URLSearchParams();

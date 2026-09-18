@@ -262,15 +262,15 @@ export default function RegisterPage() {
             required
           />
 
-          {/* Email Verification Warning Box */}
-          <div className="bg-primary-soft/60 border border-primary/25 rounded-2xl p-2.5 sm:p-3 flex items-start gap-2.5 -mt-1 text-right shadow-xs">
-            <span className="text-sm shrink-0 select-none mt-0.5">⚠️</span>
+          {/* Instant Activation Note */}
+          <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-2.5 sm:p-3 flex items-start gap-2.5 -mt-1 text-right shadow-xs">
+            <span className="text-sm shrink-0 select-none mt-0.5">✨</span>
             <div className="space-y-0.5">
-              <p className="font-body font-bold text-xs text-primary-ink">
-                تنبيه هام حول البريد الإلكتروني:
+              <p className="font-body font-bold text-xs text-emerald-800 dark:text-emerald-300">
+                تفعيل فوري ومباشر:
               </p>
               <p className="font-body text-[11px] text-ink-soft leading-relaxed">
-                اكتب بريدك بدقة؛ حيث سنرسل لك رابط تفعيل لحسابك، ولن تتمكن من تسجيل الدخول أو إتمام الطلبات إلا بعد تأكيد بريدك.
+                سيتم تفعيل حسابك فوراً وتسجيل دخولك تلقائياً لتتمكن من تصفح الأكشاك والطلب في ثوانٍ معدودة.
               </p>
             </div>
           </div>

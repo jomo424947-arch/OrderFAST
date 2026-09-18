@@ -15,30 +15,25 @@ export class AuthService {
    */
   async registerStudent(input: RegisterStudentInput) {
     const supabaseAdmin = getSupabaseAdmin();
-    const supabase = getSupabase();
 
-    // 1. Create auth user in Supabase (triggers confirmation email if Confirm signup is enabled)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // 1. Create auth user in Supabase with admin client (instant, reliable, bypasses SMTP hang)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: input.email,
       password: input.password,
-      options: {
-        data: {
-          full_name: input.fullName,
-          phone: input.phone || undefined,
-          system_role: 'student',
-        },
+      email_confirm: true,
+      user_metadata: {
+        full_name: input.fullName,
+        phone: input.phone || undefined,
+        system_role: 'student',
       },
     });
 
     if (authError || !authData.user) {
-      if (authError?.message?.includes('already registered')) {
+      const msg = authError?.message?.toLowerCase() || '';
+      if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('duplicate')) {
         throw AppError.conflict('البريد الإلكتروني مسجل مسبقاً');
       }
       throw AppError.badRequest(authError?.message || 'فشل في إنشاء حساب المستخدم');
-    }
-
-    if (authData.user.identities && authData.user.identities.length === 0) {
-      throw AppError.conflict('البريد الإلكتروني مسجل مسبقاً');
     }
 
     const userId = authData.user.id;
