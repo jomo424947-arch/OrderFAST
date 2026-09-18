@@ -17,9 +17,14 @@ export async function runMigrations() {
       const migrationPath = path.join(migrationsDir, file);
       const sqlContent = fs.readFileSync(migrationPath, 'utf-8');
       console.log(`⏳ Executing migration ${file}...`);
-      await client.query('BEGIN');
-      await client.query(sqlContent);
-      await client.query('COMMIT');
+      // PostgreSQL does not allow ALTER TYPE ... ADD VALUE inside a transaction block
+      if (sqlContent.toUpperCase().includes('ALTER TYPE') && sqlContent.toUpperCase().includes('ADD VALUE')) {
+        await client.query(sqlContent);
+      } else {
+        await client.query('BEGIN');
+        await client.query(sqlContent);
+        await client.query('COMMIT');
+      }
       console.log(`✅ Migration ${file} executed successfully!`);
     }
   } catch (error) {
