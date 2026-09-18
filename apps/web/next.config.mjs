@@ -8,8 +8,8 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
-      "img-src 'self' data: blob: https://images.unsplash.com https://placeholder.com https://xjypynrwmreulrxhaepg.supabase.co",
-      "connect-src 'self' https://xjypynrwmreulrxhaepg.supabase.co wss://xjypynrwmreulrxhaepg.supabase.co https://*.railway.app http://localhost:4000 https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+      "img-src 'self' data: blob: https://fast0rder.online https://*.fast0rder.online https://images.unsplash.com https://placeholder.com https://xjypynrwmreulrxhaepg.supabase.co",
+      "connect-src 'self' https://fast0rder.online https://*.fast0rder.online wss://fast0rder.online wss://*.fast0rder.online https://xjypynrwmreulrxhaepg.supabase.co wss://xjypynrwmreulrxhaepg.supabase.co https://*.railway.app http://localhost:4000 http://localhost:3000 ws://localhost:4000 ws://localhost:3000 https://vitals.vercel-insights.com https://va.vercel-scripts.com",
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",
@@ -21,7 +21,7 @@ const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
   { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), browsing-topics=()' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
 ];
 
 const nextConfig = {
