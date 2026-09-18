@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { eq } from 'drizzle-orm';
 import {
   registerStudentSchema,
   registerStaffSchema,
@@ -7,6 +8,9 @@ import {
 } from '@orderfast/validation';
 import { authService } from './auth.service.js';
 import { authenticate, requireSystemRole } from '../../shared/middleware/auth.js';
+import { getSupabaseAdmin } from '../../shared/supabase/index.js';
+import { db } from '../../db/client.js';
+import { profiles } from '../../db/schema.js';
 
 export async function authRoutes(app: FastifyInstance) {
   // Register Student
@@ -20,10 +24,38 @@ export async function authRoutes(app: FastifyInstance) {
     });
   });
 
-  // Register Kiosk Staff (Admin Only)
-  app.post('/register-staff', { preHandler: [authenticate, requireSystemRole(['admin'])] }, async (request, reply) => {
+  // Register Kiosk Staff (Public Self-Registration or Admin Creation)
+  app.post('/register-staff', async (request, reply) => {
     const input = registerStaffSchema.parse(request.body);
-    const result = await authService.registerStaff(input);
+
+    let isAdmin = false;
+    const authHeader = request.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.replace('Bearer ', '').trim();
+        const supabaseAdmin = getSupabaseAdmin();
+        const { data } = await supabaseAdmin.auth.getUser(token);
+        if (data?.user) {
+          const [userRecord] = await db
+            .select({ systemRole: profiles.systemRole })
+            .from(profiles)
+            .where(eq(profiles.id, data.user.id))
+            .limit(1);
+          isAdmin = userRecord?.systemRole === 'admin';
+        }
+      } catch {
+        isAdmin = false;
+      }
+    }
+
+    // Public applicants cannot assign themselves to any kiosk or take owner role
+    const safeInput = {
+      ...input,
+      kioskId: isAdmin ? input.kioskId : undefined,
+      role: isAdmin ? input.role : 'cashier',
+    };
+
+    const result = await authService.registerStaff(safeInput);
     return reply.status(201).send({
       success: true,
       message: 'تم تسجيل العامل بالكشك بنجاح',
