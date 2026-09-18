@@ -74,6 +74,7 @@ export interface Kiosk {
   campusZone?: string | null;
   category: string;
   isOpen: boolean;
+  isHidden?: boolean;
   acceptsOnlineOrders: boolean;
   acceptsCash: boolean;
   acceptsOnline: boolean;

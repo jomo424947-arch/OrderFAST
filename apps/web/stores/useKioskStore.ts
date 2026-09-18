@@ -30,6 +30,7 @@ interface KioskState {
   fetchUnderReviewItems: () => Promise<MenuItem[]>;
 
   toggleKioskOpen: (id: string) => Promise<void>;
+  toggleKioskVisibility: (id: string, isHidden: boolean) => Promise<void>;
   setWaitTime: (id: string, mins: number) => Promise<void>;
   updateKioskSettings: (id: string, settings: any) => Promise<Kiosk>;
   toggleItemAvailability: (itemId: string) => Promise<void>;
@@ -204,6 +205,26 @@ export const useKioskStore = create<KioskState>((set, get) => ({
       }));
     } catch (err: any) {
       set({ error: err.message || 'فشل تغيير حالة الكشك' });
+    }
+  },
+
+  toggleKioskVisibility: async (id: string, isHidden: boolean) => {
+    try {
+      // Optimistic update
+      set((state) => ({
+        kiosks: state.kiosks.map((k) => (k.id === id ? { ...k, isHidden } : k)),
+        kiosksWithStaff: state.kiosksWithStaff.map((k) => (k.id === id ? { ...k, isHidden } : k)),
+      }));
+
+      await kioskService.updateKioskSettings(id, { isHidden });
+    } catch (err: any) {
+      // Revert on error
+      set((state) => ({
+        kiosks: state.kiosks.map((k) => (k.id === id ? { ...k, isHidden: !isHidden } : k)),
+        kiosksWithStaff: state.kiosksWithStaff.map((k) => (k.id === id ? { ...k, isHidden: !isHidden } : k)),
+        error: err.message || 'فشل تغيير حالة ظهور الكشك',
+      }));
+      throw err;
     }
   },
 

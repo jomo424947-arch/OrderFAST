@@ -203,7 +203,8 @@ export class OrderService {
           and(
             eq(kiosks.id, input.kioskId),
             eq(kiosks.isOpen, true),
-            eq(kiosks.acceptsOnlineOrders, true)
+            eq(kiosks.acceptsOnlineOrders, true),
+            eq(kiosks.isHidden, false)
           )
         )
         .for('share');

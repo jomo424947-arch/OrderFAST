@@ -19,6 +19,7 @@ export default function KiosksListPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return kiosks.filter((k) => {
+      if (k.isHidden) return false;
       if (!q) return true;
       return (
         k.name.toLowerCase().includes(q) ||

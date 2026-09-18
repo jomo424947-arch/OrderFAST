@@ -84,6 +84,8 @@ export default function StudentDashboardPage() {
 
     return kiosks
       .filter((k) => {
+        if (k.isHidden) return false;
+
         // Search query filter
         if (q) {
           const matchName = k.name.toLowerCase().includes(q);

@@ -81,6 +81,7 @@ export const kiosks = pgTable('kiosks', {
   campusZone: text('campus_zone'),
   category: text('category').notNull().default('عام'),
   isOpen: boolean('is_open').notNull().default(false),
+  isHidden: boolean('is_hidden').notNull().default(false),
   acceptsOnlineOrders: boolean('accepts_online_orders').notNull().default(true),
   acceptsCash: boolean('accepts_cash').notNull().default(true),
   acceptsOnline: boolean('accepts_online').notNull().default(false),

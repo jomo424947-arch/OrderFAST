@@ -27,6 +27,7 @@ export interface Kiosk {
   campusZone: string;
   category: string;
   isOpen: boolean;
+  isHidden?: boolean;
   openingHours: string;
   estimatedWaitMins: number;
   ordersAheadCount: number;

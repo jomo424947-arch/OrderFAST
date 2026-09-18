@@ -24,6 +24,8 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export default function AdminKiosksPage() {
@@ -32,6 +34,7 @@ export default function AdminKiosksPage() {
     kiosksWithStaff,
     staffList,
     toggleKioskOpen,
+    toggleKioskVisibility,
     fetchKiosksWithStaff,
     fetchStaffList,
     createKiosk,
@@ -64,6 +67,7 @@ export default function AdminKiosksPage() {
   const [editOpeningHours, setEditOpeningHours] = useState('');
   const [editPrepTime, setEditPrepTime] = useState('10');
   const [editKioskImageUrl, setEditKioskImageUrl] = useState('');
+  const [editIsHidden, setEditIsHidden] = useState(false);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   // Delete Kiosk Modal State (Admin)
@@ -89,6 +93,7 @@ export default function AdminKiosksPage() {
   const [phone, setPhone] = useState('');
   const [openingHours, setOpeningHours] = useState('8:00 ص - 5:00 م');
   const [newKioskImageUrl, setNewKioskImageUrl] = useState('');
+  const [newKioskIsHidden, setNewKioskIsHidden] = useState(false);
 
   const handleOpenAddModal = () => {
     setKioskName('');
@@ -98,6 +103,7 @@ export default function AdminKiosksPage() {
     setPhone('');
     setOpeningHours('8:00 ص - 5:00 م');
     setNewKioskImageUrl('');
+    setNewKioskIsHidden(false);
     setIsAddModalOpen(true);
   };
 
@@ -115,6 +121,7 @@ export default function AdminKiosksPage() {
         openingHours: openingHours.trim() || '8:00 ص - 5:00 م',
         phone: phone.trim() || undefined,
         imageUrl: newKioskImageUrl.trim() || undefined,
+        isHidden: newKioskIsHidden,
       });
 
       await fetchKiosksWithStaff();
@@ -194,6 +201,20 @@ export default function AdminKiosksPage() {
     }
   };
 
+  const handleToggleVisibility = async (kioskId: string, currentHidden: boolean) => {
+    try {
+      await toggleKioskVisibility(kioskId, !currentHidden);
+      setToastMessage(
+        !currentHidden
+          ? 'تم إخفاء الكشك بنجاح ولن يظهر للطلاب'
+          : 'تم إظهار الكشك للطلاب بنجاح'
+      );
+      setTimeout(() => setToastMessage(null), 3500);
+    } catch (err: any) {
+      alert(err.message || 'فشل تغيير حالة ظهور الكشك');
+    }
+  };
+
   const handleOpenEditModal = (kiosk: any) => {
     setSelectedKioskForEdit(kiosk);
     setEditName(kiosk.name || '');
@@ -204,6 +225,7 @@ export default function AdminKiosksPage() {
     setEditOpeningHours(kiosk.openingHours || '8:00 ص - 5:00 م');
     setEditPrepTime(kiosk.defaultPrepTimeMins ? String(kiosk.defaultPrepTimeMins) : '10');
     setEditKioskImageUrl(kiosk.imageUrl || '');
+    setEditIsHidden(Boolean(kiosk.isHidden));
     setIsEditModalOpen(true);
   };
 
@@ -222,6 +244,7 @@ export default function AdminKiosksPage() {
         openingHours: editOpeningHours.trim() || undefined,
         defaultPrepTimeMins: parseInt(editPrepTime, 10) || 10,
         imageUrl: editKioskImageUrl.trim() || undefined,
+        isHidden: editIsHidden,
       });
 
       await fetchKiosksWithStaff();
@@ -311,6 +334,30 @@ export default function AdminKiosksPage() {
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    {/* Quick Visibility Toggle Button */}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleVisibility(kiosk.id, Boolean(kiosk.isHidden))}
+                      title={kiosk.isHidden ? 'الكشك مخفي عن الطلاب - اضغط لإظهاره' : 'الكشك معروض للطلاب - اضغط لإخفائه'}
+                      className={`px-3 py-1.5 rounded-full text-xs font-body font-bold border transition-all flex items-center gap-1.5 ${
+                        kiosk.isHidden
+                          ? 'bg-amber-500/10 text-amber-700 border-amber-300 hover:bg-amber-500/20'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                      }`}
+                    >
+                      {kiosk.isHidden ? (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5 text-amber-600" />
+                          <span>مخفي</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>ظاهر للطلاب</span>
+                        </>
+                      )}
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => toggleKioskOpen(kiosk.id)}
@@ -341,6 +388,14 @@ export default function AdminKiosksPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Hidden Notice Banner */}
+                {kiosk.isHidden && (
+                  <div className="mt-2.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200/90 text-[11px] font-body text-amber-800 flex items-center gap-2">
+                    <EyeOff className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                    <span className="font-semibold">هذا الكشك مخفي حالياً ولن يظهر في تطبيق أو قائمة تصفح الطلاب</span>
+                  </div>
+                )}
 
                 {/* Details list */}
                 <div className="mt-3 space-y-2 text-xs font-body text-ink-soft">
@@ -544,6 +599,30 @@ export default function AdminKiosksPage() {
               onChange={(url) => setNewKioskImageUrl(url)}
               onClear={() => setNewKioskImageUrl('')}
             />
+          </div>
+
+          {/* Visibility Toggle Field (Add Modal) */}
+          <div className="p-3.5 rounded-2xl bg-canvas border border-line flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <label className="font-body font-bold text-xs text-ink flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5 text-accent" />
+                حالة الظهور للطلاب
+              </label>
+              <p className="text-[11px] font-body text-ink-soft">
+                يمكنك إخفاء الكشك حتى اكتمال إعداده بحيث لا يظهر في تطبيق الطلاب.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setNewKioskIsHidden(!newKioskIsHidden)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors flex-shrink-0 ${
+                !newKioskIsHidden
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                  : 'bg-amber-50 text-amber-700 border-amber-300'
+              }`}
+            >
+              {!newKioskIsHidden ? 'ظاهر للطلاب' : 'مخفي عن الطلاب'}
+            </button>
           </div>
 
           <div className="flex items-center gap-3 pt-3 border-t border-line/60">
@@ -797,6 +876,30 @@ export default function AdminKiosksPage() {
               onChange={(url) => setEditKioskImageUrl(url)}
               onClear={() => setEditKioskImageUrl('')}
             />
+          </div>
+
+          {/* Visibility Toggle Field (Edit Modal) */}
+          <div className="p-3.5 rounded-2xl bg-canvas border border-line flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <label className="font-body font-bold text-xs text-ink flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5 text-accent" />
+                حالة ظهور الكشك للطلاب
+              </label>
+              <p className="text-[11px] font-body text-ink-soft">
+                عند اختيار &quot;مخفي&quot;، يختفي الكشك تماماً من تطبيق الطلاب ولا يمكن الطلب منه.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditIsHidden(!editIsHidden)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors flex-shrink-0 ${
+                !editIsHidden
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                  : 'bg-amber-50 text-amber-700 border-amber-300'
+              }`}
+            >
+              {!editIsHidden ? 'ظاهر للطلاب' : 'مخفي عن الطلاب'}
+            </button>
           </div>
 
           <div className="flex items-center gap-3 pt-3 border-t border-line/60">

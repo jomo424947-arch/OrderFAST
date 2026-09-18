@@ -8,6 +8,7 @@ export interface ApiKioskRaw {
   campusZone?: string | null;
   category?: string | null;
   isOpen: boolean;
+  isHidden?: boolean;
   openingHours?: string | null;
   phone?: string | null;
   rating?: string | number | null;
@@ -66,6 +67,7 @@ export function adaptKioskFromApi(raw: ApiKioskRaw): Kiosk {
     campusZone: raw.campusZone || '',
     category: raw.category || 'عام',
     isOpen: !!raw.isOpen,
+    isHidden: Boolean(raw.isHidden ?? (raw as any).is_hidden ?? false),
     openingHours: raw.openingHours || '8:00 ص - 4:00 م',
     estimatedWaitMins: raw.estimatedWaitMins ?? (raw.defaultPrepTimeMins || 15),
     ordersAheadCount: raw.ordersAheadCount ?? 0,

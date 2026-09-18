@@ -22,6 +22,7 @@ export class KioskService {
     const kioskList = await db
       .select()
       .from(kiosks)
+      .where(eq(kiosks.isHidden, false))
       .orderBy(desc(kiosks.isOpen), desc(kiosks.rating));
 
     // Calculate approximate active orders for all kiosks in 1 aggregated query
@@ -156,6 +157,7 @@ export class KioskService {
       acceptsWallet?: boolean;
       acceptsInstapay?: boolean;
       imageUrl?: string | null;
+      isHidden?: boolean;
     }
   ) {
     const [updated] = await db
@@ -349,6 +351,7 @@ export class KioskService {
         rating: '0.00',
         ratingCount: 0,
         imageUrl: data.imageUrl || null,
+        isHidden: data.isHidden ?? false,
       })
       .returning();
 
