@@ -33,7 +33,7 @@ const BrandFoodIcon: React.FC<{ item: MenuItem }> = ({ item }) => {
     name.includes('ثلج')
   ) {
     return (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="transition-transform group-hover:scale-105">
+      <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6 sm:w-8 sm:h-8 transition-transform group-hover:scale-105">
         <path
           d="M10 10 L11.5 24 C11.7 25.5 12.5 26.5 14 26.5 L18 26.5 C19.5 26.5 20.3 25.5 20.5 24 L22 10 Z"
           fill="#E8992A"
@@ -57,7 +57,7 @@ const BrandFoodIcon: React.FC<{ item: MenuItem }> = ({ item }) => {
     name.includes('نسكافيه')
   ) {
     return (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="transition-transform group-hover:scale-105">
+      <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6 sm:w-8 sm:h-8 transition-transform group-hover:scale-105">
         <path
           d="M8.5 12 L9.5 21.5 C9.7 23.5 11.2 25 13.5 25 L16.5 25 C18.8 25 20.3 23.5 20.5 21.5 L21.5 12 Z"
           fill="#E8992A"
@@ -76,7 +76,7 @@ const BrandFoodIcon: React.FC<{ item: MenuItem }> = ({ item }) => {
 
   // Default Food / Sandwiches / Meals (FastOrder Cloche plate)
   return (
-    <svg width="34" height="34" viewBox="0 0 34 34" fill="none" className="transition-transform group-hover:scale-105">
+    <svg viewBox="0 0 34 34" fill="none" className="w-7 h-7 sm:w-8 sm:h-8 transition-transform group-hover:scale-105">
       {/* Food Cloche Dome */}
       <path
         d="M7 21 C7 11.5 27 11.5 27 21 Z"
@@ -140,9 +140,9 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = React.memo(({
       )}
     >
       {/* Right side: Icon/Thumbnail + Title & Price (NO description) */}
-      <div className="flex items-center gap-3.5 min-w-0 flex-1 ml-3">
+      <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 ml-2 sm:ml-3">
         {/* Brand Icon Box */}
-        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface border border-line shadow-xs flex items-center justify-center flex-shrink-0">
+        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-surface border border-line shadow-xs flex items-center justify-center flex-shrink-0">
           {item.imageUrl ? (
             <img
               src={item.imageUrl}
@@ -158,26 +158,26 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = React.memo(({
         </div>
 
         {/* Content: Title & Price + Prep time (NO description!) */}
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="font-display font-bold text-base sm:text-lg text-ink truncate group-hover:text-primary-ink transition-colors">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h4 className="font-display font-bold text-sm sm:text-base text-ink leading-snug group-hover:text-primary-ink transition-colors break-words">
               {item.name}
             </h4>
 
             {item.isCombo && (
-              <span className="text-[10px] font-body font-medium text-ink-soft bg-canvas px-2 py-0.5 rounded-md border border-line/60 whitespace-nowrap">
+              <span className="text-[10px] font-body font-medium text-ink-soft bg-canvas px-1.5 py-0.5 rounded-md border border-line/60 whitespace-nowrap">
                 باقة كومبو
               </span>
             )}
 
             {hasOffer && (
-              <span className="text-[10px] font-body font-semibold text-danger/90 bg-danger-soft/60 px-2 py-0.5 rounded-md border border-danger/20 whitespace-nowrap">
+              <span className="text-[10px] font-body font-semibold text-danger/90 bg-danger-soft/60 px-1.5 py-0.5 rounded-md border border-danger/20 whitespace-nowrap">
                 {item.offerTag || `وفر ${discountAmount} ج.م`}
               </span>
             )}
 
             {item.isUnderReview && (
-              <span className="bg-primary-soft text-primary-ink text-[10px] font-body font-bold px-2 py-0.5 rounded-md whitespace-nowrap">
+              <span className="bg-primary-soft text-primary-ink text-[10px] font-body font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap">
                 قيد المراجعة
               </span>
             )}
@@ -185,8 +185,8 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = React.memo(({
 
           {/* Combo Deal Items Breakdown - Big, Clear & Prominent */}
           {item.isCombo && item.comboItems && item.comboItems.length > 0 && (
-            <div className="bg-canvas/80 border border-line/70 rounded-xl px-2.5 py-1.5 mt-2 mb-2 text-right">
-              <p className="font-body text-xs sm:text-sm font-bold text-ink leading-snug">
+            <div className="bg-canvas/80 border border-line/70 rounded-xl px-2 py-1 mt-1.5 mb-1.5 text-right">
+              <p className="font-body text-xs font-bold text-ink leading-snug">
                 <span className="text-ink-soft text-xs font-semibold ml-1">يشمل:</span>
                 <span className="text-ink font-black">
                   {item.comboItems.map((c) => `${c.quantity}× ${c.name}`).join(' + ')}
@@ -195,19 +195,19 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = React.memo(({
             </div>
           )}
 
-          <div className="flex items-center gap-2.5 mt-1 flex-wrap">
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
             {isAvailable ? (
               hasOffer ? (
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-base sm:text-lg font-black text-danger font-mono-nums">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-sm sm:text-base font-black text-danger font-mono-nums">
                     {formatEGP(item.price)}
                   </span>
-                  <span className="font-mono text-xs sm:text-sm text-ink-soft line-through font-medium font-mono-nums">
+                  <span className="font-mono text-[11px] sm:text-xs text-ink-soft line-through font-medium font-mono-nums">
                     {formatEGP(item.originalPrice!)}
                   </span>
                 </div>
               ) : (
-                <span className="font-mono text-base font-bold text-ink font-mono-nums">
+                <span className="font-mono text-sm sm:text-base font-bold text-ink font-mono-nums">
                   {formatEGP(item.price)}
                 </span>
               )
@@ -217,7 +217,7 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = React.memo(({
               </span>
             )}
 
-            <span className="flex items-center gap-1 font-mono text-xs text-ink-soft bg-canvas px-2 py-0.5 rounded-md border border-line/60">
+            <span className="flex items-center gap-1 font-mono text-[11px] sm:text-xs text-ink-soft bg-canvas px-1.5 py-0.5 rounded-md border border-line/60">
               <Clock className="w-3 h-3 text-ink-soft" />
               <span>{prepTime} د</span>
             </span>
@@ -226,45 +226,45 @@ export const MenuItemRow: React.FC<MenuItemRowProps> = React.memo(({
       </div>
 
       {/* Left side: Stepper or Add Button */}
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 mr-1 sm:mr-0">
         {!isAvailable ? (
-          <span className="text-xs font-body font-bold text-ink-soft bg-canvas px-3 py-1.5 rounded-xl border border-line/70">
+          <span className="text-[11px] sm:text-xs font-body font-bold text-ink-soft bg-canvas px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-line/70">
             نفد
           </span>
         ) : cartQuantity > 0 ? (
-          <div className="flex items-center gap-1 bg-primary text-primary-ink px-1.5 py-1 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-1 bg-primary text-primary-ink px-1.5 py-1 rounded-xl sm:rounded-2xl shadow-sm">
             <button
               type="button"
               onClick={handleMinus}
-              className="w-8 h-8 rounded-xl bg-surface/90 hover:bg-surface text-ink-soft hover:text-ink flex items-center justify-center transition-all active:scale-90"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-surface/90 hover:bg-surface text-ink-soft hover:text-ink flex items-center justify-center transition-all active:scale-90"
               aria-label={`تقليل كمية ${item.name}`}
             >
               {cartQuantity === 1 ? (
-                <Trash2 className="w-4 h-4 text-danger" />
+                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-danger" />
               ) : (
-                <Minus className="w-4 h-4 stroke-[2.5]" />
+                <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
               )}
             </button>
-            <span className="font-mono text-sm font-bold min-w-[24px] text-center font-mono-nums">
+            <span className="font-mono text-xs sm:text-sm font-bold min-w-[20px] sm:min-w-[24px] text-center font-mono-nums">
               {cartQuantity}
             </span>
             <button
               type="button"
               onClick={handlePlus}
-              className="w-8 h-8 rounded-xl bg-surface/90 hover:bg-surface text-ink-soft hover:text-ink flex items-center justify-center transition-all active:scale-90"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-surface/90 hover:bg-surface text-ink-soft hover:text-ink flex items-center justify-center transition-all active:scale-90"
               aria-label={`زيادة كمية ${item.name}`}
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
             </button>
           </div>
         ) : (
           <button
             type="button"
             onClick={handleAdd}
-            className="h-9 px-4 rounded-2xl bg-primary hover:bg-primary-hover text-primary-ink flex items-center gap-1.5 font-body font-bold text-xs transition-all duration-200 active:scale-95 shadow-sm"
+            className="h-8.5 sm:h-9 px-3 sm:px-4 rounded-xl sm:rounded-2xl bg-primary hover:bg-primary-hover text-primary-ink flex items-center gap-1 sm:gap-1.5 font-body font-bold text-xs transition-all duration-200 active:scale-95 shadow-sm"
             aria-label={`إضافة ${item.name} للسلة`}
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
             <span>إضافة</span>
           </button>
         )}
