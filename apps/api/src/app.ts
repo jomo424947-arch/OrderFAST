@@ -53,10 +53,27 @@ export async function buildApp(): Promise<FastifyInstance> {
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   });
 
+  // Strict CORS whitelist (security hardening — prevents cross-origin data theft)
+  const allowedOrigins = [
+    'https://www.fast0rder.online',
+    'https://fast0rder.online',
+    'capacitor://localhost',
+    'http://localhost',
+  ];
+  // Add configured CORS_ORIGIN if set and not already included
+  if (env.CORS_ORIGIN && !allowedOrigins.includes(env.CORS_ORIGIN)) {
+    allowedOrigins.push(env.CORS_ORIGIN);
+  }
+
   await app.register(cors, {
-    origin: (_origin, cb) => {
-      // Allow all incoming origins (web, custom domains like fast0rder.online, mobile apps, localhost)
-      cb(null, true);
+    origin: (origin, cb) => {
+      // Allow requests with no origin (mobile apps, server-to-server, curl)
+      if (!origin) return cb(null, true);
+      // Allow exact matches or localhost with any port
+      const isAllowed = allowedOrigins.some((allowed) =>
+        origin === allowed || origin.startsWith('http://localhost:')
+      );
+      cb(null, isAllowed);
     },
     credentials: true,
   });
@@ -66,14 +83,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(rateLimit, {
     max: 300,
     timeWindow: '1 minute',
-    keyGenerator: (request) => {
-      const authHeader = request.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        // Key by user's unique token signature to prevent university NAT/Wi-Fi collision
-        return authHeader.substring(7, 45);
-      }
-      return request.ip;
-    },
+    // Key by IP only — prevents bypass via random Authorization header rotation
+    keyGenerator: (request) => request.ip,
   });
 
   // Handle empty or whitespace body with application/json header safely
@@ -152,19 +163,26 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   // 3. Health Check Routes (supports both /api/health and /health)
+  // Cache DB probe result for 10 seconds to prevent connection exhaustion
+  let healthCache: { result: any; expiresAt: number } | null = null;
   const healthCheckHandler = async (_req: any, reply: any) => {
+    const now = Date.now();
+    if (healthCache && now < healthCache.expiresAt) {
+      return reply.status(healthCache.result.database === 'connected' ? 200 : 503).send(healthCache.result);
+    }
     const isDbConnected = await testDbConnection();
     const { isFirebaseConfigured } = await import('./modules/notifications/firebase.config.js');
     const isFbConfigured = isFirebaseConfigured();
     const status = isDbConnected ? 'healthy' : 'degraded';
-    return reply.status(isDbConnected ? 200 : 503).send({
+    const result = {
       status,
       timestamp: new Date().toISOString(),
       service: 'orderfast-api',
-      version: '1.0.0',
       database: isDbConnected ? 'connected' : 'disconnected',
       firebasePush: isFbConfigured ? 'active' : 'standby_missing_key',
-    });
+    };
+    healthCache = { result, expiresAt: now + 10_000 };
+    return reply.status(isDbConnected ? 200 : 503).send(result);
   };
 
   app.get('/api/health', healthCheckHandler);

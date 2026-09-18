@@ -20,8 +20,8 @@ export async function authRoutes(app: FastifyInstance) {
     });
   });
 
-  // Register Kiosk Staff
-  app.post('/register-staff', async (request, reply) => {
+  // Register Kiosk Staff (Admin Only)
+  app.post('/register-staff', { preHandler: [authenticate, requireSystemRole(['admin'])] }, async (request, reply) => {
     const input = registerStaffSchema.parse(request.body);
     const result = await authService.registerStaff(input);
     return reply.status(201).send({

@@ -3,6 +3,7 @@ import {
   updateKioskStatusSchema,
   updateKioskSettingsSchema,
   assignKioskStaffSchema,
+  createKioskSchema,
 } from '@orderfast/validation';
 import { kioskService } from './kiosk.service.js';
 import {
@@ -77,7 +78,7 @@ export async function kioskRoutes(app: FastifyInstance) {
     '/',
     { preHandler: [authenticate, requireSystemRole(['admin'])] },
     async (request, reply) => {
-      const body = request.body as any;
+      const body = createKioskSchema.parse(request.body);
       const data = await kioskService.createKiosk(body);
       return reply.status(201).send({
         success: true,

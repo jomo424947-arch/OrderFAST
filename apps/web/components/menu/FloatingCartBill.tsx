@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { CartItem, Kiosk } from '@/types';
 import { formatEGP } from '@/lib/formatters';
+import { getServiceFeeEGP } from '@/lib/constants';
 import {
   Receipt,
   ChevronUp,
@@ -34,6 +35,9 @@ export const FloatingCartBill: React.FC<FloatingCartBillProps> = ({
   checkoutHref = '/student/cart',
 }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
+
+  const serviceFee = getServiceFeeEGP(totalCartAmount);
+  const totalWithFees = totalCartAmount + serviceFee;
 
   // Strictly only visible when something is added to cart
   if (totalCartCount === 0) return null;
@@ -145,13 +149,13 @@ export const FloatingCartBill: React.FC<FloatingCartBillProps> = ({
               <div className="flex items-center justify-between text-xs font-body text-ink-soft font-medium">
                 <span>رسوم الخدمة</span>
                 <span className="font-mono font-bold text-ink font-mono-nums">
-                  {formatEGP(1)}
+                  {formatEGP(serviceFee)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm font-bold font-body text-ink pt-1.5 border-t border-line/60">
                 <span>المطلوب عند الاستلام</span>
                 <span className="font-mono text-base text-primary-ink font-mono-nums font-black">
-                  {formatEGP(totalCartAmount + 1)}
+                  {formatEGP(totalWithFees)}
                 </span>
               </div>
 
@@ -186,7 +190,7 @@ export const FloatingCartBill: React.FC<FloatingCartBillProps> = ({
                   </span>
                 </div>
                 <span className="font-mono text-sm font-bold text-primary-ink block mt-0.5 font-mono-nums">
-                  {formatEGP(totalCartAmount + 1)}
+                  {formatEGP(totalWithFees)}
                 </span>
               </div>
             </button>

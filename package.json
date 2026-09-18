@@ -16,7 +16,8 @@
     "lint": "npx turbo run lint",
     "type-check": "npx turbo run type-check",
     "db:generate": "npm --workspace=apps/api run db:generate",
-    "db:migrate": "npm --workspace=apps/api run db:migrate"
+    "db:migrate": "npm --workspace=apps/api run db:migrate",
+    "deploy": "python deploy.py"
   },
   "keywords": [
     "orderfast",

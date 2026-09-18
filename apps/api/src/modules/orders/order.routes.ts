@@ -229,6 +229,23 @@ export async function orderRoutes(app: FastifyInstance) {
     }
   );
 
+  // 11.1 Staff: Confirm Digital Wallet Payment
+  app.post<{ Params: { id: string } }>(
+    '/:id/confirm-payment',
+    { preHandler: [authenticate, requireSystemRole(['staff', 'admin'])] },
+    async (request, reply) => {
+      const data = await orderService.confirmPayment(
+        request.params.id,
+        request.user!
+      );
+      return reply.status(200).send({
+        success: true,
+        message: 'تم تأكيد الدفع الإلكتروني بنجاح',
+        data,
+      });
+    }
+  );
+
   // 11.1 Student: Rate Completed Order (Stars only: 1 to 5)
   app.post<{ Params: { id: string }; Body: { rating: number } }>(
     '/:id/rate',

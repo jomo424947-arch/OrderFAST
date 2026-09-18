@@ -45,6 +45,7 @@ interface OrderState {
   setOrderStatus: (orderId: string, status: OrderStatus, reason?: string) => Promise<void>;
   cancelOrder: (orderId: string, reason?: string) => Promise<void>;
   rateOrder: (orderId: string, rating: number) => Promise<void>;
+  confirmPayment: (orderId: string) => Promise<void>;
   batchAcceptOrders: (kioskId: string, orderIds: string[]) => Promise<void>;
 
   getOrderById: (orderId: string) => Order | undefined;
@@ -396,6 +397,21 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       useKioskStore.getState().fetchKiosks();
     } catch (err: any) {
       set({ error: err.message || 'فشل إرسال التقييم' });
+      throw err;
+    }
+  },
+
+  confirmPayment: async (orderId: string) => {
+    try {
+      if (!orderService.confirmPayment) {
+        throw new Error('خدمة تأكيد الدفع غير مدعومة');
+      }
+      const updated = await orderService.confirmPayment(orderId);
+      set((state) => ({
+        orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+      }));
+    } catch (err: any) {
+      set({ error: err.message || 'فشل تأكيد الدفع' });
       throw err;
     }
   },

@@ -41,7 +41,7 @@ function parseJwtPayload(token: string): { sub?: string; email?: string; exp?: n
 
 /**
  * Authentication Pre-handler
- * Fast-path: In-memory token cache (0.1ms) -> Local JWT decode + DB (1ms) -> Supabase Admin fallback
+ * Verifies token cryptographically via Supabase Auth with in-memory session cache (2 min TTL)
  */
 export async function authenticate(request: FastifyRequest, _reply: FastifyReply) {
   const authHeader = request.headers.authorization;
@@ -64,30 +64,18 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
     return;
   }
 
-  // 2. Local JWT inspection
-  const payload = parseJwtPayload(token);
-  const isTokenExpired = payload?.exp ? Date.now() >= payload.exp * 1000 : false;
+  // 2. Cryptographic Verification via Supabase Auth (mandatory — never trust unsigned JWT claims)
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
 
-  if (isTokenExpired) {
+  if (error || !data.user) {
     throw AppError.unauthorized('رمز الدخول غير صالح أو منتهي الصلاحية');
   }
 
-  let userId = payload?.sub;
-  let userEmail = payload?.email || '';
+  const userId = data.user.id;
+  const userEmail = data.user.email || '';
 
-  // 3. If local payload missing or needs verification, fallback to Supabase Admin
-  if (!userId) {
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await supabaseAdmin.auth.getUser(token);
-
-    if (error || !data.user) {
-      throw AppError.unauthorized('رمز الدخول غير صالح أو منتهي الصلاحية');
-    }
-    userId = data.user.id;
-    userEmail = data.user.email || '';
-  }
-
-  // 4. Retrieve user profile and student status in a single DB query
+  // 3. Retrieve user profile and student status in a single DB query
   const [userRecord] = await db
     .select({
       id: profiles.id,

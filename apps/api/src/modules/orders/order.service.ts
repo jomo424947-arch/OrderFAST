@@ -101,8 +101,9 @@ export class OrderService {
     input: CreateOrderInput,
     idempotencyKey: string
   ) {
-    return await db.transaction(async (tx) => {
-      // Step 1: Idempotency Check
+    try {
+      return await db.transaction(async (tx) => {
+        // Step 1: Idempotency Check
       const [existingOrder] = await tx
         .select()
         .from(orders)
@@ -287,7 +288,11 @@ export class OrderService {
       }
 
       const discount = 0;
-      const fees = 100; // 100 piasters = 1.00 EGP fixed service fee
+      // Tiered service fee based on subtotal:
+      //   < 10000 piasters (100 EGP): 300 piasters (3 EGP)
+      //   100-200 EGP (10000-20000 piasters): 500 piasters (5 EGP)
+      //   > 200 EGP (20000+ piasters): 1000 piasters (10 EGP)
+      const fees = subtotal < 10000 ? 300 : subtotal <= 20000 ? 500 : 1000;
       const total = subtotal - discount + fees;
 
       // Step 6: Atomic Order Number Generation (kiosk_daily_counters)
@@ -325,6 +330,7 @@ export class OrderService {
       );
 
       // Step 8: Insert Order Row
+      // Digital wallet payments require cashier verification before marking as paid
       const isOnline = input.paymentMethod === 'digital_wallet';
       const [newOrder] = await tx
         .insert(orders)
@@ -340,7 +346,7 @@ export class OrderService {
           fees,
           total,
           paymentMethod: input.paymentMethod || 'cash',
-          paymentStatus: isOnline ? 'paid' : 'pending_at_pickup',
+          paymentStatus: isOnline ? 'pending_verification' : 'pending_at_pickup',
           orderNotes: input.orderNotes || null,
           onlinePaymentType: input.onlinePaymentType || null,
           transferSenderPhone: input.transferSenderPhone || null,
@@ -417,6 +423,34 @@ export class OrderService {
         },
       };
     });
+    } catch (error: any) {
+      // Handle PostgreSQL 23505 Unique Violation race condition on idempotencyKey
+      if (
+        error?.code === '23505' ||
+        error?.message?.includes('idempotency') ||
+        error?.detail?.includes('idempotency') ||
+        error?.constraint?.includes('idempotency')
+      ) {
+        const [existingOrder] = await db
+          .select()
+          .from(orders)
+          .where(eq(orders.idempotencyKey, idempotencyKey))
+          .limit(1);
+
+        if (existingOrder) {
+          const items = await db
+            .select()
+            .from(orderItems)
+            .where(eq(orderItems.orderId, existingOrder.id));
+
+          return {
+            isDuplicate: true,
+            order: { ...existingOrder, items },
+          };
+        }
+      }
+      throw error;
+    }
   }
 
   /**
@@ -954,6 +988,59 @@ export class OrderService {
         orderId,
         url: `/orders/${orderId}`,
         type: 'order_completed',
+      });
+
+      return updatedOrder;
+    });
+  }
+
+  /**
+   * 10b. CONFIRM PAYMENT (Staff verifies digital wallet payment)
+   * Transitions paymentStatus from 'pending_verification' to 'paid'
+   */
+  async confirmPayment(orderId: string, requestingUser: AuthenticatedUser) {
+    return await db.transaction(async (tx) => {
+      const [existingOrder] = await tx
+        .select({ kioskId: orders.kioskId, paymentStatus: orders.paymentStatus, paymentMethod: orders.paymentMethod })
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .limit(1);
+
+      if (!existingOrder) {
+        throw AppError.notFound('الطلب غير موجود');
+      }
+
+      await this.verifyStaffKioskAccess(tx, existingOrder.kioskId, requestingUser);
+
+      if (existingOrder.paymentStatus !== 'pending_verification') {
+        throw AppError.conflict(
+          'حالة الدفع يجب أن تكون بانتظار التحقق لإتمام تأكيد الدفع',
+          'INVALID_PAYMENT_STATE'
+        );
+      }
+
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          paymentStatus: 'paid',
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.paymentStatus, 'pending_verification'))
+        )
+        .returning();
+
+      if (!updatedOrder) {
+        throw AppError.conflict('فشل تأكيد الدفع — حالة الدفع تغيرت', 'INVALID_PAYMENT_STATE');
+      }
+
+      await tx.insert(orderEvents).values({
+        id: generateId(),
+        orderId,
+        eventType: 'PAYMENT_CONFIRMED',
+        actorId: requestingUser.id,
+        actorType: 'staff',
+        metadata: { paymentMethod: existingOrder.paymentMethod, previousStatus: 'pending_verification' },
       });
 
       return updatedOrder;

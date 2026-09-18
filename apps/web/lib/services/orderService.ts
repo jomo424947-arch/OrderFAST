@@ -1,5 +1,6 @@
 import { Order, OrderStatus } from "@/types";
 import { MOCK_ORDERS } from "@/lib/mock/orders";
+import { getServiceFeeEGP } from "@/lib/constants";
 
 export interface CreateOrderPayload {
   kioskId: string;
@@ -33,6 +34,7 @@ export interface IOrderService {
   createOrder(orderData: CreateOrderPayload): Promise<Order>;
   updateOrderStatus(orderId: string, status: OrderStatus, rejectionReason?: string): Promise<Order>;
   rateOrder(orderId: string, rating: number): Promise<Order>;
+  confirmPayment?(orderId: string): Promise<Order>;
   batchAcceptOrders?(kioskId: string, orderIds: string[]): Promise<any>;
   getAdminCampusStats?(): Promise<any>;
   getAdminAnalytics?(timeframe?: string): Promise<any>;
@@ -69,7 +71,7 @@ export class MockOrderService implements IOrderService {
   async createOrder(orderData: CreateOrderPayload): Promise<Order> {
     const orderNumber = `0${Math.floor(100 + Math.random() * 900)}`;
     const subtotal = orderData.items.reduce((sum, it) => sum + (it.price || 10) * it.quantity, 0);
-    const fees = 1;
+    const fees = getServiceFeeEGP(subtotal);
 
     const newOrder: Order = {
       id: `ord-${Date.now()}`,
@@ -92,7 +94,7 @@ export class MockOrderService implements IOrderService {
       total: subtotal + fees,
       status: 'PENDING_KIOSK',
       paymentMethod: orderData.paymentMethod || 'cash',
-      paymentStatus: orderData.paymentMethod === 'digital_wallet' ? 'paid' : 'pending_at_pickup',
+      paymentStatus: orderData.paymentMethod === 'digital_wallet' ? 'pending_verification' : 'pending_at_pickup',
       orderNotes: orderData.orderNotes || undefined,
       onlinePaymentType: orderData.onlinePaymentType || undefined,
       transferSenderPhone: orderData.transferSenderPhone || undefined,
@@ -131,6 +133,20 @@ export class MockOrderService implements IOrderService {
       ...this.orders[index],
       rating,
       ratedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.orders[index] = updated;
+    return updated;
+  }
+
+  async confirmPayment(orderId: string): Promise<Order> {
+    const index = this.orders.findIndex((o) => o.id === orderId);
+    if (index === -1) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+    const updated: Order = {
+      ...this.orders[index],
+      paymentStatus: 'paid',
       updatedAt: new Date().toISOString(),
     };
     this.orders[index] = updated;

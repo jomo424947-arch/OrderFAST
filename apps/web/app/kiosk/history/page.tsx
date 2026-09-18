@@ -335,7 +335,7 @@ export default function KioskTodayOrdersPage() {
               {/* Total & Breakdown Footer */}
               <div className="pt-3 border-t border-line/60 flex items-center justify-between text-xs font-body">
                 <span className="text-ink-soft">
-                  (شامل رسوم الخدمة 1 ج.م)
+                  (شامل رسوم الخدمة {order.fees !== undefined ? formatEGP(order.fees) : '3 ج.م'})
                 </span>
                 <div className="text-left">
                   <span className="text-[11px] text-ink-soft ml-1.5">الإجمالي:</span>

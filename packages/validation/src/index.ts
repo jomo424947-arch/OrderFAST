@@ -78,6 +78,26 @@ export const updateKioskSettingsSchema = z.object({
   imageUrl: z.string().optional().nullable(),
 });
 
+export const createKioskSchema = z.object({
+  name: z.string().min(2, { message: 'اسم الكشك مطلوب' }),
+  collegeLocation: z.string().min(2, { message: 'موقع الكلية مطلوب' }),
+  campusZone: z.string().optional().nullable(),
+  category: z.string().default('general'),
+  openingHours: z.string().default('8:00 AM - 10:00 PM'),
+  defaultPrepTimeMins: z.number().int().min(1).max(120).default(10),
+  acceptanceTimeoutSecs: z.number().int().min(60).max(1800).default(180),
+  phone: z.string().optional(),
+  acceptsOnlineOrders: z.boolean().default(true),
+  acceptsCash: z.boolean().default(true),
+  acceptsOnline: z.boolean().default(false),
+  paymentPolicy: z.enum(['both', 'cash_only', 'online_only']).default('both'),
+  walletNumber: z.string().optional().nullable(),
+  instapayHandle: z.string().optional().nullable(),
+  acceptsWallet: z.boolean().default(false),
+  acceptsInstapay: z.boolean().default(false),
+  imageUrl: z.string().url().optional().nullable(),
+});
+
 export const createMenuCategorySchema = z.object({
   kioskId: uuidSchema,
   name: z.string().min(2, { message: 'اسم التصنيف مطلوب' }),
@@ -198,3 +218,4 @@ export type BatchActionInput = z.infer<typeof batchActionSchema>;
 export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;
+export type CreateKioskInput = z.infer<typeof createKioskSchema>;

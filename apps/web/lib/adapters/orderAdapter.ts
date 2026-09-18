@@ -28,7 +28,7 @@ export interface ApiOrderRaw {
   fees?: number;
   total: number;
   paymentMethod?: 'cash' | 'digital_wallet';
-  paymentStatus?: 'pending_at_pickup' | 'paid' | 'waived';
+  paymentStatus?: 'pending_at_pickup' | 'pending_verification' | 'paid' | 'waived';
   orderNotes?: string | null;
   onlinePaymentType?: 'wallet' | 'instapay' | null;
   transferSenderPhone?: string | null;

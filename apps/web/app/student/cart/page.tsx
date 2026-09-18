@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatEGP } from '@/lib/formatters';
+import { getServiceFeeEGP } from '@/lib/constants';
 import { compressImage } from '@/lib/utils/imageCompression';
 import { tokenStorage } from '@/lib/api/client';
 import {
@@ -48,7 +49,8 @@ export default function CartPage() {
   const { placeOrder } = useOrderStore();
 
   const subtotal = getSubtotal();
-  const totalAmount = subtotal + 1; // 1 EGP service fee
+  const serviceFee = getServiceFeeEGP(subtotal);
+  const totalAmount = subtotal + serviceFee;
 
   // Kiosk Payment Rules
   const acceptsCash = kiosk?.acceptsCash !== false;
@@ -632,7 +634,7 @@ export default function CartPage() {
 
         <div className="flex justify-between text-xs font-body text-ink-soft font-medium">
           <span>رسوم الخدمة</span>
-          <span className="font-mono font-semibold font-mono-nums">{formatEGP(1)}</span>
+          <span className="font-mono font-semibold font-mono-nums">{formatEGP(serviceFee)}</span>
         </div>
 
         <div className="flex justify-between font-body text-sm font-bold text-ink pt-2.5 border-t border-line/60">

@@ -121,6 +121,11 @@ export class ApiOrderService implements IOrderService {
     return adaptOrderFromApi(raw);
   }
 
+  async confirmPayment(orderId: string): Promise<Order> {
+    const raw = await apiClient.post<ApiOrderRaw>(`/orders/${orderId}/confirm-payment`);
+    return adaptOrderFromApi(raw);
+  }
+
   async rateOrder(orderId: string, rating: number): Promise<Order> {
     const raw = await apiClient.post<ApiOrderRaw>(`/orders/${orderId}/rate`, {
       rating,

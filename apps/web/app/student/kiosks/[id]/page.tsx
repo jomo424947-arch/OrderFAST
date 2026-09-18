@@ -10,6 +10,7 @@ import { FloatingCartBill } from '@/components/menu/FloatingCartBill';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Button } from '@/components/ui/Button';
 import { formatEGP, formatWaitTime } from '@/lib/formatters';
+import { getServiceFeeEGP } from '@/lib/constants';
 import {
   ChevronRight,
   Clock,
@@ -81,6 +82,8 @@ export default function KioskDetailPage() {
 
   const totalCartCount = getTotalItems();
   const totalCartAmount = getSubtotal();
+  const serviceFee = getServiceFeeEGP(totalCartAmount);
+  const totalWithFees = totalCartAmount + serviceFee;
 
   // If cart has items from another kiosk
   const isDifferentKioskCart = cartKiosk && cartKiosk.id !== kiosk.id && totalCartCount > 0;
@@ -389,12 +392,12 @@ export default function KioskDetailPage() {
                   </div>
                   <div className="flex items-center justify-between text-xs font-body text-ink-soft font-medium">
                     <span>رسوم الخدمة</span>
-                    <span className="font-mono font-semibold font-mono-nums">{formatEGP(1)}</span>
+                    <span className="font-mono font-semibold font-mono-nums">{formatEGP(serviceFee)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-bold font-body text-ink pt-1.5 border-t border-line/40">
                     <span>المطلوب عند الاستلام</span>
                     <span className="font-mono text-base text-primary-ink font-mono-nums font-black">
-                      {formatEGP(totalCartAmount + 1)}
+                      {formatEGP(totalWithFees)}
                     </span>
                   </div>
                   <p className="text-[10px] font-body text-ink-soft text-center leading-relaxed">

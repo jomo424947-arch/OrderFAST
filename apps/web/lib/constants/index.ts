@@ -112,7 +112,24 @@ export const ACCOUNT_STATUS_DETAILS: Record<
   },
 };
 
-/** رسوم خدمة الطلب الثابتة لكل طلب (1 ج.م) */
-export const SERVICE_FEE_EGP = 1;
-export const SERVICE_FEE_PIASTERS = 100;
+/**
+ * رسوم خدمة الطلب المتدرجة بالقروش (piasters)
+ *   أقل من 100 ج.م → 3 ج.م (300 قرش)
+ *   من 100 إلى 200 ج.م → 5 ج.م (500 قرش)
+ *   أعلى من 200 ج.م → 10 ج.م (1000 قرش)
+ */
+export function getServiceFeePiasters(subtotalPiasters: number): number {
+  if (subtotalPiasters < 10000) return 300;
+  if (subtotalPiasters <= 20000) return 500;
+  return 1000;
+}
+
+/** Helper: returns fee in EGP for a subtotal in EGP */
+export function getServiceFeeEGP(subtotalEGP: number): number {
+  return getServiceFeePiasters(subtotalEGP * 100) / 100;
+}
+
+/** Minimum fee displayed to the user before order is finalized */
+export const SERVICE_FEE_EGP = 3;
+export const SERVICE_FEE_PIASTERS = 300;
 

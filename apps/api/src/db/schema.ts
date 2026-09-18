@@ -35,7 +35,7 @@ export const orderStatusEnum = pgEnum('order_status_enum', [
   'NO_SHOW',
 ]);
 export const paymentMethodEnum = pgEnum('payment_method_enum', ['cash', 'digital_wallet']);
-export const paymentStatusEnum = pgEnum('payment_status_enum', ['pending_at_pickup', 'paid', 'waived']);
+export const paymentStatusEnum = pgEnum('payment_status_enum', ['pending_at_pickup', 'pending_verification', 'paid', 'waived']);
 export const notificationTypeEnum = pgEnum('notification_type_enum', ['order_status', 'kiosk_notice', 'system', 'warning']);
 export const actorTypeEnum = pgEnum('actor_type_enum', ['student', 'staff', 'admin', 'system']);
 

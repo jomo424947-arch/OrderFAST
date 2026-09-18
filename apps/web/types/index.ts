@@ -112,7 +112,7 @@ export interface Order {
   total: number; // in EGP
   status: OrderStatus;
   paymentMethod?: 'cash' | 'digital_wallet';
-  paymentStatus?: 'pending_at_pickup' | 'paid' | 'waived';
+  paymentStatus?: 'pending_at_pickup' | 'pending_verification' | 'paid' | 'waived';
   orderNotes?: string;
   onlinePaymentType?: 'wallet' | 'instapay';
   transferSenderPhone?: string;

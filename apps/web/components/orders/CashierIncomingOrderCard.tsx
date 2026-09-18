@@ -47,12 +47,21 @@ export const CashierIncomingOrderCard: React.FC<CashierIncomingOrderCardProps> =
 
               {/* Payment Status Pill */}
               {isOnline ? (
-                <span className="inline-flex items-center gap-1 font-body text-[11px] font-bold text-accent bg-accent-soft px-2.5 py-0.5 rounded-full border border-accent/20">
-                  <Smartphone className="w-3 h-3" />
-                  <span>
-                    مدفوع أونلاين ({order.onlinePaymentType === 'instapay' ? 'انستا باي' : 'محفظة كاش'})
+                order.paymentStatus === 'paid' ? (
+                  <span className="inline-flex items-center gap-1 font-body text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <Smartphone className="w-3 h-3" />
+                    <span>
+                      تم تأكيد الدفع ({order.onlinePaymentType === 'instapay' ? 'انستا باي' : 'محفظة كاش'})
+                    </span>
                   </span>
-                </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 font-body text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-300">
+                    <Smartphone className="w-3 h-3" />
+                    <span>
+                      بانتظار التحقق من التحويل ({order.onlinePaymentType === 'instapay' ? 'انستا باي' : 'محفظة كاش'})
+                    </span>
+                  </span>
+                )
               ) : (
                 <span className="inline-flex items-center gap-1 font-body text-[11px] font-bold text-primary-ink bg-primary-soft px-2.5 py-0.5 rounded-full border border-primary/20">
                   <Banknote className="w-3 h-3" />

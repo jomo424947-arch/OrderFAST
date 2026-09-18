@@ -98,10 +98,19 @@ export async function notificationRoutes(app: FastifyInstance) {
     }
   );
 
-  // Test Push Notification Endpoint
+  // Test Push Notification Endpoint (rate limited: 3 per 10 minutes per user)
   app.post(
     '/test-push',
-    { preHandler: [authenticate] },
+    {
+      preHandler: [authenticate],
+      config: {
+        rateLimit: {
+          max: 3,
+          timeWindow: '10 minutes',
+          keyGenerator: (request: any) => request.user?.id || request.ip,
+        },
+      },
+    },
     async (request, reply) => {
       const { pushService } = await import('./push.service.js');
       const { isFirebaseConfigured } = await import('./firebase.config.js');

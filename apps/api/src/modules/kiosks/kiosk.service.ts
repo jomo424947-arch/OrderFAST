@@ -321,12 +321,13 @@ export class KioskService {
   async createKiosk(data: {
     name: string;
     collegeLocation: string;
-    campusZone?: string;
-    category?: string;
-    phone?: string;
-    openingHours?: string;
-    defaultPrepTimeMins?: number;
-    imageUrl?: string;
+    campusZone?: string | null;
+    category?: string | null;
+    phone?: string | null;
+    openingHours?: string | null;
+    defaultPrepTimeMins?: number | null;
+    imageUrl?: string | null;
+    [key: string]: any;
   }) {
     const kioskId = generateId();
 
