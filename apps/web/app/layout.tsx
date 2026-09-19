@@ -4,6 +4,7 @@ import { IntroAnimation } from '@/components/branding/IntroAnimation';
 import { CapacitorDeepLinkHandler } from '@/components/auth/CapacitorDeepLinkHandler';
 import { CapacitorPushNotificationHandler } from '@/components/notifications/CapacitorPushNotificationHandler';
 import { WebPushNotificationHandler } from '@/components/notifications/WebPushNotificationHandler';
+import { LogRocketProvider } from '@/components/analytics/LogRocketProvider';
 
 export const metadata: Metadata = {
   title: 'FastOrder',
@@ -41,6 +42,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-canvas text-ink antialiased flex flex-col font-body selection:bg-primary-soft selection:text-primary-ink">
+        <LogRocketProvider />
         <CapacitorDeepLinkHandler />
         <CapacitorPushNotificationHandler />
         <WebPushNotificationHandler />

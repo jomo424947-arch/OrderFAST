@@ -10,6 +10,8 @@ import {
   Zap,
   LogIn,
   UserPlus,
+  Smartphone,
+  Download,
 } from 'lucide-react';
 import { AuthRedirectHandler } from '@/components/auth/AuthRedirectHandler';
 import { StartupGateway } from '@/components/auth/StartupGateway';
@@ -26,8 +28,15 @@ export default function LandingPage() {
           <Logo variant="full" />
           <div className="flex items-center gap-3">
             <Link
+              href="/download"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-body font-bold text-primary-ink bg-primary-soft hover:bg-primary/20 transition-colors border border-primary/30"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-primary-ink" />
+              <span>تطبيق الأندرويد</span>
+            </Link>
+            <Link
               href="/auth/login"
-              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-body font-semibold text-ink hover:text-primary-ink transition-colors"
+              className="px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-body font-semibold text-ink hover:text-primary-ink transition-colors"
             >
               تسجيل الدخول
             </Link>
@@ -59,7 +68,7 @@ export default function LandingPage() {
         </p>
 
         {/* Main Action Portals — Login & Register */}
-        <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-md mb-14">
+        <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-md mb-4">
           <Link href="/auth/login" className="w-full">
             <Button size="lg" variant="primary" className="w-full shadow-warm">
               <LogIn className="w-5 h-5 ml-2" />
@@ -73,6 +82,23 @@ export default function LandingPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Android App Download Banner */}
+        <Link
+          href="/download"
+          className="group inline-flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-surface border border-line hover:border-primary/50 shadow-xs mb-10 transition-all hover:shadow-warm max-w-md w-full text-right"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary-soft text-primary-ink flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+              <Download className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-xs sm:text-sm text-ink">حمّل تطبيق أندرويد (APK)</p>
+              <p className="text-[11px] text-ink-soft">تحميل مباشر وسريع • حجم خفيف 4.7MB</p>
+            </div>
+          </div>
+          <ArrowLeft className="w-4 h-4 text-ink-soft group-hover:-translate-x-1 transition-transform" />
+        </Link>
 
         {/* 3-Step Value Proposition Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full text-right my-8">
@@ -152,7 +178,20 @@ export default function LandingPage() {
         <p className="mb-1">
           <strong className="text-ink font-semibold">FastOrder</strong> — منصة تنظيم طوابير وأوردرات الأكشاك الجامعية
         </p>
-        <p className="font-mono text-[11px] opacity-75">ORDER • WAIT • ENJOY</p>
+        <p className="font-mono text-[11px] opacity-75 mb-3">ORDER • WAIT • ENJOY</p>
+        <div className="flex flex-wrap items-center justify-center gap-3 text-xs">
+          <Link href="/download" className="text-primary-ink font-bold hover:underline">
+            تحميل تطبيق أندرويد (APK)
+          </Link>
+          <span>•</span>
+          <Link href="/terms" className="hover:text-ink transition-colors">
+            الشروط والأحكام
+          </Link>
+          <span>•</span>
+          <Link href="/privacy" className="hover:text-ink transition-colors">
+            سياسة الخصوصية
+          </Link>
+        </div>
       </footer>
     </div>
   </StartupGateway>
