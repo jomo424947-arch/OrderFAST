@@ -588,23 +588,34 @@ export class OrderService {
   /**
    * 5.1 GET KIOSK FINISHED / HISTORY ORDERS (Completed, Rejected, Cancelled, No-Show, Expired)
    */
-  async getKioskFinishedOrders(kioskId: string, limit = 100) {
+  async getKioskFinishedOrders(
+    kioskId: string,
+    limit = 300,
+    range: 'today' | 'week' | 'month' | 'all' = 'all'
+  ) {
+    const conditions = [
+      eq(orders.kioskId, kioskId),
+      inArray(orders.status, [
+        'COMPLETED',
+        'REJECTED',
+        'CANCELLED',
+        'NO_SHOW',
+        'EXPIRED',
+      ]),
+    ];
+
+    if (range === 'today') {
+      conditions.push(sql`${orders.orderDate} = CURRENT_DATE`);
+    } else if (range === 'week') {
+      conditions.push(sql`${orders.createdAt} >= CURRENT_DATE - INTERVAL '7 days'`);
+    } else if (range === 'month') {
+      conditions.push(sql`${orders.createdAt} >= CURRENT_DATE - INTERVAL '30 days'`);
+    }
+
     const finishedOrders = await db
       .select()
       .from(orders)
-      .where(
-        and(
-          eq(orders.kioskId, kioskId),
-          sql`${orders.orderDate} = CURRENT_DATE`,
-          inArray(orders.status, [
-            'COMPLETED',
-            'REJECTED',
-            'CANCELLED',
-            'NO_SHOW',
-            'EXPIRED',
-          ])
-        )
-      )
+      .where(and(...conditions))
       .orderBy(desc(orders.createdAt))
       .limit(limit);
 

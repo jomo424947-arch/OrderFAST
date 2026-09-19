@@ -67,7 +67,7 @@ export const CashierSidebar: React.FC = () => {
     },
     {
       href: '/kiosk/history',
-      label: 'أوردرات اليوم',
+      label: 'سجل الأوردرات والمبيعات',
       icon: Archive,
       count: finishedCount,
       isActive: pathname === '/kiosk/history',

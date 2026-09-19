@@ -69,9 +69,9 @@ export class ApiOrderService implements IOrderService {
     return Array.isArray(rawList) ? rawList.map(adaptOrderFromApi) : [];
   }
 
-  async getKioskFinishedOrders(kioskId: string): Promise<Order[]> {
+  async getKioskFinishedOrders(kioskId: string, range = 'all'): Promise<Order[]> {
     try {
-      const rawList = await apiClient.get<ApiOrderRaw[]>(`/orders/kiosks/${kioskId}/history`);
+      const rawList = await apiClient.get<ApiOrderRaw[]>(`/orders/kiosks/${kioskId}/history?range=${range}`);
       return Array.isArray(rawList) ? rawList.map(adaptOrderFromApi) : [];
     } catch {
       return [];

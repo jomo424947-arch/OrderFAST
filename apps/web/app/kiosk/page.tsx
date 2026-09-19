@@ -581,7 +581,7 @@ export default function CashierDashboardPage() {
             >
               <div className="flex items-center gap-2.5">
                 <Archive className="w-4 h-4 text-accent" />
-                <span className="font-body font-bold text-xs text-ink">أوردرات اليوم</span>
+                <span className="font-body font-bold text-xs text-ink">سجل الأوردرات والمبيعات</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] font-mono font-bold bg-surface px-2 py-0.5 rounded-full border border-line">

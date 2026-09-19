@@ -14,14 +14,18 @@ interface SeedItem {
 
 interface SeedCategory {
   name: string;
+  section: 'breakfast' | 'lunch' | 'drinks';
   displayOrder: number;
   items: SeedItem[];
 }
 
 const MENU_DATA: SeedCategory[] = [
-  // 1. ساندوتشات وأطباق الإفطار
+  // ==========================================
+  // 1. قسم الإفطار 🍳 (Breakfast)
+  // ==========================================
   {
-    name: 'ساندوتشات وأطباق الإفطار',
+    name: 'ساندوتشات الإفطار',
+    section: 'breakfast',
     displayOrder: 1,
     items: [
       { name: 'ساندوتش طعمية', price: 15, prepTime: 3 },
@@ -36,11 +40,25 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'بطاطس مهروسة', price: 15, prepTime: 3 },
       { name: 'ساندوتش فول بالليمون المعصفر', price: 18, prepTime: 3 },
       { name: 'ساندوتش شكشوكة', price: 15, prepTime: 4 },
+    ],
+  },
+  {
+    name: 'ساندوتشات الأومليت',
+    section: 'breakfast',
+    displayOrder: 2,
+    items: [
       { name: 'بيض أومليت عادي', price: 15, prepTime: 4 },
       { name: 'بيض أومليت بسطرمة', price: 40, prepTime: 5 },
       { name: 'بيض أومليت خضار', price: 20, prepTime: 4 },
       { name: 'بيض أومليت سوسيس', price: 30, prepTime: 5 },
       { name: 'بيض أومليت سجق', price: 30, prepTime: 5 },
+    ],
+  },
+  {
+    name: 'التشكيلات والأطباق الجانبية',
+    section: 'breakfast',
+    displayOrder: 3,
+    items: [
       { name: 'طبق فول صغير', price: 10, prepTime: 3 },
       { name: 'طبق بطاطس', price: 15, prepTime: 4 },
       { name: 'طبق طعمية', price: 10, prepTime: 3 },
@@ -48,15 +66,25 @@ const MENU_DATA: SeedCategory[] = [
       { name: '4 أرغفة / كيس عيش', price: 5, prepTime: 1 },
       { name: 'طبق بابا غنوج', price: 15, prepTime: 3 },
       { name: 'طبق جبنة بالطماطم', price: 15, prepTime: 3 },
+    ],
+  },
+  {
+    name: 'إضافات الفطار',
+    section: 'breakfast',
+    displayOrder: 4,
+    items: [
       { name: 'إضافة بابا غنوج فطار', price: 5, prepTime: 1 },
       { name: 'مخلل صغير', price: 5, prepTime: 1 },
     ],
   },
 
-  // 2. ساندوتشات فينو وتورتيلا
+  // ==========================================
+  // 2. قسم الغداء 🍔 (Lunch)
+  // ==========================================
   {
-    name: 'ساندوتشات فينو وتورتيلا',
-    displayOrder: 2,
+    name: 'ساندوتشات فينو',
+    section: 'lunch',
+    displayOrder: 5,
     items: [
       { name: 'ساندوتش بطاطس فينو', price: 20, prepTime: 4 },
       { name: 'شاورما فراخ فينو', price: 60, prepTime: 6 },
@@ -71,6 +99,13 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'سجق فينو', price: 50, prepTime: 6 },
       { name: 'سوسيس فينو', price: 50, prepTime: 5 },
       { name: 'هوت دوج فينو', price: 50, prepTime: 5 },
+    ],
+  },
+  {
+    name: 'ساندوتشات التورتيلا',
+    section: 'lunch',
+    displayOrder: 6,
+    items: [
       { name: 'تورتيلا شاورما فراخ', price: 100, prepTime: 8 },
       { name: 'تورتيلا استربس', price: 95, prepTime: 8 },
       { name: 'تورتيلا بانيه', price: 90, prepTime: 7 },
@@ -82,11 +117,10 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'سوري بطاطس بالتومية', price: 40, prepTime: 5 },
     ],
   },
-
-  // 3. الكريب والباكتات
   {
-    name: 'الكريب والباكتات',
-    displayOrder: 3,
+    name: 'الكريب',
+    section: 'lunch',
+    displayOrder: 7,
     items: [
       { name: 'كريب ميكس جبن', price: 80, prepTime: 8 },
       { name: 'كريب شيش طاووق', price: 115, prepTime: 10 },
@@ -99,21 +133,12 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'كريب مشروم', price: 75, prepTime: 8 },
       { name: 'كريب بطاطس', price: 50, prepTime: 7 },
       { name: 'كريب فاهيتا فراخ', price: 115, prepTime: 10 },
-      { name: 'باكيت بطاطس', price: 20, prepTime: 5 },
-      { name: 'بطاطس جبنة شيدر وهلابينو', price: 30, prepTime: 6 },
-      { name: 'بطاطسيكو فراخ', price: 50, prepTime: 7 },
-      { name: 'بطاطسيكو لحمة', price: 50, prepTime: 7 },
-      { name: 'فتة شاورما', price: 60, prepTime: 8 },
-      { name: 'روزيتو', price: 65, prepTime: 8 },
-      { name: 'تشكن سيزر سالاد', price: 50, prepTime: 6 },
-      { name: 'كرواسون تشيز & تركي', price: 50, prepTime: 5 },
     ],
   },
-
-  // 4. البيتزا
   {
     name: 'البيتزا',
-    displayOrder: 4,
+    section: 'lunch',
+    displayOrder: 8,
     items: [
       { name: 'بيتزا فراخ (وسط)', price: 90, prepTime: 12 },
       { name: 'بيتزا فراخ (كبير)', price: 140, prepTime: 15 },
@@ -143,11 +168,42 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'بيتزا مكس فراخ (كبير)', price: 180, prepTime: 16 },
     ],
   },
+  {
+    name: 'الباكتات والوجبات',
+    section: 'lunch',
+    displayOrder: 9,
+    items: [
+      { name: 'باكيت بطاطس', price: 20, prepTime: 5 },
+      { name: 'بطاطس جبنة شيدر وهلابينو', price: 30, prepTime: 6 },
+      { name: 'بطاطسيكو فراخ', price: 50, prepTime: 7 },
+      { name: 'بطاطسيكو لحمة', price: 50, prepTime: 7 },
+      { name: 'فتة شاورما', price: 60, prepTime: 8 },
+      { name: 'روزيتو', price: 65, prepTime: 8 },
+      { name: 'تشكن سيزر سالاد', price: 50, prepTime: 6 },
+      { name: 'كرواسون تشيز & تركي', price: 50, prepTime: 5 },
+    ],
+  },
+  {
+    name: 'إضافات الغداء',
+    section: 'lunch',
+    displayOrder: 10,
+    items: [
+      { name: 'إضافة فراخ', price: 30, prepTime: 2 },
+      { name: 'إضافة لحوم', price: 30, prepTime: 2 },
+      { name: 'إضافة صوص', price: 8, prepTime: 1 },
+      { name: 'إضافة صوص شيدر', price: 10, prepTime: 1 },
+      { name: 'إضافة موتزاريلا', price: 25, prepTime: 2 },
+      { name: 'إضافة هالبينو', price: 10, prepTime: 1 },
+    ],
+  },
 
-  // 5. مشروبات ساخنة
+  // ==========================================
+  // 3. قسم المشروبات والحلويات 🥤 (Drinks)
+  // ==========================================
   {
     name: 'مشروبات ساخنة',
-    displayOrder: 5,
+    section: 'drinks',
+    displayOrder: 11,
     items: [
       { name: 'شاي فتلة (العروسة / ليبتون)', price: 10, prepTime: 3 },
       { name: 'شاي أحمد تي كلاسيك', price: 12, prepTime: 3 },
@@ -175,11 +231,10 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'هوت لاتيه', price: 60, prepTime: 5 },
     ],
   },
-
-  // 6. مشروبات باردة وعصائر فريش
   {
-    name: 'مشروبات باردة وعصائر فريش',
-    displayOrder: 6,
+    name: 'مشروبات باردة',
+    section: 'drinks',
+    displayOrder: 12,
     items: [
       { name: 'آيس لاتيه', price: 45, prepTime: 4 },
       { name: 'آيس سبانش لاتيه', price: 50, prepTime: 5 },
@@ -197,6 +252,13 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'آيس فانيلا لاتيه', price: 50, prepTime: 4 },
       { name: 'آيس تي خوخ', price: 35, prepTime: 3 },
       { name: 'آيس تي باشن فروت', price: 35, prepTime: 3 },
+    ],
+  },
+  {
+    name: 'عصائر فريش وميكسات وموهيتو',
+    section: 'drinks',
+    displayOrder: 13,
+    items: [
       { name: 'عصير ليمون فريش', price: 25, prepTime: 3 },
       { name: 'عصير ليمون نعناع', price: 35, prepTime: 4 },
       { name: 'عصير مانجا طبيعي', price: 40, prepTime: 4 },
@@ -211,6 +273,7 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'عصير أفوكادو سادة', price: 50, prepTime: 5 },
       { name: 'عصير أفوكادو مكسرات', price: 60, prepTime: 5 },
       { name: 'أفوكادو مكس (موز + مكسرات + عسل)', price: 70, prepTime: 6 },
+      { name: 'إضافة سموزي', price: 10, prepTime: 1 },
       { name: 'مكس مانجا + كيوي', price: 60, prepTime: 5 },
       { name: 'مكس مانجا + خوخ', price: 60, prepTime: 5 },
       { name: 'مكس موز + فراولة', price: 60, prepTime: 5 },
@@ -225,11 +288,10 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'موهيتو (أي فليفر من اختيارك)', price: 45, prepTime: 4 },
     ],
   },
-
-  // 7. ميلك شيك وفرابيه
   {
     name: 'ميلك شيك وفرابيه',
-    displayOrder: 7,
+    section: 'drinks',
+    displayOrder: 14,
     items: [
       { name: 'ميلك شيك شوكولاتة / فانيليا', price: 50, prepTime: 5 },
       { name: 'ميلك شيك كراميل', price: 50, prepTime: 5 },
@@ -249,11 +311,10 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'فرابيه بستاشيو', price: 50, prepTime: 5 },
     ],
   },
-
-  // 8. حلويات وآيس كريم
   {
     name: 'حلويات وآيس كريم',
-    displayOrder: 8,
+    section: 'drinks',
+    displayOrder: 15,
     items: [
       { name: '10 قطع بان كيك', price: 50, prepTime: 8 },
       { name: 'وافلز نوتيلا', price: 50, prepTime: 8 },
@@ -267,19 +328,11 @@ const MENU_DATA: SeedCategory[] = [
       { name: 'آيس كريم (حجم كبير)', price: 35, prepTime: 2 },
     ],
   },
-
-  // 9. الإضافات
   {
-    name: 'الإضافات',
-    displayOrder: 9,
+    name: 'إضافات المشروبات',
+    section: 'drinks',
+    displayOrder: 16,
     items: [
-      { name: 'إضافة فراخ', price: 30, prepTime: 2 },
-      { name: 'إضافة لحوم', price: 30, prepTime: 2 },
-      { name: 'إضافة صوص', price: 8, prepTime: 1 },
-      { name: 'إضافة صوص شيدر', price: 10, prepTime: 1 },
-      { name: 'إضافة موتزاريلا', price: 25, prepTime: 2 },
-      { name: 'إضافة هالبينو', price: 10, prepTime: 1 },
-      { name: 'إضافة سموزي', price: 10, prepTime: 1 },
       { name: 'إضافة حليب كوب صغير', price: 15, prepTime: 1 },
       { name: 'إضافة حليب كوب كبير', price: 20, prepTime: 1 },
       { name: 'إضافة عسل', price: 10, prepTime: 1 },
@@ -317,7 +370,7 @@ async function seedFestivalLand() {
       acceptsOnlineOrders: true,
       isOpen: true,
       isHidden: false,
-      category: 'وجبات ومشروبات وحلويات',
+      category: 'فطار · غداء · مشروبات وحلويات',
       openingHours: '8:00 ص - 10:00 م',
       imageUrl: '/images/menus/festival-land/food-menu.png',
     })
@@ -325,11 +378,16 @@ async function seedFestivalLand() {
 
   console.log(`✨ Kiosk settings and contact details updated.`);
 
-  let totalCategoriesAdded = 0;
-  let totalItemsAdded = 0;
+  const [kioskRecord] = await db
+    .select({ defaultPrepTimeMins: kiosks.defaultPrepTimeMins })
+    .from(kiosks)
+    .where(eq(kiosks.id, KIOSK_ID));
+  const kioskPrepTime = kioskRecord?.defaultPrepTimeMins || 30;
 
+  const newCategoryNames = new Set(MENU_DATA.map((c) => c.name));
+
+  // Process each category
   for (const catData of MENU_DATA) {
-    // Check if category already exists for this kiosk
     let [existingCat] = await db
       .select()
       .from(menuCategories)
@@ -347,20 +405,18 @@ async function seedFestivalLand() {
         displayOrder: catData.displayOrder,
         isActive: true,
       });
-      totalCategoriesAdded++;
       console.log(`📁 Added Category: ${catData.name}`);
     } else {
-      // update displayOrder if needed
       await db
         .update(menuCategories)
         .set({ displayOrder: catData.displayOrder, isActive: true })
         .where(eq(menuCategories.id, catId!));
-      console.log(`📁 Category already exists: ${catData.name}`);
+      console.log(`📁 Category updated: ${catData.name}`);
     }
 
-    // Insert items
+    // Insert or update items for this category
     for (const item of catData.items) {
-      const priceInPiasters = item.price * 100; // EGP to Piasters (e.g. 15 EGP = 1500 Piasters)
+      const priceInPiasters = item.price * 100;
 
       const [existingItem] = await db
         .select()
@@ -376,20 +432,18 @@ async function seedFestivalLand() {
           name: item.name,
           description: item.description || null,
           price: priceInPiasters,
-          preparationTimeMins: item.prepTime || 5,
+          preparationTimeMins: kioskPrepTime,
           isAvailable: true,
-          isUnderReview: false, // Must be false to be visible to students!
+          isUnderReview: false,
           isDeleted: false,
         });
-        totalItemsAdded++;
       } else {
-        // update price and ensure isUnderReview is false
         await db
           .update(menuItems)
           .set({
             categoryId: catId!,
             price: priceInPiasters,
-            preparationTimeMins: item.prepTime || 5,
+            preparationTimeMins: kioskPrepTime,
             isAvailable: true,
             isUnderReview: false,
             isDeleted: false,
@@ -399,10 +453,39 @@ async function seedFestivalLand() {
     }
   }
 
+  // Deactivate or clean up any old categories that are no longer part of the 16 defined categories
+  const allExistingCats = await db
+    .select()
+    .from(menuCategories)
+    .where(eq(menuCategories.kioskId, KIOSK_ID));
+
+  for (const oldCat of allExistingCats) {
+    if (!newCategoryNames.has(oldCat.name)) {
+      // Check if any items remain in this category
+      const remainingItems = await db
+        .select()
+        .from(menuItems)
+        .where(and(eq(menuItems.kioskId, KIOSK_ID), eq(menuItems.categoryId, oldCat.id)))
+        .limit(1);
+
+      if (remainingItems.length === 0) {
+        await db.delete(menuCategories).where(eq(menuCategories.id, oldCat.id));
+        console.log(`🗑️ Removed obsolete empty category: ${oldCat.name}`);
+      } else {
+        await db
+          .update(menuCategories)
+          .set({ isActive: false })
+          .where(eq(menuCategories.id, oldCat.id));
+        console.log(`⚠️ Deactivated category with remaining items: ${oldCat.name}`);
+      }
+    }
+  }
+
+  const totalItemsCount = MENU_DATA.reduce((acc, c) => acc + c.items.length, 0);
   console.log(`\n🎉 SEEDING COMPLETE!`);
   console.log(`- Categories Processed: ${MENU_DATA.length}`);
-  console.log(`- Total Items Seeded/Updated: ${MENU_DATA.reduce((acc, c) => acc + c.items.length, 0)}`);
-  console.log(`- All items set to isUnderReview = false (Immediately visible to students)`);
+  console.log(`- Total Items Seeded/Linked: ${totalItemsCount}`);
+  console.log(`- All items set to isUnderReview = false & isAvailable = true`);
 
   process.exit(0);
 }

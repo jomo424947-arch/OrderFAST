@@ -173,6 +173,17 @@ export class KioskService {
       throw AppError.notFound('الكشك غير موجود');
     }
 
+    if (settings.defaultPrepTimeMins !== undefined) {
+      await db
+        .update(menuItems)
+        .set({
+          preparationTimeMins: settings.defaultPrepTimeMins,
+          updatedAt: new Date(),
+        })
+        .where(eq(menuItems.kioskId, kioskId));
+      await cacheService.del(`menu:${kioskId}`);
+    }
+
     await cacheService.del('kiosks:all');
     await cacheService.del(`kiosk:${kioskId}`);
 

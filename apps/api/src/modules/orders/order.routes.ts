@@ -133,12 +133,19 @@ export async function orderRoutes(app: FastifyInstance) {
   );
 
   // 6.1 Staff: Get Finished / History Orders for Kiosk (COMPLETED, REJECTED, CANCELLED, NO_SHOW, EXPIRED)
-  app.get<{ Params: { kioskId: string } }>(
+  app.get<{
+    Params: { kioskId: string };
+    Querystring: { range?: 'today' | 'week' | 'month' | 'all'; limit?: string };
+  }>(
     '/kiosks/:kioskId/history',
     { preHandler: [authenticate, requireKioskStaff()] },
     async (request, reply) => {
+      const limit = request.query.limit ? parseInt(request.query.limit, 10) : 300;
+      const range = request.query.range || 'all';
       const data = await orderService.getKioskFinishedOrders(
-        request.params.kioskId
+        request.params.kioskId,
+        limit,
+        range
       );
       return reply.status(200).send({
         success: true,

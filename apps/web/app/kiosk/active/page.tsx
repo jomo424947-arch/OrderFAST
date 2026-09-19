@@ -49,7 +49,7 @@ export default function CashierActiveOrdersPage() {
     try {
       setConfirmingOrderId(orderId);
       await confirmPayment(orderId);
-      setActionSuccessMessage('تم تأكيد استلام الدفع الإلكتروني بنجاح! ✓');
+      setActionSuccessMessage('تم تأكيد استلام الدفع الإلكتروني بنجاح!');
       setTimeout(() => setActionSuccessMessage(null), 3500);
     } catch (err: any) {
       alert(err.message || 'فشل تأكيد الدفع');
@@ -144,12 +144,12 @@ export default function CashierActiveOrdersPage() {
                         isPaid ? (
                           <span className="text-[10px] font-body font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
                             <Smartphone className="w-3 h-3" />
-                            <span>مدفوع أونلاين ✓</span>
+                            <span>مدفوع أونلاين</span>
                           </span>
                         ) : (
                           <span className="text-[10px] font-body font-bold text-amber-700 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 animate-pulse">
                             <Smartphone className="w-3 h-3" />
-                            <span>بانتظار تأكيد الدفع ⚠️</span>
+                            <span>بانتظار تأكيد الدفع</span>
                           </span>
                         )
                       ) : (
@@ -230,7 +230,7 @@ export default function CashierActiveOrdersPage() {
                           : 'font-mono text-primary-ink'
                       }>
                         {isOnline
-                          ? (isPaid ? 'مدفوع أونلاين ✓' : `بانتظار التأكيد (${formatEGP(order.total)})`)
+                          ? (isPaid ? 'مدفوع أونلاين' : `بانتظار التأكيد (${formatEGP(order.total)})`)
                           : formatEGP(order.total)}
                       </span>
                     </div>

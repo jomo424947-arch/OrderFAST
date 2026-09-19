@@ -52,7 +52,7 @@ interface OrderState {
   getStudentOrders: (studentId: string) => Order[];
   getKioskIncomingOrders: (kioskId: string) => Order[];
   getKioskActiveOrders: (kioskId: string) => Order[];
-  getKioskFinishedOrders: (kioskId: string) => Order[];
+  getKioskFinishedOrders: (kioskId: string, onlyToday?: boolean) => Order[];
   decrementTimers: () => void;
 }
 
@@ -440,7 +440,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     );
   },
 
-  getKioskFinishedOrders: (kioskId: string) => {
+  getKioskFinishedOrders: (kioskId: string, onlyToday = false) => {
     const todayStr = new Date().toDateString();
     return get().orders.filter((o) => {
       if (o.kioskId !== kioskId) return false;
@@ -451,7 +451,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         o.status === 'NO_SHOW' ||
         o.status === 'EXPIRED';
       if (!isFinished) return false;
-      if (o.createdAt) {
+      if (onlyToday && o.createdAt) {
         return new Date(o.createdAt).toDateString() === todayStr;
       }
       return true;

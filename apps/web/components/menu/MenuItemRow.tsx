@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 export interface MenuItemRowProps {
   item: MenuItem;
+  kioskWaitTime?: number;
   onAdd: (item: MenuItem) => void;
   onUpdateQuantity?: (itemId: string, quantity: number) => void;
   cartQuantity?: number;
@@ -100,13 +101,14 @@ const BrandFoodIcon: React.FC<{ item: MenuItem }> = ({ item }) => {
 
 export const MenuItemRow: React.FC<MenuItemRowProps> = React.memo(({
   item,
+  kioskWaitTime,
   onAdd,
   onUpdateQuantity,
   cartQuantity = 0,
   disabled = false,
 }) => {
   const isAvailable = item.isAvailable && !disabled;
-  const prepTime = item.preparationTimeMins || 5;
+  const prepTime = kioskWaitTime !== undefined ? kioskWaitTime : (item.preparationTimeMins || 5);
   const hasOffer = !!(item.originalPrice && item.originalPrice > item.price);
   const discountAmount = hasOffer ? (item.originalPrice! - item.price) : 0;
   const discountPercent = hasOffer ? Math.round((discountAmount / item.originalPrice!) * 100) : 0;

@@ -27,6 +27,7 @@ import {
   Sparkles,
   Star,
   EyeOff,
+  ChevronDown,
 } from 'lucide-react';
 
 export default function KioskDetailPage() {
@@ -47,6 +48,7 @@ export default function KioskDetailPage() {
     kiosk: cartKiosk,
   } = useCartStore();
 
+  const [activeSection, setActiveSection] = useState<'food' | 'drinks'>('food');
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
 
   useEffect(() => {
@@ -80,6 +82,63 @@ export default function KioskDetailPage() {
   const offerItems = useMemo(() => {
     return kioskItems.filter((i) => i.originalPrice && i.originalPrice > i.price);
   }, [kioskItems]);
+
+  // Map category to main section ('food' = فطار وغدا, 'drinks' = مشروبات)
+  const getCategorySection = (categoryName: string): 'food' | 'drinks' => {
+    const name = (categoryName || '').trim().toLowerCase();
+    if (
+      name.includes('مشروب') ||
+      name.includes('ساخنة') ||
+      name.includes('باردة') ||
+      name.includes('عصائر') ||
+      name.includes('عصير') ||
+      name.includes('ميلك شيك') ||
+      name.includes('فرابيه') ||
+      name.includes('حلويات') ||
+      name.includes('آيس كريم') ||
+      name.includes('إضافات المشروبات') ||
+      name.includes('قهوة') ||
+      name.includes('شاي')
+    ) {
+      return 'drinks';
+    }
+    return 'food';
+  };
+
+  const sectionCounts = useMemo(() => {
+    let food = 0;
+    let drinks = 0;
+
+    for (const item of kioskItems) {
+      const cat = kioskCategories.find((c) => c.id === item.categoryId);
+      const sec = getCategorySection(cat?.name || '');
+      if (sec === 'food') food++;
+      else if (sec === 'drinks') drinks++;
+    }
+
+    return {
+      food,
+      drinks,
+      all: kioskItems.length,
+      offers: offerItems.length,
+    };
+  }, [kioskItems, kioskCategories, offerItems.length]);
+
+  const availableCategoriesForSection = useMemo(() => {
+    return kioskCategories.filter((c) => getCategorySection(c.name) === activeSection);
+  }, [kioskCategories, activeSection]);
+
+  const currentSectionOfferItems = useMemo(() => {
+    return offerItems.filter((i) => {
+      const cat = kioskCategories.find((c) => c.id === i.categoryId);
+      return getCategorySection(cat?.name || '') === activeSection;
+    });
+  }, [offerItems, kioskCategories, activeSection]);
+
+  const handleSelectSection = (section: 'food' | 'drinks') => {
+    setActiveSection(section);
+    setActiveCategoryFilter('all');
+  };
 
   const totalCartCount = getTotalItems();
   const totalCartAmount = getSubtotal();
@@ -190,67 +249,102 @@ export default function KioskDetailPage() {
         </div>
       )}
 
-      {/* Category Filter Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+      {/* 1. Main Sections (تصنيفين رئيسيين فقط: فطار وغدا | مشروبات) */}
+      <div className="grid grid-cols-2 p-1.5 bg-surface border border-line/90 rounded-2xl shadow-xs gap-1.5">
         <button
           type="button"
-          onClick={() => setActiveCategoryFilter('all')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-body font-bold transition-all whitespace-nowrap ${activeCategoryFilter === 'all'
-              ? 'bg-primary text-primary-ink shadow-sm'
-              : 'bg-surface border border-line text-ink-soft hover:text-ink'
+          onClick={() => handleSelectSection('food')}
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-display font-bold text-xs sm:text-sm transition-all ${activeSection === 'food'
+            ? 'bg-primary text-primary-ink shadow-sm ring-2 ring-primary/25 scale-[1.01]'
+            : 'text-ink-soft hover:text-ink hover:bg-canvas'
             }`}
         >
-          كل الأصناف ({kioskItems.length})
+          <span>فطار وغدا</span>
+          <span
+            className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${activeSection === 'food'
+              ? 'bg-black/10 text-primary-ink'
+              : 'bg-canvas border border-line/60 text-ink-soft'
+              }`}
+          >
+            {sectionCounts.food}
+          </span>
         </button>
 
-        {offerItems.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setActiveCategoryFilter('offers')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-body font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-              activeCategoryFilter === 'offers'
-                ? 'bg-danger text-white shadow-sm'
-                : 'bg-danger-soft text-danger border border-danger/25 hover:bg-danger-soft/80'
+        <button
+          type="button"
+          onClick={() => handleSelectSection('drinks')}
+          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-display font-bold text-xs sm:text-sm transition-all ${activeSection === 'drinks'
+            ? 'bg-primary text-primary-ink shadow-sm ring-2 ring-primary/25 scale-[1.01]'
+            : 'text-ink-soft hover:text-ink hover:bg-canvas'
             }`}
+        >
+          <span>مشروبات</span>
+          <span
+            className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${activeSection === 'drinks'
+              ? 'bg-black/10 text-primary-ink'
+              : 'bg-canvas border border-line/60 text-ink-soft'
+              }`}
           >
-            <Tag className="w-3.5 h-3.5 stroke-[2.2]" />
-            <span>العروض الحصرية ({offerItems.length})</span>
-          </button>
-        )}
+            {sectionCounts.drinks}
+          </span>
+        </button>
+      </div>
 
-        {kioskCategories.map((cat) => {
-          const count = kioskItems.filter((i) => i.categoryId === cat.id).length;
-          if (count === 0) return null;
-          return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setActiveCategoryFilter(cat.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-body font-bold transition-all whitespace-nowrap ${activeCategoryFilter === cat.id
-                  ? 'bg-primary text-primary-ink shadow-sm'
-                  : 'bg-surface border border-line text-ink-soft hover:text-ink'
-                }`}
-            >
-              {cat.name} ({count})
-            </button>
-          );
-        })}
+      {/* 2. Subcategories Dropdown (قائمة منسدلة احترافية بدون أي إيموجي) */}
+      <div className="space-y-1.5">
+        <label htmlFor="subcategory-select" className="block text-xs font-display font-bold text-ink-soft px-1">
+          اختر القسم الفرعي:
+        </label>
+        <div className="relative">
+          <select
+            id="subcategory-select"
+            value={activeCategoryFilter}
+            onChange={(e) => setActiveCategoryFilter(e.target.value)}
+            className="w-full bg-surface border border-line text-ink font-display font-bold text-xs sm:text-sm rounded-2xl py-3 px-4 pl-10 shadow-xs hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all cursor-pointer appearance-none"
+            dir="rtl"
+          >
+            <option value="all">
+              {activeSection === 'food'
+                ? `كل الفطار والغدا (${sectionCounts.food} صنف)`
+                : `كل المشروبات (${sectionCounts.drinks} صنف)`}
+            </option>
+
+            {currentSectionOfferItems.length > 0 && (
+              <option value="offers">
+                العروض الحصرية ({currentSectionOfferItems.length} صنف)
+              </option>
+            )}
+
+            {availableCategoriesForSection.map((cat) => {
+              const count = kioskItems.filter((i) => i.categoryId === cat.id).length;
+              if (count === 0) return null;
+              return (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name} ({count} صنف)
+                </option>
+              );
+            })}
+          </select>
+
+          {/* Left Arrow Icon for RTL Dropdown */}
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-ink-soft">
+            <ChevronDown className="w-4 h-4 stroke-[2.5]" />
+          </div>
+        </div>
       </div>
 
       {/* Main Grid: Menu list (2 cols) + Live Bill summary (1 col on lg) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Menu Items List */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Special Offers Section (قسم العروض والتخفيضات) */}
-          {offerItems.length > 0 &&
-            (activeCategoryFilter === 'all' || activeCategoryFilter === 'offers') && (
+          {/* Special Offers Section if active and has offers */}
+          {currentSectionOfferItems.length > 0 &&
+            (activeCategoryFilter === 'offers' || activeCategoryFilter === 'all') && (
               <div className="bg-gradient-to-br from-amber-500/10 via-surface to-accent-soft/20 border-2 border-accent/40 rounded-3xl p-5 shadow-warm space-y-3 relative overflow-hidden">
-                {/* Decorative subtle background icon */}
                 <div className="absolute -left-6 -top-6 text-accent/5 pointer-events-none select-none">
                   <Tag className="w-32 h-32 stroke-[1]" />
                 </div>
 
-                {/* Section Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-accent/20 relative z-10">
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-2xl bg-accent text-white flex items-center justify-center shadow-xs">
@@ -259,7 +353,7 @@ export default function KioskDetailPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-display font-black text-base sm:text-lg text-ink">
-                          عروض اليوم الحصرية
+                          عروض {activeSection === 'food' ? 'الفطار والغداء' : 'المشروبات'} الحصرية
                         </h3>
                         <span className="text-[10px] font-body font-bold bg-danger text-white px-2 py-0.5 rounded-full shadow-xs">
                           خصومات خاصة
@@ -272,16 +366,16 @@ export default function KioskDetailPage() {
                   </div>
 
                   <span className="text-xs font-body font-bold text-accent bg-accent-soft px-2.5 py-1 rounded-xl border border-accent/30 font-mono-nums">
-                    {offerItems.length} عروض
+                    {currentSectionOfferItems.length} عروض
                   </span>
                 </div>
 
-                {/* Offer Items List */}
                 <div className="divide-y divide-line/60 relative z-10">
-                  {offerItems.map((item) => (
+                  {currentSectionOfferItems.map((item) => (
                     <MenuItemRow
                       key={`offer-${item.id}`}
                       item={item}
+                      kioskWaitTime={kiosk.estimatedWaitMins}
                       cartQuantity={getItemQuantity(item.id)}
                       disabled={!kiosk.isOpen}
                       onAdd={(it) => addItem(it, kiosk)}
@@ -291,11 +385,10 @@ export default function KioskDetailPage() {
                 </div>
               </div>
             )}
-          {kioskCategories
-            .filter(
-              (cat) =>
-                activeCategoryFilter === 'all' || activeCategoryFilter === cat.id
-            )
+
+          {/* Subcategories belonging to active section */}
+          {availableCategoriesForSection
+            .filter((cat) => activeCategoryFilter === 'all' || activeCategoryFilter === cat.id)
             .map((cat) => {
               const itemsInCat = kioskItems.filter((i) => i.categoryId === cat.id);
               if (itemsInCat.length === 0) return null;
@@ -319,6 +412,7 @@ export default function KioskDetailPage() {
                       <MenuItemRow
                         key={item.id}
                         item={item}
+                        kioskWaitTime={kiosk.estimatedWaitMins}
                         cartQuantity={getItemQuantity(item.id)}
                         disabled={!kiosk.isOpen}
                         onAdd={(it) => addItem(it, kiosk)}
