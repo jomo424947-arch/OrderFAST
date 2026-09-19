@@ -361,7 +361,7 @@ export default function DownloadPage() {
                     تنزيل ملف التطبيق
                   </h3>
                   <p className="font-body text-xs text-ink-soft leading-relaxed">
-                    اضغط على زر <strong className="text-ink">"تنزيل تطبيق أندرويد (APK)"</strong> بالأعلى. إذا سألك المتصفح عن أمان التنزيل، اضغط <strong className="text-ink">"تنزيل على أي حال"</strong>.
+                    اضغط على زر <strong className="text-ink">«تنزيل تطبيق أندرويد (APK)»</strong> بالأعلى. إذا سألك المتصفح عن أمان التنزيل، اضغط <strong className="text-ink">«تنزيل على أي حال»</strong>.
                   </p>
                 </div>
               </div>
@@ -376,7 +376,7 @@ export default function DownloadPage() {
                     فتح الملف بعد اكتمال التنزيل
                   </h3>
                   <p className="font-body text-xs text-ink-soft leading-relaxed">
-                    اسحب شريط الإشعارات واضغط على إشعار اكتمال تنزيل <strong className="text-ink">FastOrder.apk</strong>، أو افتحه من تطبيق "الملفات" في مجلد التنزيلات (Downloads).
+                    اسحب شريط الإشعارات واضغط على إشعار اكتمال تنزيل <strong className="text-ink">FastOrder.apk</strong>، أو افتحه من تطبيق «الملفات» في مجلد التنزيلات (Downloads).
                   </p>
                 </div>
               </div>
@@ -391,7 +391,7 @@ export default function DownloadPage() {
                     تفعيل التثبيت من هذا المصدر
                   </h3>
                   <p className="font-body text-xs text-ink-soft leading-relaxed">
-                    إذا ظهرت لك رسالة أمان، اضغط على <strong className="text-ink">"الإعدادات"</strong> ثم فعّل زر <strong className="text-ink">"السماح بالتثبيت من هذا المصدر"</strong> لمتصفحك، ثم ارجع خطوة للخلف.
+                    إذا ظهرت لك رسالة أمان، اضغط على <strong className="text-ink">«الإعدادات»</strong> ثم فعّل زر <strong className="text-ink">«السماح بالتثبيت من هذا المصدر»</strong> لمتصفحك، ثم ارجع خطوة للخلف.
                   </p>
                 </div>
               </div>
@@ -406,7 +406,7 @@ export default function DownloadPage() {
                     الضغط على تثبيت والبدء
                   </h3>
                   <p className="font-body text-xs text-ink-soft leading-relaxed">
-                    اضغط على <strong className="text-ink">"تثبيت" (Install)</strong>، وخلال ثوانٍ معدودة اضغط <strong className="text-ink">"فتح" (Open)</strong> وسجل دخولك وابدأ طلبك الأول!
+                    اضغط على <strong className="text-ink">«تثبيت» (Install)</strong>، وخلال ثوانٍ معدودة اضغط <strong className="text-ink">«فتح» (Open)</strong> وسجل دخولك وابدأ طلبك الأول!
                   </p>
                 </div>
               </div>
