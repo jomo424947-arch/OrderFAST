@@ -1,5 +1,7 @@
 export type UserRole = 'student' | 'cashier' | 'admin';
 
+export type University = 'sphinx' | 'assiut_ahleya';
+
 export type AccountStatus = 'active' | 'warning' | 'restricted';
 
 export interface User {
@@ -8,12 +10,14 @@ export interface User {
   email: string;
   role: UserRole;
   avatar?: string;
+  university?: University;
   college?: string;
   phone?: string;
   createdAt: string;
 }
 
 export interface Student extends User {
+  university: University;
   universityId: string;
   college: string;
   status: AccountStatus;
@@ -23,6 +27,7 @@ export interface Student extends User {
 export interface Kiosk {
   id: string;
   name: string;
+  university?: University;
   collegeLocation: string;
   campusZone: string;
   category: string;

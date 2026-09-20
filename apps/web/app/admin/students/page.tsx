@@ -19,13 +19,17 @@ import {
 export default function AdminStudentsPage() {
   const { students, isLoading, fetchStudents, updateStudentStatus } = useStudentStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUniversity, setSelectedUniversity] = useState<'all' | 'sphinx' | 'assiut_ahleya'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    fetchStudents(selectedUniversity === 'all' ? undefined : selectedUniversity);
+  }, [fetchStudents, selectedUniversity]);
 
   const filteredStudents = students.filter((s) => {
+    if (selectedUniversity !== 'all' && s.university && s.university !== selectedUniversity) {
+      return false;
+    }
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -56,13 +60,52 @@ export default function AdminStudentsPage() {
           </p>
         </div>
 
-        <div className="w-full sm:w-64">
-          <SearchInput
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onClear={() => setSearchQuery('')}
-            placeholder="بحث بالاسم أو الرقم الجامعي..."
-          />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+          {/* University Filter Buttons */}
+          <div className="flex items-center gap-1.5 bg-surface border border-line p-1 rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setSelectedUniversity('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold transition-all ${
+                selectedUniversity === 'all'
+                  ? 'bg-ink text-white shadow-xs'
+                  : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              كل الجامعات
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedUniversity('sphinx')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold transition-all ${
+                selectedUniversity === 'sphinx'
+                  ? 'bg-ink text-white shadow-xs'
+                  : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              سفنكس
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedUniversity('assiut_ahleya')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold transition-all ${
+                selectedUniversity === 'assiut_ahleya'
+                  ? 'bg-ink text-white shadow-xs'
+                  : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              أسيوط الأهلية
+            </button>
+          </div>
+
+          <div className="w-full sm:w-64">
+            <SearchInput
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onClear={() => setSearchQuery('')}
+              placeholder="بحث بالاسم أو الرقم الجامعي..."
+            />
+          </div>
         </div>
       </div>
 
@@ -92,6 +135,9 @@ export default function AdminStudentsPage() {
                     <h3 className="font-display font-bold text-base text-ink">
                       {student.name}
                     </h3>
+                    <span className="font-body text-xs font-bold text-primary-ink bg-primary-soft px-2.5 py-0.5 rounded-md border border-primary/20">
+                      {student.university === 'assiut_ahleya' ? 'جامعة أسيوط الأهلية' : 'جامعة سفنكس'}
+                    </span>
                     <span className="font-mono text-xs font-bold text-ink-soft bg-canvas px-2 py-0.5 rounded-md border border-line">
                       ID: {student.universityId}
                     </span>

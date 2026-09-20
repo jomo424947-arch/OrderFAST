@@ -1,4 +1,4 @@
-import { User, Student, Cashier, Admin, UserRole } from "@/types";
+import { User, Student, Cashier, Admin, UserRole, University } from "@/types";
 import { MOCK_STUDENTS } from "@/lib/mock/students";
 import { MOCK_CASHIERS } from "@/lib/mock/cashiers";
 import { MOCK_ADMIN } from "@/lib/mock/admin";
@@ -9,6 +9,7 @@ export interface RegisterPayload {
   password: string;
   phone?: string;
   /** Student-only */
+  university?: University;
   college?: string;
   universityId?: string;
   /** Cashier-only */
@@ -22,8 +23,9 @@ export interface IAuthService {
   register(data: RegisterPayload, role: UserRole): Promise<User>;
   logout(): Promise<void>;
   resendConfirmationEmail(email: string): Promise<void>;
-  syncOAuthUser(college?: string): Promise<{ user: User; isNewUser: boolean }>;
+  syncOAuthUser(college?: string, university?: University): Promise<{ user: User; isNewUser: boolean }>;
   updateStudentCollege(college: string): Promise<void>;
+  updateStudentUniversity(university: University, college?: string): Promise<void>;
 }
 
 export class MockAuthService implements IAuthService {
@@ -68,8 +70,9 @@ export class MockAuthService implements IAuthService {
     if (role === "student") {
       const student: Student = {
         ...base,
+        university: data.university || "sphinx",
         universityId: data.universityId || `U${Date.now()}`,
-        college: data.college || "كلية الحاسبات والمعلومات",
+        college: data.college || "كلية الحاسبات والذكاء الاصطناعي",
         status: "active",
         noShowCount: 0,
       };
@@ -105,10 +108,11 @@ export class MockAuthService implements IAuthService {
     // Mock resend
   }
 
-  async syncOAuthUser(college?: string): Promise<{ user: User; isNewUser: boolean }> {
+  async syncOAuthUser(college?: string, university?: University): Promise<{ user: User; isNewUser: boolean }> {
     return {
       user: {
         ...this.students[0],
+        university: university || this.students[0].university || "sphinx",
         college: college || this.students[0].college,
       },
       isNewUser: false,
@@ -118,6 +122,13 @@ export class MockAuthService implements IAuthService {
   async updateStudentCollege(college: string): Promise<void> {
     if (this.students[0]) {
       this.students[0].college = college;
+    }
+  }
+
+  async updateStudentUniversity(university: University, college?: string): Promise<void> {
+    if (this.students[0]) {
+      this.students[0].university = university;
+      if (college) this.students[0].college = college;
     }
   }
 

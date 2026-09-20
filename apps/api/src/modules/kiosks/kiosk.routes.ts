@@ -5,6 +5,7 @@ import {
   assignKioskStaffSchema,
   createKioskSchema,
 } from '@orderfast/validation';
+import type { University } from '@orderfast/types';
 import { kioskService } from './kiosk.service.js';
 import {
   authenticate,
@@ -13,12 +14,13 @@ import {
 } from '../../shared/middleware/auth.js';
 
 export async function kioskRoutes(app: FastifyInstance) {
-  // Admin: Get all kiosks with assigned staff
+  // Admin: Get all kiosks with assigned staff (optionally filtered by university)
   app.get(
     '/admin/with-staff',
     { preHandler: [authenticate, requireSystemRole(['admin'])] },
-    async (_request, reply) => {
-      const data = await kioskService.getAdminKiosksWithStaff();
+    async (request, reply) => {
+      const { university } = (request.query as { university?: University }) || {};
+      const data = await kioskService.getAdminKiosksWithStaff(university);
       return reply.status(200).send({
         success: true,
         data,
@@ -101,9 +103,10 @@ export async function kioskRoutes(app: FastifyInstance) {
     }
   );
 
-  // Public: List all kiosks with wait times and queue status
-  app.get('/', async (_request, reply) => {
-    const data = await kioskService.getAllKiosks();
+  // Public: List all kiosks with wait times and queue status, optionally filtered by university
+  app.get('/', async (request, reply) => {
+    const { university } = (request.query as { university?: University }) || {};
+    const data = await kioskService.getAllKiosks(university);
     return reply.status(200).send({
       success: true,
       data,

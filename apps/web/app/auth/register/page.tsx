@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/branding/Logo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { COLLEGES } from '@/lib/constants';
+import { COLLEGES_BY_UNIVERSITY, UNIVERSITIES, UniversityKey } from '@/lib/constants';
 import { Eye, EyeOff, User, Store, Phone as PhoneIcon, MailCheck, RefreshCw } from 'lucide-react';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -28,11 +28,17 @@ export default function RegisterPage() {
   const { register, resendConfirmation } = useAuthStore();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>('student');
+  const [university, setUniversity] = useState<UniversityKey>('sphinx');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [college, setCollege] = useState(COLLEGES[1]);
+  const [college, setCollege] = useState(COLLEGES_BY_UNIVERSITY.sphinx[0]);
   const [password, setPassword] = useState('');
+
+  const handleUniversityChange = (newUniv: UniversityKey) => {
+    setUniversity(newUniv);
+    setCollege(COLLEGES_BY_UNIVERSITY[newUniv][0] || '');
+  };
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [termsErrorHighlight, setTermsErrorHighlight] = useState(false);
@@ -94,6 +100,7 @@ export default function RegisterPage() {
         email: email.trim(),
         phone: phone.trim() || undefined,
         password,
+        university: selectedRole === 'student' ? university : undefined,
         college: selectedRole === 'student' ? college : undefined,
       },
       selectedRole
@@ -286,23 +293,42 @@ export default function RegisterPage() {
             iconPosition="left"
           />
 
-          {/* Student-specific: College */}
+          {/* Student-specific: University & College */}
           {selectedRole === 'student' && (
-            <div className="w-full text-right">
-              <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
-                الكلية
-              </label>
-              <select
-                value={college}
-                onChange={(e) => setCollege(e.target.value)}
-                className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer"
-              >
-                {COLLEGES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-4">
+              <div className="w-full text-right">
+                <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+                  الجامعة
+                </label>
+                <select
+                  value={university}
+                  onChange={(e) => handleUniversityChange(e.target.value as UniversityKey)}
+                  className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer font-semibold"
+                >
+                  {UNIVERSITIES.map((u) => (
+                    <option key={u.key} value={u.key}>
+                      {u.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="w-full text-right">
+                <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+                  الكلية
+                </label>
+                <select
+                  value={college}
+                  onChange={(e) => setCollege(e.target.value)}
+                  className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer"
+                >
+                  {COLLEGES_BY_UNIVERSITY[university].map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 

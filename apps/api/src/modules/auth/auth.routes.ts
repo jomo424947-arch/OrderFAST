@@ -5,7 +5,9 @@ import {
   registerStaffSchema,
   loginSchema,
   updateStudentStatusSchema,
+  updateStudentUniversitySchema,
 } from '@orderfast/validation';
+import type { University } from '@orderfast/types';
 import { authService } from './auth.service.js';
 import { authenticate, requireSystemRole } from '../../shared/middleware/auth.js';
 import { getSupabaseAdmin } from '../../shared/supabase/index.js';
@@ -140,7 +142,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     const user = userData.user;
-    const body = (request.body as { college?: string }) || {};
+    const body = (request.body as { college?: string; university?: University }) || {};
     const metadata = {
       fullName: (user.user_metadata?.full_name || user.user_metadata?.name) as string | undefined,
       avatarUrl: (user.user_metadata?.avatar_url || user.user_metadata?.picture) as string | undefined,
@@ -150,7 +152,8 @@ export async function authRoutes(app: FastifyInstance) {
       user.id,
       user.email || '',
       metadata,
-      body.college
+      body.college,
+      body.university
     );
 
     return reply.status(200).send({
@@ -177,6 +180,21 @@ export async function authRoutes(app: FastifyInstance) {
     });
   });
 
+  // Update Student University & College
+  app.patch('/student/university', { preHandler: [authenticate] }, async (request, reply) => {
+    const input = updateStudentUniversitySchema.parse(request.body);
+    const updated = await authService.updateStudentUniversity(
+      request.user!.id,
+      input.university,
+      input.college
+    );
+    return reply.status(200).send({
+      success: true,
+      message: 'تم تحديث الجامعة بنجاح',
+      data: updated,
+    });
+  });
+
   // Get Current Authenticated Profile
   app.get('/me', { preHandler: [authenticate] }, async (request, reply) => {
     const profile = await authService.getProfileById(request.user!.id);
@@ -190,8 +208,9 @@ export async function authRoutes(app: FastifyInstance) {
   app.get(
     '/students',
     { preHandler: [authenticate, requireSystemRole(['admin'])] },
-    async (_request, reply) => {
-      const data = await authService.getAllStudents();
+    async (request, reply) => {
+      const { university } = (request.query as { university?: University }) || {};
+      const data = await authService.getAllStudents(university);
       return reply.status(200).send({
         success: true,
         data,

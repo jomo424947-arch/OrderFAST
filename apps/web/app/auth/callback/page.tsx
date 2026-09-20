@@ -9,11 +9,12 @@ import { CollegeSelectionModal } from '@/components/auth/CollegeSelectionModal';
 import { supabase } from '@/lib/supabase/client';
 import { tokenStorage } from '@/lib/api/client';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { UniversityKey } from '@/lib/constants';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const { syncOAuthUser, updateStudentCollege } = useAuthStore();
+  const { syncOAuthUser, updateStudentCollege, updateStudentUniversity } = useAuthStore();
 
   const [status, setStatus] = useState<'loading' | 'needs_college' | 'success' | 'error'>('loading');
   const [statusMessage, setStatusMessage] = useState('جاري معالجة تسجيل الدخول...');
@@ -247,10 +248,10 @@ export default function AuthCallbackPage() {
     };
   }, [router, syncOAuthUser]);
 
-  const handleCollegeSelection = async (college: string) => {
-    await updateStudentCollege(college);
+  const handleCollegeSelection = async (university: UniversityKey, college: string) => {
+    await updateStudentUniversity(university, college);
     setStatus('success');
-    setStatusMessage('تم حفظ بيانات كليتك بنجاح! أهلاً بك في FastOrder');
+    setStatusMessage('تم حفظ بيانات جامعتك وكليتك بنجاح! أهلاً بك في FastOrder');
     setTimeout(() => {
       router.replace('/student');
     }, 600);
@@ -332,7 +333,7 @@ export default function AuthCallbackPage() {
         <CollegeSelectionModal
           isOpen={status === 'needs_college'}
           studentName={studentName}
-          onSelectCollege={handleCollegeSelection}
+          onSelect={handleCollegeSelection}
         />
       </div>
     </div>

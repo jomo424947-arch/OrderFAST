@@ -17,6 +17,7 @@ export interface ApiAuthResponse {
     isActive: boolean;
     createdAt?: string;
     student?: {
+      university?: 'sphinx' | 'assiut_ahleya';
       universityId: string;
       college: string;
       accountStatus: 'active' | 'warning' | 'restricted';
@@ -55,6 +56,7 @@ function mapApiUserToFrontendUser(user: ApiAuthResponse['user'], email: string):
   if (role === 'student' && user.student) {
     const student: Student = {
       ...baseUser,
+      university: (user.student.university as any) || 'sphinx',
       universityId: user.student.universityId,
       college: user.student.college,
       status: user.student.accountStatus,
@@ -112,6 +114,7 @@ export class ApiAuthService implements IAuthService {
           password: data.password,
           fullName: data.name,
           phone: data.phone || undefined,
+          university: data.university || 'sphinx',
           universityId: data.universityId || `U${Date.now().toString().slice(-6)}`,
           college: data.college || 'كلية الهندسة',
         },
@@ -190,11 +193,11 @@ export class ApiAuthService implements IAuthService {
     );
   }
 
-  async syncOAuthUser(college?: string): Promise<{ user: User; isNewUser: boolean }> {
+  async syncOAuthUser(college?: string, university?: any): Promise<{ user: User; isNewUser: boolean }> {
     const res = await apiClient.post<{
       profile: ApiAuthResponse['user'];
       isNewUser: boolean;
-    }>('/auth/oauth-sync', { college });
+    }>('/auth/oauth-sync', { college, university });
 
     const user = mapApiUserToFrontendUser(res.profile, '');
     return {
@@ -205,5 +208,9 @@ export class ApiAuthService implements IAuthService {
 
   async updateStudentCollege(college: string): Promise<void> {
     await apiClient.patch('/auth/student/college', { college });
+  }
+
+  async updateStudentUniversity(university: any, college?: string): Promise<void> {
+    await apiClient.patch('/auth/student/university', { university, college });
   }
 }

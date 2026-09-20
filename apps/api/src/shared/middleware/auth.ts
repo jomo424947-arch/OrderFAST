@@ -5,7 +5,7 @@ import { AppError } from '../errors/index.js';
 import { generateId } from '../id/index.js';
 import { db } from '../../db/client.js';
 import { profiles, kioskStaff, students } from '../../db/schema.js';
-import type { SystemRole, KioskRole, AccountStatus } from '@orderfast/types';
+import type { SystemRole, KioskRole, AccountStatus, University } from '@orderfast/types';
 
 export interface AuthenticatedUser {
   id: string;
@@ -14,6 +14,7 @@ export interface AuthenticatedUser {
   fullName: string;
   isActive: boolean;
   studentStatus?: AccountStatus;
+  university?: University;
 }
 
 declare module 'fastify' {
@@ -83,6 +84,7 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
       fullName: profiles.fullName,
       isActive: profiles.isActive,
       studentStatus: students.accountStatus,
+      university: students.university,
     })
     .from(profiles)
     .leftJoin(students, eq(profiles.id, students.id))
@@ -100,6 +102,7 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
     fullName: userRecord.fullName,
     isActive: userRecord.isActive,
     studentStatus: userRecord.studentStatus || undefined,
+    university: (userRecord.university as University) || undefined,
   };
 
   request.user = authenticatedUser;

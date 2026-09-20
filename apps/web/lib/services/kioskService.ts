@@ -2,7 +2,7 @@ import { Kiosk } from "@/types";
 import { MOCK_KIOSKS } from "@/lib/mock/kiosks";
 
 export interface IKioskService {
-  getAllKiosks(): Promise<Kiosk[]>;
+  getAllKiosks(university?: string): Promise<Kiosk[]>;
   getKioskById(id: string): Promise<Kiosk | null>;
   searchKiosks(query: string, category?: string): Promise<Kiosk[]>;
   updateKioskStatus(kioskId: string, isOpen: boolean, isRushMode?: boolean): Promise<Kiosk>;
@@ -15,8 +15,9 @@ export interface IKioskService {
 export class MockKioskService implements IKioskService {
   private kiosks: Kiosk[] = [...MOCK_KIOSKS];
 
-  async getAllKiosks(): Promise<Kiosk[]> {
-    return this.kiosks;
+  async getAllKiosks(university?: string): Promise<Kiosk[]> {
+    if (!university) return this.kiosks;
+    return this.kiosks.filter((k) => !k.university || k.university === university);
   }
 
   async getKioskById(id: string): Promise<Kiosk | null> {

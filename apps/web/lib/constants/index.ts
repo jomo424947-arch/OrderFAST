@@ -4,17 +4,38 @@ export const APP_NAME = "FastOrder";
 export const APP_TAGLINE = "ORDER • WAIT • ENJOY";
 export const APP_TAGLINE_AR = "اطلب • استنى • استمتع";
 
-export const COLLEGES = [
-  "كلية طب الفم والأسنان",
-  "كلية الصيدلة",
-  "كلية الطب البيطري",
-  "كلية العلاج الطبيعي",
-  "كلية الهندسة",
-  "كلية الحاسبات والذكاء الاصطناعي",
-  "كلية تكنولوجيا العلوم الصحية",
-  "كلية التمريض",
+export type UniversityKey = 'sphinx' | 'assiut_ahleya';
 
+export const UNIVERSITIES: { key: UniversityKey; label: string }[] = [
+  { key: 'sphinx', label: 'جامعة سفنكس' },
+  { key: 'assiut_ahleya', label: 'جامعة أسيوط الأهلية' },
 ];
+
+export const COLLEGES_BY_UNIVERSITY: Record<UniversityKey, string[]> = {
+  sphinx: [
+    "كلية الطب البشري",
+    "كلية طب الفم والأسنان",
+    "كلية الصيدلة",
+    "كلية الطب البيطري",
+    "كلية العلاج الطبيعي",
+    "كلية الهندسة",
+    "كلية الحاسبات والذكاء الاصطناعي",
+    "كلية تكنولوجيا العلوم الصحية",
+    "كلية التمريض",
+  ],
+  assiut_ahleya: [
+    "كلية الطب والجراحة",
+    "كلية طب الفم والأسنان",
+    "كلية الصيدلة والبحوث الدوائية",
+    "كلية الهندسة والعلوم التطبيقية",
+    "كلية الحاسبات والذكاء الاصطناعي",
+    "كلية العلوم الإدارية والمالية",
+    "كلية الألسن واللغات التطبيقية",
+  ],
+};
+
+// Backward compatibility (default to Sphinx)
+export const COLLEGES = COLLEGES_BY_UNIVERSITY.sphinx;
 
 export const CATEGORIES = [
   { id: "all", label: "الكل" },

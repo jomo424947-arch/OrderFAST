@@ -1,31 +1,43 @@
 'use client';
 
 import React, { useState } from 'react';
-import { COLLEGES } from '@/lib/constants';
+import { UNIVERSITIES, COLLEGES_BY_UNIVERSITY, UniversityKey } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
 import { GraduationCap, Sparkles } from 'lucide-react';
 
 interface CollegeSelectionModalProps {
   isOpen: boolean;
   studentName?: string;
-  onSelectCollege: (college: string) => Promise<void>;
+  onSelect?: (university: UniversityKey, college: string) => Promise<void>;
+  onSelectCollege?: (college: string) => Promise<void>;
 }
 
 export function CollegeSelectionModal({
   isOpen,
   studentName,
+  onSelect,
   onSelectCollege,
 }: CollegeSelectionModalProps) {
-  const [selectedCollege, setSelectedCollege] = useState<string>(COLLEGES[0]);
+  const [university, setUniversity] = useState<UniversityKey>('sphinx');
+  const [selectedCollege, setSelectedCollege] = useState<string>(COLLEGES_BY_UNIVERSITY.sphinx[0]);
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleUniversityChange = (newUniv: UniversityKey) => {
+    setUniversity(newUniv);
+    setSelectedCollege(COLLEGES_BY_UNIVERSITY[newUniv][0] || '');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await onSelectCollege(selectedCollege);
+      if (onSelect) {
+        await onSelect(university, selectedCollege);
+      } else if (onSelectCollege) {
+        await onSelectCollege(selectedCollege);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -47,11 +59,28 @@ export function CollegeSelectionModal({
             {studentName ? `أهلاً بك، ${studentName}!` : 'أهلاً بك في FastOrder!'}
           </h3>
           <p className="font-body text-xs text-ink-soft">
-            يرجى تحديد كليتك لعرض الأكشاك والعروض الأقرب إليك أولاً
+            يرجى تحديد جامعتك وكليتك لعرض الأكشاك الخاصة بك أولاً
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div>
+            <label className="block font-body text-xs font-semibold text-ink mb-1.5">
+              اختر الجامعة:
+            </label>
+            <select
+              value={university}
+              onChange={(e) => handleUniversityChange(e.target.value as UniversityKey)}
+              className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer font-bold"
+            >
+              {UNIVERSITIES.map((u) => (
+                <option key={u.key} value={u.key}>
+                  {u.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label className="block font-body text-xs font-semibold text-ink mb-1.5">
               اختر الكلية:
@@ -61,7 +90,7 @@ export function CollegeSelectionModal({
               onChange={(e) => setSelectedCollege(e.target.value)}
               className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all cursor-pointer"
             >
-              {COLLEGES.map((college) => (
+              {COLLEGES_BY_UNIVERSITY[university].map((college) => (
                 <option key={college} value={college}>
                   {college}
                 </option>

@@ -4,8 +4,9 @@ import { IKioskService } from '../kioskService';
 import { adaptKioskFromApi, ApiKioskRaw } from '@/lib/adapters/kioskAdapter';
 
 export class ApiKioskService implements IKioskService {
-  async getAllKiosks(): Promise<Kiosk[]> {
-    const rawKiosks = await apiClient.get<ApiKioskRaw[]>('/kiosks', { skipAuth: true });
+  async getAllKiosks(university?: string): Promise<Kiosk[]> {
+    const endpoint = university ? `/kiosks?university=${encodeURIComponent(university)}` : '/kiosks';
+    const rawKiosks = await apiClient.get<ApiKioskRaw[]>(endpoint, { skipAuth: true });
     return Array.isArray(rawKiosks) ? rawKiosks.map(adaptKioskFromApi) : [];
   }
 
@@ -65,8 +66,11 @@ export class ApiKioskService implements IKioskService {
     return apiClient.get<any>(`/kiosks/${kioskId}/stats`);
   }
 
-  async getAdminKiosksWithStaff(): Promise<any[]> {
-    const rawList = await apiClient.get<any[]>('/kiosks/admin/with-staff');
+  async getAdminKiosksWithStaff(university?: string): Promise<any[]> {
+    const endpoint = university
+      ? `/kiosks/admin/with-staff?university=${encodeURIComponent(university)}`
+      : '/kiosks/admin/with-staff';
+    const rawList = await apiClient.get<any[]>(endpoint);
     return Array.isArray(rawList)
       ? rawList.map((k) => ({
           ...adaptKioskFromApi(k),
@@ -78,6 +82,7 @@ export class ApiKioskService implements IKioskService {
 
   async createKiosk(data: {
     name: string;
+    university?: string;
     collegeLocation: string;
     campusZone?: string;
     category?: string;

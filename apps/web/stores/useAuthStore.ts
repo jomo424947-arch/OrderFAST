@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, UserRole, AccountStatus, Student, Cashier, Admin } from '@/types';
+import { User, UserRole, AccountStatus, Student, Cashier, Admin, University } from '@/types';
 import { authService, RegisterPayload } from '@/lib/services/authService';
 import { apiClient, tokenStorage } from '@/lib/api/client';
 import { useKioskStore } from './useKioskStore';
@@ -33,11 +33,17 @@ interface AuthState {
   ) => Promise<{ success: boolean; error?: string }>;
 
   syncOAuthUser: (
-    college?: string
+    college?: string,
+    university?: University
   ) => Promise<{ success: boolean; user?: User; isNewUser?: boolean; error?: string }>;
 
   updateStudentCollege: (
     college: string
+  ) => Promise<{ success: boolean; error?: string }>;
+
+  updateStudentUniversity: (
+    university: University,
+    college?: string
   ) => Promise<{ success: boolean; error?: string }>;
 
   initializeAuth: () => Promise<void>;
@@ -246,10 +252,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      syncOAuthUser: async (college) => {
+      syncOAuthUser: async (college, university) => {
         try {
           set({ isLoading: true });
-          const { user, isNewUser } = await authService.syncOAuthUser(college);
+          const { user, isNewUser } = await authService.syncOAuthUser(college, university);
 
           if (user.role === 'student') {
             const s = user as Student;
@@ -310,6 +316,27 @@ export const useAuthStore = create<AuthState>()(
         } catch (err: unknown) {
           const message =
             err instanceof Error ? err.message : 'فشل تحديث الكلية';
+          return { success: false, error: message };
+        }
+      },
+
+      updateStudentUniversity: async (university, college) => {
+        try {
+          await authService.updateStudentUniversity(university, college);
+          const currentStudent = get().student;
+          if (currentStudent) {
+            set({
+              student: {
+                ...currentStudent,
+                university,
+                ...(college ? { college } : {}),
+              },
+            });
+          }
+          return { success: true };
+        } catch (err: unknown) {
+          const message =
+            err instanceof Error ? err.message : 'فشل تحديث الجامعة';
           return { success: false, error: message };
         }
       },

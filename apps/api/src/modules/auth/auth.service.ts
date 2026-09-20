@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { profiles, students, kioskStaff, kiosks } from '../../db/schema.js';
 import { getSupabaseAdmin, getSupabase } from '../../shared/supabase/index.js';
@@ -8,6 +8,7 @@ import type {
   RegisterStaffInput,
   LoginInput,
 } from '@orderfast/validation';
+import type { University } from '@orderfast/types';
 
 export class AuthService {
   /**
@@ -58,6 +59,7 @@ export class AuthService {
         // Insert student extension
         await tx.insert(students).values({
           id: userId,
+          university: input.university || 'sphinx',
           universityId: input.universityId,
           college: input.college,
           accountStatus: 'active',
@@ -71,6 +73,7 @@ export class AuthService {
         fullName: input.fullName,
         phone: input.phone || null,
         systemRole: 'student' as const,
+        university: input.university || 'sphinx',
         universityId: input.universityId,
         college: input.college,
         accountStatus: 'active' as const,
@@ -286,12 +289,16 @@ export class AuthService {
   }
 
   /**
-   * Admin Only: Retrieves all registered students with their profile and status
+   * Admin Only: Retrieves all registered students with their profile and status, optionally filtered by university
    */
-  async getAllStudents() {
+  async getAllStudents(university?: University) {
     const supabaseAdmin = getSupabaseAdmin();
     const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
     const userEmailMap = new Map(authUsers?.users?.map((u) => [u.id, u.email]) || []);
+
+    const whereClause = university
+      ? and(eq(profiles.systemRole, 'student'), eq(students.university, university))
+      : eq(profiles.systemRole, 'student');
 
     const studentList = await db
       .select({
@@ -301,6 +308,7 @@ export class AuthService {
         avatarUrl: profiles.avatarUrl,
         isActive: profiles.isActive,
         createdAt: profiles.createdAt,
+        university: students.university,
         universityId: students.universityId,
         college: students.college,
         status: students.accountStatus,
@@ -308,7 +316,7 @@ export class AuthService {
       })
       .from(profiles)
       .innerJoin(students, eq(profiles.id, students.id))
-      .where(eq(profiles.systemRole, 'student'));
+      .where(whereClause);
 
     return studentList.map((std) => ({
       ...std,
@@ -384,7 +392,8 @@ export class AuthService {
     userId: string,
     email: string,
     metadata: { fullName?: string; avatarUrl?: string },
-    college?: string
+    college?: string,
+    university?: University
   ) {
     // 1. Check if profile exists
     const [existingProfile] = await db
@@ -417,6 +426,7 @@ export class AuthService {
 
         await tx.insert(students).values({
           id: userId,
+          university: university || 'sphinx',
           universityId,
           college: college || 'كلية الحاسبات والذكاء الاصطناعي',
           accountStatus: 'active',
@@ -437,6 +447,7 @@ export class AuthService {
 
         await db.insert(students).values({
           id: userId,
+          university: university || 'sphinx',
           universityId,
           college: college || 'كلية الحاسبات والذكاء الاصطناعي',
           accountStatus: 'active',
@@ -459,6 +470,31 @@ export class AuthService {
     const [updated] = await db
       .update(students)
       .set({ college, updatedAt: new Date() })
+      .where(eq(students.id, userId))
+      .returning();
+
+    if (!updated) {
+      throw AppError.notFound('الطالب غير موجود');
+    }
+
+    return updated;
+  }
+
+  /**
+   * Updates university and optionally college for an authenticated student
+   */
+  async updateStudentUniversity(userId: string, university: University, college?: string) {
+    const updateData: { university: University; college?: string; updatedAt: Date } = {
+      university,
+      updatedAt: new Date(),
+    };
+    if (college) {
+      updateData.college = college;
+    }
+
+    const [updated] = await db
+      .update(students)
+      .set(updateData)
       .where(eq(students.id, userId))
       .returning();
 

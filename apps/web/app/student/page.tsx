@@ -40,11 +40,11 @@ export default function StudentDashboardPage() {
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
   useEffect(() => {
-    fetchKiosks();
+    fetchKiosks(student?.university);
     if (student?.id) {
       fetchStudentOrders(student.id);
     }
-  }, [student?.id, fetchKiosks, fetchStudentOrders]);
+  }, [student?.id, student?.university, fetchKiosks, fetchStudentOrders]);
 
   // Orders for current student
   const studentOrders = useMemo(() => {
@@ -85,6 +85,11 @@ export default function StudentDashboardPage() {
     return kiosks
       .filter((k) => {
         if (k.isHidden) return false;
+
+        // University isolation filter
+        if (student?.university && k.university && k.university !== student.university) {
+          return false;
+        }
 
         // Search query filter
         if (q) {
@@ -277,9 +282,16 @@ export default function StudentDashboardPage() {
       <div className="space-y-4 pt-1">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-line/60">
           <div>
-            <h3 className="font-display font-bold text-lg sm:text-xl text-ink">
-              أكشاك الحرم الجامعي
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-display font-bold text-lg sm:text-xl text-ink">
+                أكشاك الحرم الجامعي
+              </h3>
+              {student?.university && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary-soft text-primary-ink border border-primary/20">
+                  {student.university === 'assiut_ahleya' ? 'جامعة أسيوط الأهلية' : 'جامعة سفنكس'}
+                </span>
+              )}
+            </div>
             <p className="font-body text-xs text-ink-soft mt-0.5">
               منافذ البيع والكافيهات المتاحة للطلب والاستلام المباشر
             </p>

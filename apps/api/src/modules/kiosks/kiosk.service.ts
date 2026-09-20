@@ -5,24 +5,40 @@ import { cacheService } from '../../shared/cache/index.js';
 import { AppError } from '../../shared/errors/index.js';
 import { generateId } from '../../shared/id/index.js';
 import { getSupabaseAdmin } from '../../shared/supabase/index.js';
-import type { KioskDashboardStats } from '@orderfast/types';
+import type { KioskDashboardStats, University } from '@orderfast/types';
 
 export class KioskService {
   /**
-   * Retrieves all kiosks with cached results and live approximate queue counts
+   * Helper to invalidate kiosk caches across all variants
    */
-  async getAllKiosks() {
-    const cacheKey = 'kiosks:all';
+  private async invalidateKiosksCache(kioskId?: string) {
+    await cacheService.del('kiosks:all');
+    await cacheService.del('kiosks:all:sphinx');
+    await cacheService.del('kiosks:all:assiut_ahleya');
+    if (kioskId) {
+      await cacheService.del(`kiosk:${kioskId}`);
+    }
+  }
+
+  /**
+   * Retrieves all kiosks with cached results and live approximate queue counts, optionally filtered by university
+   */
+  async getAllKiosks(university?: University) {
+    const cacheKey = university ? `kiosks:all:${university}` : 'kiosks:all';
     const cached = await cacheService.get<any[]>(cacheKey);
 
     if (cached) {
       return cached;
     }
 
+    const whereClause = university
+      ? and(eq(kiosks.isHidden, false), eq(kiosks.university, university))
+      : eq(kiosks.isHidden, false);
+
     const kioskList = await db
       .select()
       .from(kiosks)
-      .where(eq(kiosks.isHidden, false))
+      .where(whereClause)
       .orderBy(desc(kiosks.isOpen), desc(kiosks.rating));
 
     // Calculate approximate active orders for all kiosks in 1 aggregated query
@@ -125,8 +141,7 @@ export class KioskService {
     }
 
     // Invalidate caches
-    await cacheService.del('kiosks:all');
-    await cacheService.del(`kiosk:${kioskId}`);
+    await this.invalidateKiosksCache(kioskId);
 
     return {
       ...updated,
@@ -141,6 +156,7 @@ export class KioskService {
     kioskId: string,
     settings: {
       name?: string;
+      university?: University;
       collegeLocation?: string;
       campusZone?: string | null;
       category?: string;
@@ -184,8 +200,7 @@ export class KioskService {
       await cacheService.del(`menu:${kioskId}`);
     }
 
-    await cacheService.del('kiosks:all');
-    await cacheService.del(`kiosk:${kioskId}`);
+    await this.invalidateKiosksCache(kioskId);
 
     return {
       ...updated,
@@ -253,13 +268,13 @@ export class KioskService {
   }
 
   /**
-   * Admin: Get all kiosks with assigned cashiers and menu item counts (Batch optimized - 3 queries total)
+   * Admin: Get all kiosks with assigned cashiers and menu item counts (Batch optimized - 3 queries total), optionally filtered by university
    */
-  async getAdminKiosksWithStaff() {
-    const kioskList = await db
-      .select()
-      .from(kiosks)
-      .orderBy(desc(kiosks.createdAt));
+  async getAdminKiosksWithStaff(university?: University) {
+    const query = db.select().from(kiosks);
+    const kioskList = university
+      ? await query.where(eq(kiosks.university, university)).orderBy(desc(kiosks.createdAt))
+      : await query.orderBy(desc(kiosks.createdAt));
 
     if (kioskList.length === 0) {
       return [];
@@ -333,6 +348,7 @@ export class KioskService {
    */
   async createKiosk(data: {
     name: string;
+    university?: University;
     collegeLocation: string;
     campusZone?: string | null;
     category?: string | null;
@@ -349,6 +365,7 @@ export class KioskService {
       .values({
         id: kioskId,
         name: data.name,
+        university: data.university || 'sphinx',
         collegeLocation: data.collegeLocation,
         campusZone: data.campusZone || 'الساحة الرئيسية',
         category: data.category || 'عام',
@@ -366,7 +383,7 @@ export class KioskService {
       })
       .returning();
 
-    await cacheService.del('kiosks:all');
+    await this.invalidateKiosksCache();
     return newKiosk;
   }
 
@@ -485,7 +502,7 @@ export class KioskService {
       .delete(kioskStaff)
       .where(and(eq(kioskStaff.kioskId, kioskId), eq(kioskStaff.userId, userId)));
 
-    await cacheService.del('kiosks:all');
+    await this.invalidateKiosksCache(kioskId);
 
     return {
       success: true,
@@ -519,8 +536,7 @@ export class KioskService {
       // Delete kiosk itself
       await tx.delete(kiosks).where(eq(kiosks.id, kioskId));
 
-      await cacheService.del('kiosks:all');
-      await cacheService.del(`kiosk:${kioskId}`);
+      await this.invalidateKiosksCache(kioskId);
 
       return {
         success: true,

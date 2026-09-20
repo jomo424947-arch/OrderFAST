@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { ImageUploadDropzone } from '@/components/ui/ImageUploadDropzone';
-import { COLLEGES } from '@/lib/constants';
+import { COLLEGES_BY_UNIVERSITY, UNIVERSITIES, UniversityKey } from '@/lib/constants';
 import {
   Plus,
   Store,
@@ -59,8 +59,9 @@ export default function AdminKiosksPage() {
   // Edit Kiosk Modal State (Admin)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedKioskForEdit, setSelectedKioskForEdit] = useState<any>(null);
+  const [editUniversity, setEditUniversity] = useState<UniversityKey>('sphinx');
   const [editName, setEditName] = useState('');
-  const [editCollegeLocation, setEditCollegeLocation] = useState(COLLEGES[0]);
+  const [editCollegeLocation, setEditCollegeLocation] = useState(COLLEGES_BY_UNIVERSITY.sphinx[0]);
   const [editCampusZone, setEditCampusZone] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editPhone, setEditPhone] = useState('');
@@ -77,17 +78,22 @@ export default function AdminKiosksPage() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedUniversityFilter, setSelectedUniversityFilter] = useState<'all' | 'sphinx' | 'assiut_ahleya'>('all');
 
   useEffect(() => {
-    fetchKiosksWithStaff();
+    fetchKiosksWithStaff(selectedUniversityFilter === 'all' ? undefined : selectedUniversityFilter);
     fetchStaffList();
-  }, [fetchKiosksWithStaff, fetchStaffList]);
+  }, [fetchKiosksWithStaff, fetchStaffList, selectedUniversityFilter]);
 
-  const displayedKiosks = kiosksWithStaff.length > 0 ? kiosksWithStaff : kiosks;
+  const rawKiosks = kiosksWithStaff.length > 0 ? kiosksWithStaff : kiosks;
+  const displayedKiosks = selectedUniversityFilter === 'all'
+    ? rawKiosks
+    : rawKiosks.filter((k: any) => (k.university || 'sphinx') === selectedUniversityFilter);
 
   // New Kiosk Form State
+  const [newKioskUniversity, setNewKioskUniversity] = useState<UniversityKey>('sphinx');
   const [kioskName, setKioskName] = useState('');
-  const [collegeLocation, setCollegeLocation] = useState(COLLEGES[0]);
+  const [collegeLocation, setCollegeLocation] = useState(COLLEGES_BY_UNIVERSITY.sphinx[0]);
   const [campusZone, setCampusZone] = useState('');
   const [category, setCategory] = useState('مشروبات وسناكس');
   const [phone, setPhone] = useState('');
@@ -96,8 +102,9 @@ export default function AdminKiosksPage() {
   const [newKioskIsHidden, setNewKioskIsHidden] = useState(false);
 
   const handleOpenAddModal = () => {
+    setNewKioskUniversity('sphinx');
     setKioskName('');
-    setCollegeLocation(COLLEGES[0]);
+    setCollegeLocation(COLLEGES_BY_UNIVERSITY.sphinx[0]);
     setCampusZone('');
     setCategory('مشروبات وسناكس');
     setPhone('');
@@ -115,6 +122,7 @@ export default function AdminKiosksPage() {
       setIsSubmitting(true);
       const newKiosk = await createKiosk({
         name: kioskName.trim(),
+        university: newKioskUniversity,
         collegeLocation,
         campusZone: campusZone.trim() || 'الساحة الرئيسية',
         category,
@@ -217,8 +225,10 @@ export default function AdminKiosksPage() {
 
   const handleOpenEditModal = (kiosk: any) => {
     setSelectedKioskForEdit(kiosk);
+    const univ = (kiosk.university as UniversityKey) || 'sphinx';
+    setEditUniversity(univ);
     setEditName(kiosk.name || '');
-    setEditCollegeLocation(kiosk.collegeLocation || COLLEGES[0]);
+    setEditCollegeLocation(kiosk.collegeLocation || COLLEGES_BY_UNIVERSITY[univ][0]);
     setEditCampusZone(kiosk.campusZone || '');
     setEditCategory(kiosk.category || '');
     setEditPhone(kiosk.phone || '');
@@ -237,6 +247,7 @@ export default function AdminKiosksPage() {
       setIsSubmittingEdit(true);
       await updateKioskSettings(selectedKioskForEdit.id, {
         name: editName.trim(),
+        university: editUniversity,
         collegeLocation: editCollegeLocation,
         campusZone: editCampusZone.trim() || undefined,
         category: editCategory.trim() || undefined,
@@ -288,14 +299,53 @@ export default function AdminKiosksPage() {
             إدارة الأكشاك والكاشيرات
           </h2>
           <p className="font-body text-xs text-ink-soft mt-0.5">
-            إجمالي {displayedKiosks.length} أكشاك جامعية · {displayedKiosks.reduce((s, k) => s + (k.staff?.length || 0), 0)} موظف معين
+            إجمالي {displayedKiosks.length} أكشاك جامعية · {displayedKiosks.reduce((s: number, k: any) => s + (k.staff?.length || 0), 0)} موظف معين
           </p>
         </div>
 
-        <Button variant="primary" size="sm" onClick={handleOpenAddModal}>
-          <Plus className="w-4 h-4 ml-1.5" />
-          <span>إضافة كشك جديد</span>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* University Filter Buttons */}
+          <div className="flex items-center gap-1.5 bg-surface border border-line p-1 rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setSelectedUniversityFilter('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold transition-all ${
+                selectedUniversityFilter === 'all'
+                  ? 'bg-ink text-white shadow-xs'
+                  : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              الكل
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedUniversityFilter('sphinx')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold transition-all ${
+                selectedUniversityFilter === 'sphinx'
+                  ? 'bg-ink text-white shadow-xs'
+                  : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              سفنكس
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedUniversityFilter('assiut_ahleya')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-body font-bold transition-all ${
+                selectedUniversityFilter === 'assiut_ahleya'
+                  ? 'bg-ink text-white shadow-xs'
+                  : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              أسيوط الأهلية
+            </button>
+          </div>
+
+          <Button variant="primary" size="sm" onClick={handleOpenAddModal}>
+            <Plus className="w-4 h-4 ml-1.5" />
+            <span>إضافة كشك جديد</span>
+          </Button>
+        </div>
       </div>
 
       {/* Feedback Toast */}
@@ -324,9 +374,14 @@ export default function AdminKiosksPage() {
                       <Store className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-display font-bold text-base text-ink">
-                        {kiosk.name}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-display font-bold text-base text-ink">
+                          {kiosk.name}
+                        </h3>
+                        <span className="font-body text-[11px] font-bold text-primary-ink bg-primary-soft px-2 py-0.5 rounded-md border border-primary/20">
+                          {(kiosk.university || 'sphinx') === 'assiut_ahleya' ? 'جامعة أسيوط الأهلية' : 'جامعة سفنكس'}
+                        </span>
+                      </div>
                       <p className="font-body text-xs text-ink-soft">
                         {kiosk.category}
                       </p>
@@ -545,6 +600,27 @@ export default function AdminKiosksPage() {
 
           <div className="w-full text-right">
             <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+              الجامعة
+            </label>
+            <select
+              value={newKioskUniversity}
+              onChange={(e) => {
+                const u = e.target.value as UniversityKey;
+                setNewKioskUniversity(u);
+                setCollegeLocation(COLLEGES_BY_UNIVERSITY[u][0] || '');
+              }}
+              className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer font-bold"
+            >
+              {UNIVERSITIES.map((u) => (
+                <option key={u.key} value={u.key}>
+                  {u.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-full text-right">
+            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
               موقع الكلية
             </label>
             <select
@@ -552,7 +628,7 @@ export default function AdminKiosksPage() {
               onChange={(e) => setCollegeLocation(e.target.value)}
               className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer"
             >
-              {COLLEGES.map((c) => (
+              {COLLEGES_BY_UNIVERSITY[newKioskUniversity].map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
@@ -810,6 +886,27 @@ export default function AdminKiosksPage() {
 
           <div className="w-full text-right">
             <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+              الجامعة
+            </label>
+            <select
+              value={editUniversity}
+              onChange={(e) => {
+                const u = e.target.value as UniversityKey;
+                setEditUniversity(u);
+                setEditCollegeLocation(COLLEGES_BY_UNIVERSITY[u][0] || '');
+              }}
+              className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer font-bold"
+            >
+              {UNIVERSITIES.map((u) => (
+                <option key={u.key} value={u.key}>
+                  {u.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="w-full text-right">
+            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
               موقع الكلية
             </label>
             <select
@@ -817,7 +914,7 @@ export default function AdminKiosksPage() {
               onChange={(e) => setEditCollegeLocation(e.target.value)}
               className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer"
             >
-              {COLLEGES.map((c) => (
+              {COLLEGES_BY_UNIVERSITY[editUniversity].map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>

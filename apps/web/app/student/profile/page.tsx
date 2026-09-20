@@ -42,7 +42,7 @@ export default function StudentProfilePage() {
           {student?.name || 'حساب طالب'}
         </h3>
         <p className="font-body text-xs text-ink-soft mb-3">
-          {student?.college || 'جامعة سفنكس'}
+          {student?.college || 'الكلية'} · {student?.university === 'assiut_ahleya' ? 'جامعة أسيوط الأهلية' : 'جامعة سفنكس'}
         </p>
 
         {/* Status Badge matching reference (حالتك تمام / تحذير / مقيد) */}

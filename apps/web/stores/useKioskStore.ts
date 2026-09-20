@@ -19,8 +19,8 @@ interface KioskState {
   error: string | null;
 
   setActiveKioskId: (id: string) => void;
-  fetchKiosks: () => Promise<Kiosk[]>;
-  fetchKiosksWithStaff: () => Promise<any[]>;
+  fetchKiosks: (university?: string) => Promise<Kiosk[]>;
+  fetchKiosksWithStaff: (university?: string) => Promise<any[]>;
   fetchStaffList: () => Promise<any[]>;
   assignStaff: (kioskId: string, userId: string, role?: string) => Promise<void>;
   removeStaff: (kioskId: string, userId: string) => Promise<void>;
@@ -60,10 +60,25 @@ export const useKioskStore = create<KioskState>((set, get) => ({
 
   setActiveKioskId: (id: string) => set({ activeKioskId: id }),
 
-  fetchKiosks: async () => {
+  fetchKiosks: async (university?: string) => {
     try {
       set({ isLoading: true, error: null });
-      const fetched = await kioskService.getAllKiosks();
+      let targetUniv = university;
+      if (!targetUniv && typeof window !== 'undefined') {
+        try {
+          const authData = localStorage.getItem('orderfast-auth');
+          if (authData) {
+            const parsed = JSON.parse(authData);
+            if (parsed?.state?.student?.university) {
+              targetUniv = parsed.state.student.university;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const fetched = await kioskService.getAllKiosks(targetUniv);
       const currentActive = get().activeKioskId;
       const validActiveId = isValidUUID(currentActive) && fetched.some((k) => k.id === currentActive)
         ? currentActive
@@ -81,15 +96,15 @@ export const useKioskStore = create<KioskState>((set, get) => ({
     }
   },
 
-  fetchKiosksWithStaff: async () => {
+  fetchKiosksWithStaff: async (university?: string) => {
     try {
       set({ isLoading: true, error: null });
       if (kioskService instanceof ApiKioskService) {
-        const list = await (kioskService as ApiKioskService).getAdminKiosksWithStaff();
+        const list = await (kioskService as ApiKioskService).getAdminKiosksWithStaff(university);
         set({ kiosksWithStaff: list, kiosks: list, isLoading: false });
         return list;
       }
-      const list = await kioskService.getAllKiosks();
+      const list = await kioskService.getAllKiosks(university);
       set({ kiosks: list, kiosksWithStaff: list, isLoading: false });
       return list;
     } catch (err: any) {

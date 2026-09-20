@@ -4,6 +4,7 @@ import { piastersToEgp } from './priceAdapter';
 export interface ApiKioskRaw {
   id: string;
   name: string;
+  university?: 'sphinx' | 'assiut_ahleya';
   collegeLocation: string;
   campusZone?: string | null;
   category?: string | null;
@@ -63,6 +64,7 @@ export function adaptKioskFromApi(raw: ApiKioskRaw): Kiosk {
   return {
     id: raw.id,
     name: raw.name,
+    university: (raw.university as any) || 'sphinx',
     collegeLocation: raw.collegeLocation,
     campusZone: raw.campusZone || '',
     category: raw.category || 'عام',

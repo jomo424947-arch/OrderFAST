@@ -15,13 +15,23 @@ export const egpPiastersSchema = z
 // 2. Auth & Profiles Schemas
 // ==========================================
 
+export const universitySchema = z.enum(['sphinx', 'assiut_ahleya'], {
+  errorMap: () => ({ message: 'يجب اختيار جامعة صحيحة (سفنكس أو أسيوط الأهلية)' }),
+});
+
 export const registerStudentSchema = z.object({
   email: z.string().email({ message: 'بريد إلكتروني غير صالح' }),
   password: z.string().min(6, { message: 'كلمة المرور يجب أن لا تقل عن 6 أحرف' }),
   fullName: z.string().min(2, { message: 'الاسم بالكامل مطلوب' }),
   phone: z.string().optional(),
+  university: universitySchema.default('sphinx'),
   universityId: z.string().min(3, { message: 'الرقم الجامعي مطلوب' }),
   college: z.string().min(2, { message: 'اسم الكلية مطلوب' }),
+});
+
+export const updateStudentUniversitySchema = z.object({
+  university: universitySchema,
+  college: z.string().min(2, { message: 'اسم الكلية مطلوب' }).optional(),
 });
 
 export const registerStaffSchema = z.object({
@@ -60,6 +70,7 @@ export const updateKioskStatusSchema = z.object({
 
 export const updateKioskSettingsSchema = z.object({
   name: z.string().min(2).optional(),
+  university: universitySchema.optional(),
   collegeLocation: z.string().optional(),
   campusZone: z.string().optional().nullable(),
   category: z.string().optional(),
@@ -81,6 +92,7 @@ export const updateKioskSettingsSchema = z.object({
 
 export const createKioskSchema = z.object({
   name: z.string().min(2, { message: 'اسم الكشك مطلوب' }),
+  university: universitySchema.default('sphinx'),
   collegeLocation: z.string().min(2, { message: 'موقع الكلية مطلوب' }),
   campusZone: z.string().optional().nullable(),
   category: z.string().default('general'),
@@ -221,3 +233,4 @@ export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;
 export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;
 export type CreateKioskInput = z.infer<typeof createKioskSchema>;
+export type UpdateStudentUniversityInput = z.infer<typeof updateStudentUniversitySchema>;

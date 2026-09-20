@@ -10,6 +10,8 @@
 
 export type SystemRole = 'student' | 'staff' | 'admin';
 
+export type University = 'sphinx' | 'assiut_ahleya';
+
 export type AccountStatus = 'active' | 'warning' | 'restricted';
 
 export type KioskRole = 'owner' | 'cashier';
@@ -57,6 +59,7 @@ export interface Profile {
 }
 
 export interface StudentProfile extends Profile {
+  university: University;
   universityId: string;
   college: string;
   accountStatus: AccountStatus;
@@ -70,6 +73,7 @@ export interface StudentProfile extends Profile {
 export interface Kiosk {
   id: string;
   name: string;
+  university: University;
   collegeLocation: string;
   campusZone?: string | null;
   category: string;

@@ -20,6 +20,7 @@ import { sql, relations } from 'drizzle-orm';
 // 1. Enums Definition
 // ==========================================
 
+export const universityEnum = pgEnum('university_enum', ['sphinx', 'assiut_ahleya']);
 export const systemRoleEnum = pgEnum('system_role_enum', ['student', 'staff', 'admin']);
 export const accountStatusEnum = pgEnum('account_status_enum', ['active', 'warning', 'restricted']);
 export const kioskRoleEnum = pgEnum('kiosk_role_enum', ['owner', 'cashier']);
@@ -60,6 +61,7 @@ export const profiles = pgTable('profiles', {
 
 export const students = pgTable('students', {
   id: uuid('id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
+  university: universityEnum('university').notNull().default('sphinx'),
   universityId: text('university_id').notNull().unique(),
   college: text('college').notNull(),
   accountStatus: accountStatusEnum('account_status').notNull().default('active'),
@@ -68,6 +70,7 @@ export const students = pgTable('students', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   noShowCheck: check('no_show_positive_check', sql`${table.noShowCount} >= 0`),
+  universityIdx: index('idx_students_university').on(table.university),
 }));
 
 // ==========================================
@@ -77,6 +80,7 @@ export const students = pgTable('students', {
 export const kiosks = pgTable('kiosks', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
+  university: universityEnum('university').notNull().default('sphinx'),
   collegeLocation: text('college_location').notNull(),
   campusZone: text('campus_zone'),
   category: text('category').notNull().default('عام'),
@@ -104,6 +108,7 @@ export const kiosks = pgTable('kiosks', {
   defaultPrepCheck: check('prep_time_check', sql`${table.defaultPrepTimeMins} > 0`),
   timeoutCheck: check('timeout_check', sql`${table.acceptanceTimeoutSecs} >= 60`),
   ratingCheck: check('rating_bounds_check', sql`${table.rating} >= 0 AND ${table.rating} <= 5`),
+  universityIdx: index('idx_kiosks_university').on(table.university),
 }));
 
 // ==========================================

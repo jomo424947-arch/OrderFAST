@@ -7,7 +7,7 @@ interface StudentStoreState {
   isLoading: boolean;
   error: string | null;
 
-  fetchStudents: () => Promise<Student[]>;
+  fetchStudents: (university?: string) => Promise<Student[]>;
   updateStudentStatus: (studentId: string, status: AccountStatus) => Promise<void>;
 }
 
@@ -16,10 +16,13 @@ export const useStudentStore = create<StudentStoreState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  fetchStudents: async () => {
+  fetchStudents: async (university?: string) => {
     try {
       set({ isLoading: true, error: null });
-      const data = await apiClient.get<Student[]>('/auth/students');
+      const endpoint = university
+        ? `/auth/students?university=${encodeURIComponent(university)}`
+        : '/auth/students';
+      const data = await apiClient.get<Student[]>(endpoint);
       const list = Array.isArray(data) ? data : [];
       set({ students: list, isLoading: false });
       return list;

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { COLLEGES } from '@/lib/constants';
+import { COLLEGES_BY_UNIVERSITY, UniversityKey } from '@/lib/constants';
 import { ChevronRight, Save, BellRing, Phone, Mail, User, Smartphone, CheckCircle2, Bell, Send } from 'lucide-react';
 import {
   isNotificationSupported,
@@ -15,10 +15,13 @@ import {
 
 export default function StudentSettingsPage() {
   const router = useRouter();
-  const { student } = useAuthStore();
+  const { student, updateStudentCollege } = useAuthStore();
+
+  const userUniv = (student?.university as UniversityKey) || 'sphinx';
+  const availableColleges = COLLEGES_BY_UNIVERSITY[userUniv] || COLLEGES_BY_UNIVERSITY.sphinx;
 
   const [name, setName] = useState(student?.name || '');
-  const [college, setCollege] = useState(student?.college || COLLEGES[0]);
+  const [college, setCollege] = useState(student?.college || availableColleges[0]);
   const [phone, setPhone] = useState(student?.phone || '01012345678');
   const [orderReadyAlerts, setOrderReadyAlerts] = useState(true);
   const [delayAlerts, setDelayAlerts] = useState(true);
@@ -48,8 +51,11 @@ export default function StudentSettingsPage() {
     setTestingNotif(false);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (college && college !== student?.college) {
+      await updateStudentCollege(college);
+    }
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
@@ -83,6 +89,15 @@ export default function StudentSettingsPage() {
             البيانات الجامعية
           </h4>
 
+          <div className="w-full text-right">
+            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+              الجامعة
+            </label>
+            <div className="w-full bg-canvas border border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink font-bold">
+              {userUniv === 'assiut_ahleya' ? 'جامعة أسيوط الأهلية' : 'جامعة سفنكس'}
+            </div>
+          </div>
+
           <Input
             label="الاسم الكامل"
             value={name}
@@ -99,7 +114,7 @@ export default function StudentSettingsPage() {
               onChange={(e) => setCollege(e.target.value)}
               className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer"
             >
-              {COLLEGES.map((c) => (
+              {availableColleges.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
