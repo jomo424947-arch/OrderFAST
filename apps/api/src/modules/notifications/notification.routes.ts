@@ -72,10 +72,7 @@ export async function notificationRoutes(app: FastifyInstance) {
   // Register device for guest/unregistered visitors (No auth required)
   app.post<{ Body: { token: string; platform?: string; guestId?: string; browserInfo?: string } }>(
     '/devices/guest',
-<<<<<<< HEAD
-=======
     { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
->>>>>>> 362bbfb (Solve many of problem)
     async (request, reply) => {
       const { token, platform, guestId, browserInfo } = request.body || {};
       const result = await notificationService.registerDevice(
