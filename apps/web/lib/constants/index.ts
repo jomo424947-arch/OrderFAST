@@ -46,6 +46,44 @@ export const CATEGORIES = [
   { id: "meals", label: "وجبات سريعة" },
 ];
 
+export const KIOSK_OFFERING_OPTIONS = [
+  { value: 'ماكولات', label: 'مأكولات' },
+  { value: 'مشروبات', label: 'مشروبات' },
+  { value: 'مشروبات وماكولات', label: 'مشروبات ومأكولات (الاتنين معاً)' },
+] as const;
+
+export type KioskOfferingType = 'food' | 'drinks' | 'both';
+
+export function getKioskOfferingType(category?: string | null): KioskOfferingType {
+  const cat = (category || '').trim().toLowerCase();
+
+  const hasDrinks = cat.includes('مشروب') || cat.includes('عصير') || cat.includes('قهوة');
+  const hasFood =
+    cat.includes('ماكول') ||
+    cat.includes('مأكول') ||
+    cat.includes('فطار') ||
+    cat.includes('غداء') ||
+    cat.includes('غدا') ||
+    cat.includes('ساندوتش') ||
+    cat.includes('اكل') ||
+    cat.includes('أكل');
+
+  if (hasDrinks && hasFood) {
+    return 'both';
+  }
+  if (hasDrinks) {
+    return 'drinks';
+  }
+  if (hasFood) {
+    return 'food';
+  }
+
+  if (cat === 'مشروبات') return 'drinks';
+  if (cat === 'ماكولات' || cat === 'مأكولات') return 'food';
+
+  return 'both';
+}
+
 export const ORDER_STATUS_DETAILS: Record<
   OrderStatus,
   { label: string; description: string; badgeColor: string; textColor: string; stepIndex: number }

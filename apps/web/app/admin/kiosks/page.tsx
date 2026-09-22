@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { ImageUploadDropzone } from '@/components/ui/ImageUploadDropzone';
-import { COLLEGES_BY_UNIVERSITY, UNIVERSITIES, UniversityKey } from '@/lib/constants';
+import { COLLEGES_BY_UNIVERSITY, UNIVERSITIES, UniversityKey, KIOSK_OFFERING_OPTIONS, getKioskOfferingType } from '@/lib/constants';
 import {
   Plus,
   Store,
@@ -95,7 +95,7 @@ export default function AdminKiosksPage() {
   const [kioskName, setKioskName] = useState('');
   const [collegeLocation, setCollegeLocation] = useState(COLLEGES_BY_UNIVERSITY.sphinx[0]);
   const [campusZone, setCampusZone] = useState('');
-  const [category, setCategory] = useState('مشروبات وسناكس');
+  const [category, setCategory] = useState<string>('مشروبات وماكولات');
   const [phone, setPhone] = useState('');
   const [openingHours, setOpeningHours] = useState('8:00 ص - 5:00 م');
   const [newKioskImageUrl, setNewKioskImageUrl] = useState('');
@@ -106,7 +106,7 @@ export default function AdminKiosksPage() {
     setKioskName('');
     setCollegeLocation(COLLEGES_BY_UNIVERSITY.sphinx[0]);
     setCampusZone('');
-    setCategory('مشروبات وسناكس');
+    setCategory('مشروبات وماكولات');
     setPhone('');
     setOpeningHours('8:00 ص - 5:00 م');
     setNewKioskImageUrl('');
@@ -230,7 +230,9 @@ export default function AdminKiosksPage() {
     setEditName(kiosk.name || '');
     setEditCollegeLocation(kiosk.collegeLocation || COLLEGES_BY_UNIVERSITY[univ][0]);
     setEditCampusZone(kiosk.campusZone || '');
-    setEditCategory(kiosk.category || '');
+    const offType = getKioskOfferingType(kiosk.category);
+    const normalizedCat = offType === 'drinks' ? 'مشروبات' : offType === 'food' ? 'ماكولات' : 'مشروبات وماكولات';
+    setEditCategory(normalizedCat);
     setEditPhone(kiosk.phone || '');
     setEditOpeningHours(kiosk.openingHours || '8:00 ص - 5:00 م');
     setEditPrepTime(kiosk.defaultPrepTimeMins ? String(kiosk.defaultPrepTimeMins) : '10');
@@ -643,12 +645,22 @@ export default function AdminKiosksPage() {
             placeholder="مثال: بجوار مبنى الورش - الساحة الرئيسية"
           />
 
-          <Input
-            label="التصنيف"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="مثال: مشروبات ساخنة وسناكس"
-          />
+          <div className="w-full text-right">
+            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+              التصنيف
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer font-bold"
+            >
+              {KIOSK_OFFERING_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <Input
             label="مواعيد العمل"
@@ -929,12 +941,22 @@ export default function AdminKiosksPage() {
             placeholder="مثال: بجوار مبنى الورش - الساحة الرئيسية"
           />
 
-          <Input
-            label="التصنيف"
-            value={editCategory}
-            onChange={(e) => setEditCategory(e.target.value)}
-            placeholder="مثال: مشروبات ساخنة وسناكس"
-          />
+          <div className="w-full text-right">
+            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+              التصنيف
+            </label>
+            <select
+              value={editCategory}
+              onChange={(e) => setEditCategory(e.target.value)}
+              className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer font-bold"
+            >
+              {KIOSK_OFFERING_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input

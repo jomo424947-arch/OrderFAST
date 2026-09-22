@@ -10,7 +10,7 @@ import { FloatingCartBill } from '@/components/menu/FloatingCartBill';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Button } from '@/components/ui/Button';
 import { formatEGP, formatWaitTime } from '@/lib/formatters';
-import { getServiceFeeEGP } from '@/lib/constants';
+import { getServiceFeeEGP, getKioskOfferingType } from '@/lib/constants';
 import {
   ChevronRight,
   Clock,
@@ -68,6 +68,11 @@ export default function KioskDetailPage() {
     estimatedWaitMins: 15,
   };
 
+  // Kiosk offering type selected by Admin: 'drinks' (مشروبات), 'food' (ماكولات), 'both' (مشروبات وماكولات)
+  const offeringType = useMemo(() => {
+    return getKioskOfferingType(kiosk?.category);
+  }, [kiosk?.category]);
+
   // Group items by category for this kiosk (exclude items under review)
   const kioskItems = useMemo(() => {
     return menuItems.filter(
@@ -85,8 +90,18 @@ export default function KioskDetailPage() {
 
   // Map category to main section ('food' = فطار وغدا, 'drinks' = مشروبات)
   const getCategorySection = (categoryName: string): 'food' | 'drinks' => {
+    // If Admin set kiosk as drinks only (مشروبات)
+    if (offeringType === 'drinks') {
+      return 'drinks';
+    }
+    // If Admin set kiosk as food only (ماكولات)
+    if (offeringType === 'food') {
+      return 'food';
+    }
+
+    // For dual kiosks (مشروبات وماكولات): map by category keywords
     const name = (categoryName || '').trim().toLowerCase();
-    if (
+    const isDrinkCategory =
       name.includes('مشروب') ||
       name.includes('ساخنة') ||
       name.includes('باردة') ||
@@ -98,11 +113,24 @@ export default function KioskDetailPage() {
       name.includes('آيس كريم') ||
       name.includes('إضافات المشروبات') ||
       name.includes('قهوة') ||
-      name.includes('شاي')
-    ) {
-      return 'drinks';
-    }
-    return 'food';
+      name.includes('شاي') ||
+      name.includes('موهيتو') ||
+      name.includes('mojito') ||
+      name.includes('بوبا') ||
+      name.includes('boba') ||
+      name.includes('فرابتشينو') ||
+      name.includes('frappuccino') ||
+      name.includes('shake') ||
+      name.includes('ايس') ||
+      name.includes('iced') ||
+      name.includes('مثلجة') ||
+      name.includes('كوفي') ||
+      name.includes('لاتيه') ||
+      name.includes('مياه') ||
+      name.includes('بيبسي') ||
+      name.includes('كانز');
+
+    return isDrinkCategory ? 'drinks' : 'food';
   };
 
   const sectionCounts = useMemo(() => {
@@ -122,7 +150,24 @@ export default function KioskDetailPage() {
       all: kioskItems.length,
       offers: offerItems.length,
     };
-  }, [kioskItems, kioskCategories, offerItems.length]);
+  }, [kioskItems, kioskCategories, offerItems.length, offeringType]);
+
+  const showSectionToggle = offeringType === 'both' && sectionCounts.food > 0 && sectionCounts.drinks > 0;
+
+  // Set default active section according to kiosk offering type
+  useEffect(() => {
+    if (offeringType === 'drinks') {
+      setActiveSection('drinks');
+    } else if (offeringType === 'food') {
+      setActiveSection('food');
+    } else {
+      if (sectionCounts.food === 0 && sectionCounts.drinks > 0) {
+        setActiveSection('drinks');
+      } else if (sectionCounts.drinks === 0 && sectionCounts.food > 0) {
+        setActiveSection('food');
+      }
+    }
+  }, [offeringType, sectionCounts.food, sectionCounts.drinks]);
 
   const availableCategoriesForSection = useMemo(() => {
     return kioskCategories.filter((c) => getCategorySection(c.name) === activeSection);
@@ -249,46 +294,48 @@ export default function KioskDetailPage() {
         </div>
       )}
 
-      {/* 1. Main Sections (تصنيفين رئيسيين فقط: فطار وغدا | مشروبات) */}
-      <div className="grid grid-cols-2 p-1.5 bg-surface border border-line/90 rounded-2xl shadow-xs gap-1.5">
-        <button
-          type="button"
-          onClick={() => handleSelectSection('food')}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-display font-bold text-xs sm:text-sm transition-all ${activeSection === 'food'
-            ? 'bg-primary text-primary-ink shadow-sm ring-2 ring-primary/25 scale-[1.01]'
-            : 'text-ink-soft hover:text-ink hover:bg-canvas'
-            }`}
-        >
-          <span>فطار وغدا</span>
-          <span
-            className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${activeSection === 'food'
-              ? 'bg-black/10 text-primary-ink'
-              : 'bg-canvas border border-line/60 text-ink-soft'
+      {/* 1. Main Sections (يظهر التبديل فقط إذا كان تصنيف الكشك 'مشروبات وماكولات' ويحتوي عليهما معاً) */}
+      {showSectionToggle && (
+        <div className="grid grid-cols-2 p-1.5 bg-surface border border-line/90 rounded-2xl shadow-xs gap-1.5">
+          <button
+            type="button"
+            onClick={() => handleSelectSection('food')}
+            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-display font-bold text-xs sm:text-sm transition-all ${activeSection === 'food'
+              ? 'bg-primary text-primary-ink shadow-sm ring-2 ring-primary/25 scale-[1.01]'
+              : 'text-ink-soft hover:text-ink hover:bg-canvas'
               }`}
           >
-            {sectionCounts.food}
-          </span>
-        </button>
+            <span>فطار وغدا</span>
+            <span
+              className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${activeSection === 'food'
+                ? 'bg-black/10 text-primary-ink'
+                : 'bg-canvas border border-line/60 text-ink-soft'
+                }`}
+            >
+              {sectionCounts.food}
+            </span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => handleSelectSection('drinks')}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-display font-bold text-xs sm:text-sm transition-all ${activeSection === 'drinks'
-            ? 'bg-primary text-primary-ink shadow-sm ring-2 ring-primary/25 scale-[1.01]'
-            : 'text-ink-soft hover:text-ink hover:bg-canvas'
-            }`}
-        >
-          <span>مشروبات</span>
-          <span
-            className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${activeSection === 'drinks'
-              ? 'bg-black/10 text-primary-ink'
-              : 'bg-canvas border border-line/60 text-ink-soft'
+          <button
+            type="button"
+            onClick={() => handleSelectSection('drinks')}
+            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-display font-bold text-xs sm:text-sm transition-all ${activeSection === 'drinks'
+              ? 'bg-primary text-primary-ink shadow-sm ring-2 ring-primary/25 scale-[1.01]'
+              : 'text-ink-soft hover:text-ink hover:bg-canvas'
               }`}
           >
-            {sectionCounts.drinks}
-          </span>
-        </button>
-      </div>
+            <span>مشروبات</span>
+            <span
+              className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${activeSection === 'drinks'
+                ? 'bg-black/10 text-primary-ink'
+                : 'bg-canvas border border-line/60 text-ink-soft'
+                }`}
+            >
+              {sectionCounts.drinks}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* 2. Subcategories Dropdown (قائمة منسدلة احترافية بدون أي إيموجي) */}
       <div className="space-y-1.5">

@@ -25,10 +25,12 @@ export function CapacitorPushNotificationHandler() {
 
     const storedToken = localStorage.getItem(FCM_TOKEN_STORAGE_KEY);
     if (storedToken) {
+      const capacitor = (window as any).Capacitor;
+      const platform = capacitor?.getPlatform ? capacitor.getPlatform() : 'android';
       apiClient
         .post('/notifications/devices', {
           token: storedToken,
-          platform: 'android',
+          platform,
         })
         .then(() => {
           console.log('[Push] Device token synced successfully with user account.');
@@ -126,9 +128,10 @@ export function CapacitorPushNotificationHandler() {
                 guestId = 'guest_' + Math.random().toString(36).substring(2, 12);
                 localStorage.setItem('fastorder_guest_id', guestId);
               }
+              const rawPlatform = capacitor?.getPlatform ? capacitor.getPlatform() : 'android';
               await apiClient.post(endpoint, {
                 token,
-                platform: 'android',
+                platform: rawPlatform === 'ios' ? 'ios' : 'android',
                 guestId,
               });
               console.log('[Push] Device token registered with backend API (isAuth:', isAuth, ').');

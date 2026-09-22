@@ -22,7 +22,7 @@ const BrandFoodIcon: React.FC<{ item: MenuItem }> = ({ item }) => {
   const name = (item.name || '').toLowerCase();
   const cat = (item.categoryId || '').toLowerCase();
 
-  // Cold drinks / cans / juice
+  // Cold drinks / cans / juice / mojito / boba / frappe / milkshake
   if (
     cat.includes('cold') ||
     cat.includes('drink') ||
@@ -31,7 +31,19 @@ const BrandFoodIcon: React.FC<{ item: MenuItem }> = ({ item }) => {
     name.includes('بيبسي') ||
     name.includes('كولا') ||
     name.includes('مياه') ||
-    name.includes('ثلج')
+    name.includes('ثلج') ||
+    name.includes('موهيتو') ||
+    name.includes('mojito') ||
+    name.includes('بوبا') ||
+    name.includes('boba') ||
+    name.includes('فرابتشينو') ||
+    name.includes('frappuccino') ||
+    name.includes('ميلك') ||
+    name.includes('شيك') ||
+    name.includes('shake') ||
+    name.includes('ايس') ||
+    name.includes('ice') ||
+    name.includes('لاتيه')
   ) {
     return (
       <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6 sm:w-8 sm:h-8 transition-transform group-hover:scale-105">
