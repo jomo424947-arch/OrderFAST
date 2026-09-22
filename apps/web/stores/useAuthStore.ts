@@ -16,6 +16,7 @@ interface AuthState {
   admin: Admin | null;
   studentStatus: AccountStatus;
   isLoading: boolean;
+  needsCollegeSelection: boolean;
 
   login: (
     email: string,
@@ -49,6 +50,7 @@ interface AuthState {
   initializeAuth: () => Promise<void>;
   logout: () => void;
   setStudentStatus: (status: AccountStatus) => void;
+  setNeedsCollegeSelection: (needs: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -57,6 +59,7 @@ export const useAuthStore = create<AuthState>()(
       role: null,
       isAuthenticated: false,
       isAuthInitialized: false,
+      needsCollegeSelection: false,
       student: null,
       cashier: null,
       admin: null,
@@ -267,6 +270,7 @@ export const useAuthStore = create<AuthState>()(
               cashier: null,
               admin: null,
               studentStatus: s.status ?? 'active',
+              needsCollegeSelection: isNewUser ? true : get().needsCollegeSelection,
               isLoading: false,
             });
           } else if (user.role === 'cashier') {
@@ -277,6 +281,7 @@ export const useAuthStore = create<AuthState>()(
               student: null,
               cashier: user as Cashier,
               admin: null,
+              needsCollegeSelection: false,
               isLoading: false,
             });
           } else {
@@ -287,6 +292,7 @@ export const useAuthStore = create<AuthState>()(
               student: null,
               cashier: null,
               admin: user as Admin,
+              needsCollegeSelection: false,
               isLoading: false,
             });
           }
@@ -306,6 +312,7 @@ export const useAuthStore = create<AuthState>()(
           const currentStudent = get().student;
           if (currentStudent) {
             set({
+              needsCollegeSelection: false,
               student: {
                 ...currentStudent,
                 college,
@@ -326,6 +333,7 @@ export const useAuthStore = create<AuthState>()(
           const currentStudent = get().student;
           if (currentStudent) {
             set({
+              needsCollegeSelection: false,
               student: {
                 ...currentStudent,
                 university,
@@ -354,6 +362,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           role: null,
           isAuthenticated: false,
+          needsCollegeSelection: false,
           student: null,
           cashier: null,
           admin: null,
@@ -363,6 +372,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setStudentStatus: (status) => set({ studentStatus: status }),
+      setNeedsCollegeSelection: (needs) => set({ needsCollegeSelection: needs }),
     }),
     {
       name: 'orderfast-auth',

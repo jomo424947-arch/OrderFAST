@@ -74,12 +74,7 @@ export function CapacitorDeepLinkHandler() {
 
           if (data.session && isSubscribed) {
             tokenStorage.setTokens(data.session.access_token, data.session.refresh_token);
-            const syncResult = await useAuthStore.getState().syncOAuthUser();
-            if (syncResult.isNewUser) {
-              router.replace('/auth/callback');
-            } else {
-              router.replace('/student');
-            }
+            router.replace('/auth/callback');
           }
           return;
         }
@@ -97,12 +92,7 @@ export function CapacitorDeepLinkHandler() {
 
           if (data.session && isSubscribed) {
             tokenStorage.setTokens(data.session.access_token, data.session.refresh_token);
-            const syncResult = await useAuthStore.getState().syncOAuthUser();
-            if (syncResult.isNewUser) {
-              router.replace('/auth/callback');
-            } else {
-              router.replace('/student');
-            }
+            router.replace('/auth/callback');
           }
         }
       } catch (err) {

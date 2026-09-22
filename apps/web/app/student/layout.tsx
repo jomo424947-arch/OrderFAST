@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import { StudentMotivationalPrompt } from '@/components/student/StudentMotivationalPrompt';
+import { CollegeSelectionModal } from '@/components/auth/CollegeSelectionModal';
 
 export default function StudentLayout({
   children,
@@ -16,6 +17,8 @@ export default function StudentLayout({
   children: React.ReactNode;
 }) {
   const student = useAuthStore((s) => s.student);
+  const needsCollegeSelection = useAuthStore((s) => s.needsCollegeSelection);
+  const updateStudentUniversity = useAuthStore((s) => s.updateStudentUniversity);
   const startStudentOrdersPolling = useOrderStore((s) => s.startStudentOrdersPolling);
   const startNotificationsPolling = useNotificationStore((s) => s.startNotificationsPolling);
 
@@ -43,6 +46,15 @@ export default function StudentLayout({
           <StudentMotivationalPrompt />
           <StudentBottomNav />
         </div>
+
+        {/* Safety Net: In-App College Selection Modal if student hasn't selected their college yet */}
+        <CollegeSelectionModal
+          isOpen={Boolean(needsCollegeSelection)}
+          studentName={student?.name}
+          onSelect={async (university, college) => {
+            await updateStudentUniversity(university, college);
+          }}
+        />
       </div>
     </RoleGuard>
   );

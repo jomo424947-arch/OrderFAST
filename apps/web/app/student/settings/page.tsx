@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { COLLEGES_BY_UNIVERSITY, UniversityKey } from '@/lib/constants';
+import { COLLEGES_BY_UNIVERSITY, UNIVERSITIES, UniversityKey } from '@/lib/constants';
 import { ChevronRight, Save, BellRing, Phone, Mail, User, Smartphone, CheckCircle2, Bell, Send } from 'lucide-react';
 import {
   isNotificationSupported,
@@ -15,10 +15,12 @@ import {
 
 export default function StudentSettingsPage() {
   const router = useRouter();
-  const { student, updateStudentCollege } = useAuthStore();
+  const { student, updateStudentUniversity, updateStudentCollege } = useAuthStore();
 
-  const userUniv = (student?.university as UniversityKey) || 'sphinx';
-  const availableColleges = COLLEGES_BY_UNIVERSITY[userUniv] || COLLEGES_BY_UNIVERSITY.sphinx;
+  const [university, setUniversity] = useState<UniversityKey>(
+    (student?.university as UniversityKey) || 'sphinx'
+  );
+  const availableColleges = COLLEGES_BY_UNIVERSITY[university] || COLLEGES_BY_UNIVERSITY.sphinx;
 
   const [name, setName] = useState(student?.name || '');
   const [college, setCollege] = useState(student?.college || availableColleges[0]);
@@ -26,14 +28,30 @@ export default function StudentSettingsPage() {
   const [orderReadyAlerts, setOrderReadyAlerts] = useState(true);
   const [delayAlerts, setDelayAlerts] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [browserPerm, setBrowserPerm] = useState<NotificationPermission>('default');
   const [testingNotif, setTestingNotif] = useState(false);
+
+  React.useEffect(() => {
+    if (student?.university) {
+      setUniversity(student.university as UniversityKey);
+    }
+    if (student?.college) {
+      setCollege(student.college);
+    }
+  }, [student?.university, student?.college]);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setBrowserPerm(Notification.permission);
     }
   }, []);
+
+  const handleUniversityChange = (newUniv: UniversityKey) => {
+    setUniversity(newUniv);
+    const newColleges = COLLEGES_BY_UNIVERSITY[newUniv] || [];
+    setCollege(newColleges[0] || '');
+  };
 
   const handleTestBrowserNotification = async () => {
     setTestingNotif(true);
@@ -53,11 +71,16 @@ export default function StudentSettingsPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (college && college !== student?.college) {
-      await updateStudentCollege(college);
+    setIsSaving(true);
+    try {
+      if (university !== student?.university || college !== student?.college) {
+        await updateStudentUniversity(university, college);
+      }
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
   };
 
   return (
@@ -90,12 +113,20 @@ export default function StudentSettingsPage() {
           </h4>
 
           <div className="w-full text-right">
-            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+            <label className="block font-body text-xs font-semibold text-ink mb-1.5">
               الجامعة
             </label>
-            <div className="w-full bg-canvas border border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink font-bold">
-              {userUniv === 'assiut_ahleya' ? 'جامعة أسيوط الأهلية' : 'جامعة سفنكس'}
-            </div>
+            <select
+              value={university}
+              onChange={(e) => handleUniversityChange(e.target.value as UniversityKey)}
+              className="w-full bg-surface border-[1.5px] border-line rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink focus:outline-none focus:border-primary cursor-pointer font-bold"
+            >
+              {UNIVERSITIES.map((u) => (
+                <option key={u.key} value={u.key}>
+                  {u.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <Input
@@ -106,7 +137,7 @@ export default function StudentSettingsPage() {
           />
 
           <div className="w-full text-right">
-            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+            <label className="block font-body text-xs font-semibold text-ink mb-1.5">
               الكلية
             </label>
             <select
@@ -222,7 +253,7 @@ export default function StudentSettingsPage() {
           </div>
         </div>
 
-        <Button type="submit" variant="primary" size="lg" className="w-full">
+        <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isSaving}>
           <Save className="w-4 h-4 ml-1" />
           <span>{isSaved ? 'تم حفظ التعديلات بنجاح!' : 'حفظ التعديلات'}</span>
         </Button>

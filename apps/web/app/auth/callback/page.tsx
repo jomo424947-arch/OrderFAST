@@ -217,8 +217,8 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      const isNewUser = syncResult.isNewUser;
-      const user = syncResult.user;
+      const isNewUser = Boolean(syncResult.isNewUser || useAuthStore.getState().needsCollegeSelection);
+      const user = syncResult.user || useAuthStore.getState().student;
 
       if (isNewUser) {
         // Option B: Show College Selection Modal

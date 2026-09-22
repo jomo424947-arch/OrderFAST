@@ -63,12 +63,7 @@ export function GoogleAuthButton({
                   tokenSessionData.session.access_token,
                   tokenSessionData.session.refresh_token
                 );
-                const syncResult = await useAuthStore.getState().syncOAuthUser();
-                if (syncResult.isNewUser) {
-                  router.replace('/auth/callback');
-                } else {
-                  router.replace('/student');
-                }
+                router.replace('/auth/callback');
                 return;
               }
             }
