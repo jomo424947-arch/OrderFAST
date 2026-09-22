@@ -610,6 +610,9 @@ export class OrderService {
       conditions.push(sql`${orders.createdAt} >= CURRENT_DATE - INTERVAL '7 days'`);
     } else if (range === 'month') {
       conditions.push(sql`${orders.createdAt} >= CURRENT_DATE - INTERVAL '30 days'`);
+    } else {
+      // range === 'all': bounded 90-day safety window to prevent full-table scan on high-volume kiosks
+      conditions.push(sql`${orders.createdAt} >= CURRENT_DATE - INTERVAL '90 days'`);
     }
 
     const finishedOrders = await db
@@ -1302,17 +1305,36 @@ export class OrderService {
       const succeeded: string[] = [];
       const failed: Array<{ id: string; reason: string; code: string }> = [];
 
+      if (!input.orderIds || input.orderIds.length === 0) {
+        return {
+          successCount: 0,
+          failureCount: 0,
+          succeeded,
+          failed,
+        };
+      }
+
+      // Extra-1: Fetch all candidate orders in a single batched query upfront (eliminates N+1 queries)
+      const existingOrders = await tx
+        .select({
+          id: orders.id,
+          status: orders.status,
+          expiresAt: orders.expiresAt,
+          studentId: orders.studentId,
+          orderNumber: orders.orderNumber,
+        })
+        .from(orders)
+        .where(
+          and(
+            inArray(orders.id, input.orderIds),
+            eq(orders.kioskId, kioskId)
+          )
+        );
+
+      const orderMap = new Map(existingOrders.map((o) => [o.id, o]));
+
       for (const orderId of input.orderIds) {
-        const [existing] = await tx
-          .select({
-            status: orders.status,
-            expiresAt: orders.expiresAt,
-            studentId: orders.studentId,
-            orderNumber: orders.orderNumber,
-          })
-          .from(orders)
-          .where(and(eq(orders.id, orderId), eq(orders.kioskId, kioskId)))
-          .limit(1);
+        const existing = orderMap.get(orderId);
 
         if (!existing) {
           failed.push({ id: orderId, reason: 'الطلب غير موجود بالكشك', code: 'NOT_FOUND' });
@@ -1465,55 +1487,87 @@ export class OrderService {
 
   /**
    * 15. BACKGROUND WORKER: Expire Timed-out Orders
+   * Extra-4: Uses per-order transactions with Promise.allSettled to guarantee atomic consistency
    */
   async expirePendingOrders(): Promise<number> {
-    const expiredOrders = await db
-      .update(orders)
-      .set({
-        status: 'EXPIRED',
-        expiredAt: new Date(),
-        updatedAt: new Date(),
+    const candidateOrders = await db
+      .select({
+        id: orders.id,
+        studentId: orders.studentId,
+        orderNumber: orders.orderNumber,
       })
+      .from(orders)
       .where(
         and(
           eq(orders.status, 'PENDING_KIOSK'),
           sql`${orders.expiresAt} < now()`
         )
       )
-      .returning({ id: orders.id, studentId: orders.studentId, orderNumber: orders.orderNumber });
+      .limit(100);
 
-    if (expiredOrders.length > 0) {
-      // Log events for all expired orders
-      await db.insert(orderEvents).values(
-        expiredOrders.map((o) => ({
-          id: generateId(),
-          orderId: o.id,
-          eventType: 'STATUS_CHANGED',
-          fromStatus: 'PENDING_KIOSK' as const,
-          toStatus: 'EXPIRED' as const,
-          actorType: 'system' as const,
-          metadata: { autoExpired: true },
-        }))
-      );
-
-      // Notify Students
-      await db.insert(notifications).values(
-        expiredOrders.map((o) => ({
-          id: generateId(),
-          userId: o.studentId,
-          orderId: o.id,
-          type: 'order_status' as const,
-          title: 'انتهت مهلة الطلب ⌛',
-          body: `نعتذر، لم يستجب الكشك خلال المهلة المحددة للطلب رقم ${o.orderNumber}. يمكنك إعادة الطلب أو اختيار كشك آخر.`,
-        }))
-      );
+    if (candidateOrders.length === 0) {
+      return 0;
     }
 
-    return expiredOrders.length;
+    let successCount = 0;
+    const results = await Promise.allSettled(
+      candidateOrders.map(async (candidate) => {
+        return await db.transaction(async (tx) => {
+          const [updated] = await tx
+            .update(orders)
+            .set({
+              status: 'EXPIRED',
+              expiredAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(orders.id, candidate.id),
+                eq(orders.status, 'PENDING_KIOSK')
+              )
+            )
+            .returning({ id: orders.id });
+
+          if (!updated) {
+            return false;
+          }
+
+          await tx.insert(orderEvents).values({
+            id: generateId(),
+            orderId: candidate.id,
+            eventType: 'STATUS_CHANGED',
+            fromStatus: 'PENDING_KIOSK',
+            toStatus: 'EXPIRED',
+            actorType: 'system',
+            metadata: { autoExpired: true },
+          });
+
+          await tx.insert(notifications).values({
+            id: generateId(),
+            userId: candidate.studentId,
+            orderId: candidate.id,
+            type: 'order_status',
+            title: 'انتهت مهلة الطلب ⌛',
+            body: `نعتذر، لم يستجب الكشك خلال المهلة المحددة للطلب رقم ${candidate.orderNumber}. يمكنك إعادة الطلب أو اختيار كشك آخر.`,
+          });
+
+          return true;
+        });
+      })
+    );
+
+    for (const res of results) {
+      if (res.status === 'fulfilled' && res.value === true) {
+        successCount++;
+      }
+    }
+
+    return successCount;
   }
 
   /**
    * 16. ADMIN: Get Recent Orders Across All Kiosks
+   * Extra-2: Default 30-day index-friendly date filter to prevent full sequential table scans
    */
   async getAdminRecentOrders(limit = 50, page = 1) {
     const offset = (page - 1) * limit;
@@ -1521,6 +1575,7 @@ export class OrderService {
     const allOrders = await db
       .select()
       .from(orders)
+      .where(sql`${orders.createdAt} >= CURRENT_DATE - INTERVAL '30 days'`)
       .orderBy(desc(orders.createdAt))
       .limit(limit)
       .offset(offset);
@@ -1530,50 +1585,58 @@ export class OrderService {
 
   /**
    * 17. ADMIN: Get Campus-wide Executive Statistics
+   * P1-8: Parallelized with Promise.all to avoid 6 sequential roundtrips
    */
   async getAdminCampusStats() {
-    // Total orders count
-    const [ordersCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(orders);
+    const [
+      [ordersCount],
+      [todayCount],
+      [salesSum],
+      [activeCount],
+      [feeStats],
+      [todayFeeStats],
+    ] = await Promise.all([
+      // Total orders count
+      db.select({ count: sql<number>`count(*)::int` }).from(orders),
 
-    // Total orders today
-    const [todayCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(orders)
-      .where(sql`${orders.orderDate} = CURRENT_DATE`);
+      // Total orders today
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(orders)
+        .where(sql`${orders.orderDate} = CURRENT_DATE`),
 
-    // Total today completed / active sales (Piasters)
-    const [salesSum] = await db
-      .select({ totalSales: sql<number>`coalesce(sum(${orders.total}), 0)::int` })
-      .from(orders)
-      .where(
-        and(
-          sql`${orders.orderDate} = CURRENT_DATE`,
-          inArray(orders.status, ['ACCEPTED', 'PREPARING', 'READY', 'COMPLETED'])
-        )
-      );
+      // Total today completed / active sales (Piasters)
+      db
+        .select({ totalSales: sql<number>`coalesce(sum(${orders.total}), 0)::int` })
+        .from(orders)
+        .where(
+          and(
+            sql`${orders.orderDate} = CURRENT_DATE`,
+            inArray(orders.status, ['ACCEPTED', 'PREPARING', 'READY', 'COMPLETED'])
+          )
+        ),
 
-    // Total active orders in kitchen
-    const [activeCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(orders)
-      .where(inArray(orders.status, ['PENDING_KIOSK', 'ACCEPTED', 'PREPARING', 'READY']));
+      // Total active orders in kitchen
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(orders)
+        .where(inArray(orders.status, ['PENDING_KIOSK', 'ACCEPTED', 'PREPARING', 'READY'])),
 
-    // Platform Service Fees Earnings (All-time and Today)
-    const [feeStats] = await db
-      .select({
-        totalFeeRevenuePiasters: sql<number>`coalesce(sum(${orders.fees}), 0)::int`,
-      })
-      .from(orders)
-      .where(eq(orders.status, 'COMPLETED'));
+      // Platform Service Fees Earnings (All-time and Today)
+      db
+        .select({
+          totalFeeRevenuePiasters: sql<number>`coalesce(sum(${orders.fees}), 0)::int`,
+        })
+        .from(orders)
+        .where(eq(orders.status, 'COMPLETED')),
 
-    const [todayFeeStats] = await db
-      .select({
-        todayFeeRevenuePiasters: sql<number>`coalesce(sum(${orders.fees}), 0)::int`,
-      })
-      .from(orders)
-      .where(and(eq(orders.status, 'COMPLETED'), sql`${orders.orderDate} = CURRENT_DATE`));
+      db
+        .select({
+          todayFeeRevenuePiasters: sql<number>`coalesce(sum(${orders.fees}), 0)::int`,
+        })
+        .from(orders)
+        .where(and(eq(orders.status, 'COMPLETED'), sql`${orders.orderDate} = CURRENT_DATE`)),
+    ]);
 
     return {
       totalOrders: ordersCount?.count || 0,
@@ -1587,7 +1650,8 @@ export class OrderService {
 
   /**
    * 18. ADMIN: Comprehensive Platform & Financial Analytics
-   * Calculates real platform revenue from orders.fees permanently stored in database
+   * Calculates real platform revenue from orders.fees permanently stored in database.
+   * Note (Extra-2): When timeframe='all', full-history aggregation is performed and cached for 60s.
    */
   async getAdminAnalytics(timeframe: 'all' | 'today' | 'week' | 'month' = 'all') {
     const validTimeframe: 'all' | 'today' | 'week' | 'month' =

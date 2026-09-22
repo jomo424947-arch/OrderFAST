@@ -3,6 +3,8 @@ import pg from 'pg';
 import * as schema from './schema.js';
 import { env } from '../config/env.js';
 
+import { logger } from '../shared/logger/index.js';
+
 const { Pool } = pg;
 
 const isLocal =
@@ -17,11 +19,26 @@ export const pool = new Pool({
   connectionString: env.DATABASE_URL,
   // Transaction mode pooler shares connections per-transaction (not per-session),
   // so higher max is safe — slots are released after each COMMIT/ROLLBACK.
-  max: isPooler ? 15 : 20,
+  max: isPooler ? 25 : 30,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 60000,
+  connectionTimeoutMillis: 10000,
   ssl: isLocal || isPooler ? false : { rejectUnauthorized: false },
 });
+
+// P1-9: Background pool health monitor — logs alert if queue of waiting clients forms
+const poolMonitorInterval = setInterval(() => {
+  if (pool.waitingCount > 0) {
+    logger.warn(
+      {
+        totalCount: pool.totalCount,
+        idleCount: pool.idleCount,
+        waitingCount: pool.waitingCount,
+      },
+      '⚠️ PostgreSQL connection pool under contention: clients waiting for connection'
+    );
+  }
+}, 10000);
+poolMonitorInterval.unref();
 
 export const db = drizzle(pool, { schema });
 
@@ -31,7 +48,7 @@ export async function testDbConnection(): Promise<boolean> {
     client.release();
     return true;
   } catch (error) {
-    console.error('❌ Failed to connect to PostgreSQL database:', error);
+    logger.error({ err: error }, '❌ Failed to connect to PostgreSQL database');
     return false;
   }
 }

@@ -10,7 +10,7 @@ import { env } from '../../apps/api/src/config/env.js';
 import { pool, db, testDbConnection } from '../../apps/api/src/db/client.js';
 import { getSupabaseAdmin, getSupabaseClient } from '../../apps/api/src/shared/supabase/index.js';
 import * as schema from '../../apps/api/src/db/schema.js';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from '../../apps/api/node_modules/drizzle-orm/index.js';
 import { OrderService } from '../../apps/api/src/modules/orders/order.service.js';
 import { AuthService } from '../../apps/api/src/modules/auth/auth.service.js';
 import { CatalogService } from '../../apps/api/src/modules/catalog/catalog.service.js';
@@ -322,17 +322,17 @@ async function runSuite() {
     // 1. Fetch public menu for Kiosk A
     const menuRes = await app.inject({
       method: 'GET',
-      url: `/api/catalog/kiosks/${testKioskIdA}/menu`,
+      url: `/api/kiosks/${testKioskIdA}/menu`,
     });
     assert.strictEqual(menuRes.statusCode, 200);
     const menu = JSON.parse(menuRes.body);
     assert.ok(menu.data.categories.length > 0, 'Must have at least 1 category');
-    assert.ok(menu.data.categories[0].items.length >= 2, 'Must have active items');
+    assert.ok((menu.data.items || []).length >= 2, 'Must have active items');
 
     // 2. Staff A toggles Shawarma Roll availability to false
     const toggleRes = await app.inject({
       method: 'PATCH',
-      url: `/api/catalog/items/${testMenuItemId1}/availability`,
+      url: `/api/menu-items/${testMenuItemId1}/availability`,
       headers: { authorization: `Bearer ${staffAuthTokenA}` },
       payload: { isAvailable: false },
     });
@@ -341,16 +341,16 @@ async function runSuite() {
     // 3. Verify public menu excludes unavailable item
     const menuAfterRes = await app.inject({
       method: 'GET',
-      url: `/api/catalog/kiosks/${testKioskIdA}/menu`,
+      url: `/api/kiosks/${testKioskIdA}/menu`,
     });
     const menuAfter = JSON.parse(menuAfterRes.body);
-    const itemNames = menuAfter.data.categories[0].items.map((i: any) => i.name);
+    const itemNames = (menuAfter.data.items || []).map((i: any) => i.name);
     assert.strictEqual(itemNames.includes('Shawarma Roll'), false, 'Unavailable items must not appear in public student menu');
 
     // Re-enable item for subsequent order tests
     await app.inject({
       method: 'PATCH',
-      url: `/api/catalog/items/${testMenuItemId1}/availability`,
+      url: `/api/menu-items/${testMenuItemId1}/availability`,
       headers: { authorization: `Bearer ${staffAuthTokenA}` },
       payload: { isAvailable: true },
     });
@@ -419,7 +419,8 @@ async function runSuite() {
 
     // Verify Financial Snapshots
     assert.strictEqual(order.subtotal, 15500, 'Subtotal must be 15500 piasters (155.00 EGP)');
-    assert.strictEqual(order.total, 15500, 'Total must match subtotal minus discount plus fees');
+    assert.strictEqual(order.fees, 500, 'Fees must be 500 piasters (5.00 EGP)');
+    assert.strictEqual(order.total, 16000, 'Total must match subtotal minus discount plus fees (15500 + 500 = 16000)');
     assert.strictEqual(order.status, 'PENDING_KIOSK');
     assert.ok(order.orderNumber.startsWith('#'), 'Order number format should be #XXXX');
     assert.strictEqual(order.studentNameSnapshot, 'Ahmed Student');
@@ -508,7 +509,7 @@ async function runSuite() {
       headers: { authorization: `Bearer ${staffAuthTokenA}` },
       payload: { status: 'ACCEPTED' },
     });
-    assert.strictEqual(secondAcceptRes.statusCode, 400, 'Cannot accept an already ACCEPTED order');
+    assert.strictEqual(secondAcceptRes.statusCode, 409, 'Cannot accept an already ACCEPTED order');
 
     // 3. Advance to PREPARING
     const prepRes = await app.inject({
@@ -571,20 +572,18 @@ async function runSuite() {
     });
     const order2Id = JSON.parse(orderRes2.body).data.id;
 
-    // Test Batch Reject
+    // Test Batch Accept (Extra-1 optimized batch endpoint)
     const batchRes = await app.inject({
       method: 'POST',
-      url: '/api/orders/batch-status',
+      url: `/api/orders/kiosks/${testKioskIdA}/batch/accept`,
       headers: { authorization: `Bearer ${staffAuthTokenA}` },
       payload: {
         orderIds: [order1Id],
-        status: 'REJECTED',
-        rejectionReason: 'Sold out for the day',
       },
     });
     assert.strictEqual(batchRes.statusCode, 200);
     const batchData = JSON.parse(batchRes.body);
-    assert.strictEqual(batchData.data.successful.length, 1);
+    assert.strictEqual(batchData.data.successCount, 1);
 
     // Test Expiration Worker: Set expires_at in past for order2
     await db
@@ -685,7 +684,7 @@ async function runSuite() {
       const t0 = performance.now();
       const r = await app.inject({
         method: 'GET',
-        url: `/api/catalog/kiosks/${testKioskIdA}/menu`,
+        url: `/api/kiosks/${testKioskIdA}/menu`,
       });
       assert.strictEqual(r.statusCode, 200);
       latencies.push(performance.now() - t0);
@@ -705,20 +704,29 @@ async function runSuite() {
 
   // Phase 16: Teardown & Clean Up Test Artifacts
   await recordPhase('16. Teardown & Clean Up Test Artifacts', async () => {
-    // Delete test kiosks (CASCADE deletes categories, items, orders, staff, events)
-    await db.delete(schema.kiosks).where(eq(schema.kiosks.id, testKioskIdA));
-    await db.delete(schema.kiosks).where(eq(schema.kiosks.id, testKioskIdB));
+    const testKioskIds = [testKioskIdA, testKioskIdB];
+    const testUserIds = [studentUserId, staffUserIdA, staffUserIdB];
 
-    // Delete profiles
-    await db.delete(schema.profiles).where(eq(schema.profiles.id, studentUserId));
-    await db.delete(schema.profiles).where(eq(schema.profiles.id, staffUserIdA));
-    await db.delete(schema.profiles).where(eq(schema.profiles.id, staffUserIdB));
+    // 1. Delete orders referencing test kiosks (orders.kioskId has no ON DELETE CASCADE)
+    //    order_items, order_events, and notifications with orderId CASCADE from orders
+    await db.delete(schema.orders).where(inArray(schema.orders.kioskId, testKioskIds));
 
-    // Delete from Supabase Auth
+    // 2. Delete notifications referencing test users (notifications.userId cascades from profiles,
+    //    but we clean them explicitly to avoid FK issues with profiles deletion)
+    await db.delete(schema.notifications).where(inArray(schema.notifications.userId, testUserIds));
+
+    // 3. Delete user device tokens for test users
+    await db.delete(schema.userDeviceTokens).where(inArray(schema.userDeviceTokens.userId, testUserIds));
+
+    // 4. Delete test kiosks (CASCADE deletes: kiosk_staff, daily_order_counters, menu_categories, menu_items)
+    await db.delete(schema.kiosks).where(inArray(schema.kiosks.id, testKioskIds));
+
+    // 5. Delete profiles
+    await db.delete(schema.profiles).where(inArray(schema.profiles.id, testUserIds));
+
+    // 6. Delete from Supabase Auth
     const admin = getSupabaseAdmin();
-    await admin.auth.admin.deleteUser(studentUserId);
-    await admin.auth.admin.deleteUser(staffUserIdA);
-    await admin.auth.admin.deleteUser(staffUserIdB);
+    await Promise.allSettled(testUserIds.map(uid => admin.auth.admin.deleteUser(uid)));
   });
 
   // Close connections

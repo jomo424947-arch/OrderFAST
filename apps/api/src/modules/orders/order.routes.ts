@@ -6,6 +6,7 @@ import {
   cancelOrderSchema,
   batchActionSchema,
 } from '@orderfast/validation';
+import type { OrderStatus } from '@orderfast/types';
 import { orderService } from './order.service.js';
 import { AppError } from '../../shared/errors/index.js';
 import {
@@ -291,6 +292,43 @@ export async function orderRoutes(app: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         message: 'تم تسجيل عدم حضور الطالب بنجاح',
+        data,
+      });
+    }
+  );
+
+  // 12.1 Staff: Compatibility Status Transition Dispatcher (PATCH /:id/status)
+  app.patch<{ Params: { id: string } }>(
+    '/:id/status',
+    { preHandler: [authenticate, requireSystemRole(['staff', 'admin'])] },
+    async (request, reply) => {
+      const body = request.body as { status: OrderStatus; estimatedReadyMins?: number; reason?: string };
+      let data;
+      switch (body?.status) {
+        case 'ACCEPTED':
+          data = await orderService.acceptOrder(request.params.id, request.user!, {
+            customPrepTimeMins: body.estimatedReadyMins,
+          });
+          break;
+        case 'PREPARING':
+          data = await orderService.startPreparing(request.params.id, request.user!);
+          break;
+        case 'READY':
+          data = await orderService.markReady(request.params.id, request.user!);
+          break;
+        case 'COMPLETED':
+          data = await orderService.completeOrder(request.params.id, request.user!);
+          break;
+        case 'REJECTED':
+          data = await orderService.rejectOrder(request.params.id, request.user!, {
+            reason: body.reason || 'تم الرفض بواسطة العامل',
+          });
+          break;
+        default:
+          throw AppError.badRequest('حالة الطلب غير مدعومة');
+      }
+      return reply.status(200).send({
+        success: true,
         data,
       });
     }

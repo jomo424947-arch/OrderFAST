@@ -14,7 +14,7 @@ export interface ICacheService {
 export class MemoryCacheService implements ICacheService {
   private cache: LRUCache<string, any>;
 
-  constructor(maxItems = 1000, defaultTtlMs = 60 * 1000) {
+  constructor(maxItems = 5000, defaultTtlMs = 60 * 1000) {
     this.cache = new LRUCache({
       max: maxItems,
       ttl: defaultTtlMs,

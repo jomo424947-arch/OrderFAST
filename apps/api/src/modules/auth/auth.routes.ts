@@ -16,64 +16,76 @@ import { profiles } from '../../db/schema.js';
 
 export async function authRoutes(app: FastifyInstance) {
   // Register Student
-  app.post('/register-student', async (request, reply) => {
-    const input = registerStudentSchema.parse(request.body);
-    const result = await authService.registerStudent(input);
-    return reply.status(201).send({
-      success: true,
-      message: 'تم تسجيل حساب الطالب بنجاح',
-      data: result,
-    });
-  });
+  app.post(
+    '/register-student',
+    { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const input = registerStudentSchema.parse(request.body);
+      const result = await authService.registerStudent(input);
+      return reply.status(201).send({
+        success: true,
+        message: 'تم تسجيل حساب الطالب بنجاح',
+        data: result,
+      });
+    }
+  );
 
   // Register Kiosk Staff (Public Self-Registration or Admin Creation)
-  app.post('/register-staff', async (request, reply) => {
-    const input = registerStaffSchema.parse(request.body);
+  app.post(
+    '/register-staff',
+    { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const input = registerStaffSchema.parse(request.body);
 
-    let isAdmin = false;
-    const authHeader = request.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.replace('Bearer ', '').trim();
-        const supabaseAdmin = getSupabaseAdmin();
-        const { data } = await supabaseAdmin.auth.getUser(token);
-        if (data?.user) {
-          const [userRecord] = await db
-            .select({ systemRole: profiles.systemRole })
-            .from(profiles)
-            .where(eq(profiles.id, data.user.id))
-            .limit(1);
-          isAdmin = userRecord?.systemRole === 'admin';
+      let isAdmin = false;
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          const token = authHeader.replace('Bearer ', '').trim();
+          const supabaseAdmin = getSupabaseAdmin();
+          const { data } = await supabaseAdmin.auth.getUser(token);
+          if (data?.user) {
+            const [userRecord] = await db
+              .select({ systemRole: profiles.systemRole })
+              .from(profiles)
+              .where(eq(profiles.id, data.user.id))
+              .limit(1);
+            isAdmin = userRecord?.systemRole === 'admin';
+          }
+        } catch {
+          isAdmin = false;
         }
-      } catch {
-        isAdmin = false;
       }
+
+      // Public applicants cannot assign themselves to any kiosk or take owner role
+      const safeInput = {
+        ...input,
+        kioskId: isAdmin ? input.kioskId : undefined,
+        role: isAdmin ? input.role : 'cashier',
+      };
+
+      const result = await authService.registerStaff(safeInput);
+      return reply.status(201).send({
+        success: true,
+        message: 'تم تسجيل العامل بالكشك بنجاح',
+        data: result,
+      });
     }
-
-    // Public applicants cannot assign themselves to any kiosk or take owner role
-    const safeInput = {
-      ...input,
-      kioskId: isAdmin ? input.kioskId : undefined,
-      role: isAdmin ? input.role : 'cashier',
-    };
-
-    const result = await authService.registerStaff(safeInput);
-    return reply.status(201).send({
-      success: true,
-      message: 'تم تسجيل العامل بالكشك بنجاح',
-      data: result,
-    });
-  });
+  );
 
   // Login
-  app.post('/login', async (request, reply) => {
-    const input = loginSchema.parse(request.body);
-    const result = await authService.login(input);
-    return reply.status(200).send({
-      success: true,
-      data: result,
-    });
-  });
+  app.post(
+    '/login',
+    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const input = loginSchema.parse(request.body);
+      const result = await authService.login(input);
+      return reply.status(200).send({
+        success: true,
+        data: result,
+      });
+    }
+  );
 
   // Refresh Session
   app.post('/refresh', async (request, reply) => {

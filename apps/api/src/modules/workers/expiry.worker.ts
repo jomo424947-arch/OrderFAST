@@ -1,4 +1,5 @@
 import { orderService } from '../orders/order.service.js';
+import { logger } from '../../shared/logger/index.js';
 
 export class ExpiryWorker {
   private timer: NodeJS.Timeout | null = null;
@@ -10,7 +11,7 @@ export class ExpiryWorker {
   start(intervalMs = 20000) {
     if (this.timer) return;
 
-    console.log(`⏱️ Order Expiry Worker started (Interval: ${intervalMs / 1000}s)`);
+    logger.info(`⏱️ Order Expiry Worker started (Interval: ${intervalMs / 1000}s)`);
 
     this.timer = setInterval(async () => {
       if (this.isRunning) return; // Prevent overlapping runs
@@ -19,10 +20,10 @@ export class ExpiryWorker {
       try {
         const expiredCount = await orderService.expirePendingOrders();
         if (expiredCount > 0) {
-          console.log(`⌛ Auto-expired ${expiredCount} timed-out orders`);
+          logger.info(`⌛ Auto-expired ${expiredCount} timed-out orders`);
         }
       } catch (error) {
-        console.error('❌ Error during order expiration scan:', error);
+        logger.error({ err: error }, '❌ Error during order expiration scan');
       } finally {
         this.isRunning = false;
       }
@@ -36,7 +37,7 @@ export class ExpiryWorker {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
-      console.log('🛑 Order Expiry Worker stopped');
+      logger.info('🛑 Order Expiry Worker stopped');
     }
   }
 }

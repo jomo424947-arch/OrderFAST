@@ -81,7 +81,7 @@ export async function catalogRoutes(app: FastifyInstance) {
   // Protected: Update menu item (Staff)
   app.patch<{ Params: { id: string } }>(
     '/menu-items/:id',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, requireSystemRole(['staff', 'admin'])] },
     async (request, reply) => {
       const body = updateMenuItemSchema.parse(request.body);
       const data = await catalogService.updateMenuItem(
@@ -100,7 +100,7 @@ export async function catalogRoutes(app: FastifyInstance) {
   // Protected: Toggle Item Availability (Staff)
   app.patch<{ Params: { id: string } }>(
     '/menu-items/:id/availability',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, requireSystemRole(['staff', 'admin'])] },
     async (request, reply) => {
       const body = toggleItemAvailabilitySchema.parse(request.body);
       const data = await catalogService.toggleItemAvailability(
@@ -121,7 +121,7 @@ export async function catalogRoutes(app: FastifyInstance) {
   // Protected: Soft Delete Menu Item (Staff)
   app.delete<{ Params: { id: string } }>(
     '/menu-items/:id',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, requireSystemRole(['staff', 'admin'])] },
     async (request, reply) => {
       await catalogService.deleteMenuItem(request.params.id, request.user!);
       return reply.status(200).send({

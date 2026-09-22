@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { db } from '../../db/client.js';
 import { notifications, userDeviceTokens } from '../../db/schema.js';
 import { AppError } from '../../shared/errors/index.js';
@@ -42,13 +42,21 @@ export class NotificationService {
   }
 
   /**
-   * Marks all notifications as read for the user
+   * Marks all notifications as read for the user (capped at 1000 to prevent unbounded locks)
    */
   async markAllAsRead(userId: string) {
-    await db
-      .update(notifications)
-      .set({ isRead: true })
-      .where(eq(notifications.userId, userId));
+    const unread = await db
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)))
+      .limit(1000);
+
+    if (unread.length > 0) {
+      await db
+        .update(notifications)
+        .set({ isRead: true })
+        .where(inArray(notifications.id, unread.map((n) => n.id)));
+    }
   }
 
   /**

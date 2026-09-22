@@ -24,6 +24,8 @@ export async function buildApp(): Promise<FastifyInstance> {
     disableRequestLogging: true,
     bodyLimit: 1048576, // 1MB maximum body payload
     connectionTimeout: 30000, // 30s connection timeout
+    requestTimeout: 15000, // 15s request timeout
+    keepAliveTimeout: 30000, // 30s keepalive timeout
   });
 
   // Custom clean, colorized single-line HTTP logger
@@ -55,11 +57,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   // Strict CORS whitelist (security hardening — prevents cross-origin data theft)
+  const isProduction = env.NODE_ENV === 'production';
   const allowedOrigins = [
     'https://www.fast0rder.online',
     'https://fast0rder.online',
     'capacitor://localhost',
-    'http://localhost',
+    ...(!isProduction ? ['http://localhost'] : []),
   ];
   // Add configured CORS_ORIGIN if set and not already included
   if (env.CORS_ORIGIN && !allowedOrigins.includes(env.CORS_ORIGIN)) {
@@ -70,9 +73,9 @@ export async function buildApp(): Promise<FastifyInstance> {
     origin: (origin, cb) => {
       // Allow requests with no origin (mobile apps, server-to-server, curl)
       if (!origin) return cb(null, true);
-      // Allow exact matches or localhost with any port
+      // Allow exact matches or localhost with any port (only in non-production)
       const isAllowed = allowedOrigins.some((allowed) =>
-        origin === allowed || origin.startsWith('http://localhost:')
+        origin === allowed || (!isProduction && origin.startsWith('http://localhost:'))
       );
       cb(null, isAllowed);
     },
