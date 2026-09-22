@@ -314,7 +314,9 @@ export const notifications = pgTable('notifications', {
 
 export const userDeviceTokens = pgTable('user_device_tokens', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
+  guestId: text('guest_id'),
+  browserInfo: text('browser_info'),
   token: text('token').notNull(),
   platform: text('platform').notNull().default('android'),
   isActive: boolean('is_active').notNull().default(true),
@@ -324,6 +326,26 @@ export const userDeviceTokens = pgTable('user_device_tokens', {
 }, (table) => ({
   userTokenIdx: index('idx_user_device_tokens_user_id').on(table.userId),
   tokenUniqueIdx: uniqueIndex('idx_user_device_tokens_token').on(table.token),
+}));
+
+// ==========================================
+// 12c. Marketing Campaigns Table (Push Broadcasts)
+// ==========================================
+
+export const marketingCampaigns = pgTable('marketing_campaigns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  targetType: text('target_type').notNull().default('all'), // 'all' | 'single_user' | 'college' | 'university'
+  targetValue: text('target_value'),
+  actionUrl: text('action_url'),
+  imageUrl: text('image_url'),
+  sentCount: integer('sent_count').notNull().default(0),
+  failedCount: integer('failed_count').notNull().default(0),
+  createdBy: uuid('created_by').references(() => profiles.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  createdAtIdx: index('idx_marketing_campaigns_created_at').on(table.createdAt),
 }));
 
 // ==========================================

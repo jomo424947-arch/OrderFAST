@@ -15,6 +15,7 @@ import { kioskRoutes } from './modules/kiosks/kiosk.routes.js';
 import { catalogRoutes } from './modules/catalog/catalog.routes.js';
 import { orderRoutes } from './modules/orders/order.routes.js';
 import { notificationRoutes } from './modules/notifications/notification.routes.js';
+import { marketingRoutes } from './modules/notifications/marketing.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -220,6 +221,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await app.register(catalogRoutes, { prefix: `${prefix}` });
     await app.register(orderRoutes, { prefix: `${prefix}/orders` });
     await app.register(notificationRoutes, { prefix: `${prefix}/notifications` });
+    await app.register(marketingRoutes, { prefix: `${prefix}/admin/marketing` });
   }
 
   return app;

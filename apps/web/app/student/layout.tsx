@@ -8,6 +8,7 @@ import { RoleGuard } from '@/components/auth/RoleGuard';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useNotificationStore } from '@/stores/useNotificationStore';
+import { StudentMotivationalPrompt } from '@/components/student/StudentMotivationalPrompt';
 
 export default function StudentLayout({
   children,
@@ -39,6 +40,7 @@ export default function StudentLayout({
           <main className="flex-1 p-4 sm:p-6 max-w-5xl w-full mx-auto pb-24 lg:pb-12">
             {children}
           </main>
+          <StudentMotivationalPrompt />
           <StudentBottomNav />
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
   Users,
   LogOut,
   TrendingUp,
+  Megaphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +56,12 @@ export const AdminSidebar: React.FC = () => {
       label: 'الإحصائيات والأرباح',
       icon: TrendingUp,
       isActive: pathname.startsWith('/admin/analytics'),
+    },
+    {
+      href: '/admin/marketing',
+      label: 'الإشعارات التسويقية',
+      icon: Megaphone,
+      isActive: pathname.startsWith('/admin/marketing'),
     },
   ];
 

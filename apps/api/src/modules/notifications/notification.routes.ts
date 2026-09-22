@@ -49,16 +49,37 @@ export async function notificationRoutes(app: FastifyInstance) {
     }
   );
 
-  // Register device for FCM push notifications
-  app.post<{ Body: { token: string; platform?: string } }>(
+  // Register device for FCM push notifications (Authenticated users)
+  app.post<{ Body: { token: string; platform?: string; guestId?: string; browserInfo?: string } }>(
     '/devices',
     { preHandler: [authenticate] },
     async (request, reply) => {
-      const { token, platform } = request.body || {};
+      const { token, platform, guestId, browserInfo } = request.body || {};
       const result = await notificationService.registerDevice(
         request.user!.id,
         token,
-        platform || 'android'
+        platform || 'android',
+        guestId,
+        browserInfo
+      );
+      return reply.status(200).send({
+        success: true,
+        data: result,
+      });
+    }
+  );
+
+  // Register device for guest/unregistered visitors (No auth required)
+  app.post<{ Body: { token: string; platform?: string; guestId?: string; browserInfo?: string } }>(
+    '/devices/guest',
+    async (request, reply) => {
+      const { token, platform, guestId, browserInfo } = request.body || {};
+      const result = await notificationService.registerDevice(
+        null,
+        token,
+        platform || 'android',
+        guestId,
+        browserInfo
       );
       return reply.status(200).send({
         success: true,

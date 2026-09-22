@@ -117,17 +117,23 @@ export function CapacitorPushNotificationHandler() {
             console.log('[Push] Device registered with FCM, token:', token.substring(0, 16) + '...');
             localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
 
-            // Sync with backend if already authenticated
-            if (useAuthStore.getState().isAuthenticated) {
-              try {
-                await apiClient.post('/notifications/devices', {
-                  token,
-                  platform: 'android',
-                });
-                console.log('[Push] Device token registered with backend API.');
-              } catch (apiErr) {
-                console.warn('[Push] Error registering device token with API:', apiErr);
+            // Sync with backend (supports both authenticated users and guests)
+            try {
+              const isAuth = useAuthStore.getState().isAuthenticated;
+              const endpoint = isAuth ? '/notifications/devices' : '/notifications/devices/guest';
+              let guestId = localStorage.getItem('fastorder_guest_id');
+              if (!guestId) {
+                guestId = 'guest_' + Math.random().toString(36).substring(2, 12);
+                localStorage.setItem('fastorder_guest_id', guestId);
               }
+              await apiClient.post(endpoint, {
+                token,
+                platform: 'android',
+                guestId,
+              });
+              console.log('[Push] Device token registered with backend API (isAuth:', isAuth, ').');
+            } catch (apiErr) {
+              console.warn('[Push] Error registering device token with API:', apiErr);
             }
           });
 

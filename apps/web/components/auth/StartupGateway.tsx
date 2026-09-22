@@ -58,10 +58,10 @@ export function StartupGateway({ children }: { children: React.ReactNode }) {
     setShouldRenderLanding(true);
   }, [isClient, isAuthInitialized, isAuthenticated, role, router]);
 
-  // While evaluating or redirecting on native mobile, render a dark #161920 canvas
-  // to ensure 100% zero white flash after the Native Splash screen.
+  // While evaluating or redirecting, render the warm brand canvas
+  // to ensure 100% smooth visual transition.
   if (!isClient || !isAuthInitialized || !shouldRenderLanding) {
-    return <div className="fixed inset-0 bg-[#161920]" />;
+    return <div className="fixed inset-0 bg-canvas" />;
   }
 
   return <>{children}</>;

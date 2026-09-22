@@ -52,9 +52,15 @@ export class NotificationService {
   }
 
   /**
-   * Registers or updates an FCM device token for push notifications
+   * Registers or updates an FCM device token for push notifications (supports both registered users and guests)
    */
-  async registerDevice(userId: string, token: string, platform = 'android') {
+  async registerDevice(
+    userId: string | null | undefined,
+    token: string,
+    platform = 'android',
+    guestId?: string,
+    browserInfo?: string
+  ) {
     if (!token || typeof token !== 'string') {
       throw AppError.badRequest('رمز الجهاز (Device Token) مطلوب');
     }
@@ -70,7 +76,9 @@ export class NotificationService {
       const [updated] = await db
         .update(userDeviceTokens)
         .set({
-          userId,
+          userId: userId || existing.userId,
+          guestId: guestId || existing.guestId,
+          browserInfo: browserInfo || existing.browserInfo,
           platform,
           isActive: true,
           lastUsedAt: new Date(),
@@ -85,7 +93,9 @@ export class NotificationService {
     const [created] = await db
       .insert(userDeviceTokens)
       .values({
-        userId,
+        userId: userId || undefined,
+        guestId,
+        browserInfo,
         token,
         platform,
         isActive: true,
