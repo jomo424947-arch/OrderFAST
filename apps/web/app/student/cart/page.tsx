@@ -13,6 +13,7 @@ import { formatEGP } from '@/lib/formatters';
 import { getServiceFeeEGP } from '@/lib/constants';
 import { compressImage } from '@/lib/utils/imageCompression';
 import { tokenStorage } from '@/lib/api/client';
+import { trackPurchase } from '@/lib/utils/metaPixel';
 import {
   ChevronRight,
   Plus,
@@ -202,6 +203,13 @@ export default function CartPage() {
         transferSenderPhone: paymentMethod === 'digital_wallet' ? senderPhone.trim() : undefined,
         transferAmount: paymentMethod === 'digital_wallet' ? Number(transferredAmount) || totalAmount : undefined,
         transferImageUrl: paymentMethod === 'digital_wallet' ? transferImageUrl || undefined : undefined,
+      });
+
+      trackPurchase({
+        value: totalAmount,
+        currency: 'EGP',
+        orderId: order?.id,
+        numItems: items.reduce((sum, item) => sum + item.quantity, 0),
       });
 
       clearCart();

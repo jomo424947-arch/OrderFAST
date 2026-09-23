@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { CartItem, MenuItem, Kiosk } from '@/types';
 import { playAddToCartSound, playRemoveFromCartSound } from '@/lib/utils/sound';
+import { trackAddToCart } from '@/lib/utils/metaPixel';
 
 interface CartState {
   items: CartItem[];
@@ -38,6 +39,11 @@ export const useCartStore = create<CartState>((set, get) => ({
     }
 
     playAddToCartSound();
+    trackAddToCart({
+      contentName: item.name,
+      value: item.price,
+      currency: 'EGP',
+    });
     set({ items: updatedItems, kiosk });
   },
 
