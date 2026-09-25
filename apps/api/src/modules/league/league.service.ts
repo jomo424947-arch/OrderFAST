@@ -359,7 +359,7 @@ export class LeagueService {
   /**
    * Helper: Get a student's rank in a season
    */
-  private async getStudentRank(seasonId: string, studentId: string, txOrDb: any = db): Promise<number | null> {
+  async getStudentRank(seasonId: string, studentId: string, txOrDb: any = db): Promise<number | null> {
     const [standing] = await txOrDb
       .select({ totalPoints: leagueStandings.totalPoints })
       .from(leagueStandings)
@@ -384,6 +384,117 @@ export class LeagueService {
       );
 
     return rankResult?.rank || 1;
+  }
+
+  /**
+   * Helper: Get or estimate league points for an order
+   */
+  async getOrderLeaguePointsInfo(order: {
+    id: string;
+    studentId: string;
+    total: number;
+    status: string;
+  }) {
+    const season = await this.getActiveSeason();
+    if (!season) {
+      return {
+        earnedPoints: null,
+        potentialPoints: 0,
+        seasonName: null,
+        currentRank: null,
+        totalPoints: 0,
+        dailyCapReached: false,
+        isFirstOrder: false,
+      };
+    }
+
+    // 1. Check if points were already awarded for this order
+    const [pointsLog] = await db
+      .select({ points: leaguePointsLog.points, reason: leaguePointsLog.reason })
+      .from(leaguePointsLog)
+      .where(
+        and(
+          eq(leaguePointsLog.orderId, order.id),
+          eq(leaguePointsLog.studentId, order.studentId),
+          sql`${leaguePointsLog.reason} != 'reversal'`
+        )
+      )
+      .limit(1);
+
+    const earnedPoints = pointsLog ? pointsLog.points : null;
+
+    // 2. Check daily cap
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const [dailyCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(leaguePointsLog)
+      .where(
+        and(
+          eq(leaguePointsLog.studentId, order.studentId),
+          eq(leaguePointsLog.seasonId, season.id),
+          sql`${leaguePointsLog.createdAt} >= ${today.toISOString()}::timestamptz`,
+          sql`${leaguePointsLog.reason} != 'reversal'`
+        )
+      );
+
+    const dailyCapReached =
+      earnedPoints === null && (dailyCount?.count || 0) >= season.maxPointsOrdersPerDay;
+
+    // 3. Check if first order
+    const [completedCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.studentId, order.studentId),
+          eq(orders.status, 'COMPLETED')
+        )
+      );
+
+    const isFirstOrder =
+      order.status === 'COMPLETED'
+        ? (completedCount?.count || 0) <= 1 && pointsLog?.reason === 'first_order'
+        : (completedCount?.count || 0) === 0;
+
+    let potentialPoints = 0;
+    if (earnedPoints !== null) {
+      potentialPoints = earnedPoints;
+    } else if (!dailyCapReached) {
+      if (isFirstOrder) {
+        potentialPoints = season.firstOrderPoints;
+      } else if (order.total < season.tier1MaxPiasters) {
+        potentialPoints = 1;
+      } else if (order.total < season.tier2MaxPiasters) {
+        potentialPoints = 2;
+      } else {
+        potentialPoints = 3;
+      }
+    }
+
+    const rank = await this.getStudentRank(season.id, order.studentId);
+
+    // Get current total points
+    const [standing] = await db
+      .select({ totalPoints: leagueStandings.totalPoints })
+      .from(leagueStandings)
+      .where(
+        and(
+          eq(leagueStandings.studentId, order.studentId),
+          eq(leagueStandings.seasonId, season.id)
+        )
+      )
+      .limit(1);
+
+    return {
+      earnedPoints,
+      potentialPoints,
+      seasonName: season.name,
+      currentRank: rank,
+      totalPoints: standing?.totalPoints || 0,
+      dailyCapReached,
+      isFirstOrder,
+    };
   }
 
   /**

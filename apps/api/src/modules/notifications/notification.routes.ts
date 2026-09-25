@@ -1,8 +1,18 @@
 import { FastifyInstance } from 'fastify';
 import { notificationService } from './notification.service.js';
+import { marketingService } from './marketing.service.js';
 import { authenticate } from '../../shared/middleware/auth.js';
 
 export async function notificationRoutes(app: FastifyInstance) {
+  // Public/Student: Get active in-app motivational / promotional ad configuration
+  app.get('/app-prompt', async (_request, reply) => {
+    const prompt = await marketingService.getAppPrompt();
+    return reply.status(200).send({
+      success: true,
+      data: prompt,
+    });
+  });
+
   // Get all user notifications
   app.get('/', { preHandler: [authenticate] }, async (request, reply) => {
     const query = request.query as { page?: string; limit?: string };

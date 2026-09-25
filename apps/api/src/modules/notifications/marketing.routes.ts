@@ -59,4 +59,26 @@ export async function marketingRoutes(app: FastifyInstance) {
       message: `تم إرسال الإشعار بنجاح إلى ${result.stats.sentCount} جهاز.`,
     });
   });
+
+  // 5. Get In-App Promotional Prompt / Motivational Popup Config (Admin)
+  app.get('/prompt', async (_request, reply) => {
+    const prompt = await marketingService.getAppPrompt();
+    return reply.status(200).send({
+      success: true,
+      data: prompt,
+    });
+  });
+
+  // 6. Update In-App Promotional Prompt / Motivational Popup Config (Admin)
+  const updatePromptHandler = async (request: any, reply: any) => {
+    const updated = await marketingService.updateAppPrompt(request.body);
+    return reply.status(200).send({
+      success: true,
+      data: updated,
+      message: 'تم تحديث إعدادات إعلان التطبيق المنبثق بنجاح.',
+    });
+  };
+
+  app.put('/prompt', updatePromptHandler);
+  app.post('/prompt', updatePromptHandler);
 }

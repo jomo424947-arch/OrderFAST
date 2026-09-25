@@ -12,6 +12,7 @@ export interface ImageUploadDropzoneProps {
   onChange: (url: string) => void;
   onClear?: () => void;
   disabled?: boolean;
+  aspectRatio?: number;
 }
 
 export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
@@ -19,16 +20,18 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
   onChange,
   onClear,
   disabled = false,
+  aspectRatio,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const rawSelectedFileRef = useRef<File | null>(null);
 
   // Crop & Adjust modal state
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
-  const [cropFileName, setCropFileName] = useState<string>('kiosk_cover.jpg');
+  const [cropFileName, setCropFileName] = useState<string>('banner.jpg');
 
   const handleUploadFile = async (file: File) => {
     if (!file) return;
@@ -88,6 +91,7 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
     }
 
     setUploadError(null);
+    rawSelectedFileRef.current = file;
     setCropFileName(file.name);
 
     const reader = new FileReader();
@@ -126,6 +130,17 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
       fileInputRef.current.value = '';
     }
     await handleUploadFile(croppedFile);
+  };
+
+  const handleUseOriginal = async () => {
+    setIsCropModalOpen(false);
+    setCropImageSrc(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    if (rawSelectedFileRef.current) {
+      await handleUploadFile(rawSelectedFileRef.current);
+    }
   };
 
   const handleCropClose = () => {
@@ -168,36 +183,45 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
             fileInputRef.current?.click();
           }
         }}
-        className={`relative h-44 w-full rounded-2xl overflow-hidden border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center p-4 select-none ${
+        className={`relative min-h-[190px] max-h-[300px] w-full rounded-2xl overflow-hidden border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center p-2 select-none ${
           isDragging
             ? 'border-primary bg-primary-soft/40 scale-[1.01]'
             : value
-            ? 'border-line hover:border-primary/60 bg-surface'
+            ? 'border-line hover:border-primary/60 bg-stone-950/70'
             : 'border-line/80 hover:border-primary/70 bg-canvas hover:bg-surface'
         }`}
       >
         {value ? (
           <>
-            {/* Uploaded Image Preview */}
-            <Image
+            {/* Ambient Blurred Backdrop for Full Visibility */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+              <img
+                src={value}
+                alt=""
+                className="w-full h-full object-cover blur-2xl scale-125 opacity-35"
+              />
+              <div className="absolute inset-0 bg-black/30" />
+            </div>
+
+            {/* Foreground Uncropped Image View */}
+            <img
               src={value}
-              alt="معاينة صورة الكشك"
-              fill
-              className="object-cover"
-              unoptimized
+              alt="معاينة الصورة"
+              className="relative z-10 max-h-[280px] max-w-full object-contain rounded-xl drop-shadow-md mx-auto"
             />
-            <div className="absolute inset-0 bg-black/45 hover:bg-black/55 transition-colors flex flex-col items-center justify-center text-white gap-2 opacity-0 hover:opacity-100 duration-200">
+
+            <div className="absolute inset-0 z-20 bg-black/45 hover:bg-black/60 transition-colors flex flex-col items-center justify-center text-white gap-2 opacity-0 hover:opacity-100 duration-200">
               <div className="flex items-center gap-2">
                 <Upload className="w-5 h-5" />
                 <Crop className="w-5 h-5 text-amber-400" />
               </div>
               <span className="text-xs font-body font-bold text-center px-4">
-                انقر لاختيار صورة أخرى وتعديلها أو اسحب ملفاً هنا
+                انقر لاختيار صورة أخرى أو اسحب ملفاً هنا
               </span>
             </div>
           </>
         ) : (
-          <div className="text-center space-y-2 pointer-events-none">
+          <div className="text-center space-y-2 pointer-events-none p-4">
             <div className="w-12 h-12 rounded-2xl bg-surface border border-line flex items-center justify-center mx-auto text-primary-ink shadow-xs">
               {isUploading ? (
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -210,7 +234,7 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
                 اضغط لاختيار صورة من جهازك
               </p>
               <p className="font-body text-[11px] text-ink-soft mt-0.5">
-                أو اسحب وأفلت ملف الصورة هنا (مع إمكانية التكبير والتحريك والقص قبل الرفع)
+                أو اسحب وأفلت ملف الصورة هنا (يدعم البوسترات الرأسية والأفقية بجميع الأبعاد)
               </p>
             </div>
           </div>
@@ -218,7 +242,7 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
 
         {/* Loading Overlay */}
         {isUploading && (
-          <div className="absolute inset-0 bg-surface/90 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-20">
+          <div className="absolute inset-0 bg-surface/90 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-30">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="font-body text-xs font-bold text-ink">
               جاري رفع ومعالجة الصورة إلى السحابة...
@@ -284,9 +308,10 @@ export const ImageUploadDropzone: React.FC<ImageUploadDropzoneProps> = ({
         isOpen={isCropModalOpen}
         imageSrc={cropImageSrc}
         fileName={cropFileName}
-        aspectRatio={16 / 9}
+        aspectRatio={aspectRatio}
         onClose={handleCropClose}
         onConfirm={handleCropConfirm}
+        onUseOriginal={rawSelectedFileRef.current ? handleUseOriginal : undefined}
       />
     </div>
   );

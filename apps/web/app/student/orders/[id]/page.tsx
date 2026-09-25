@@ -11,7 +11,11 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatEGP, formatArabicTime } from '@/lib/formatters';
-import { ChevronRight, Store, CreditCard, Info, RefreshCw, XCircle, PackageCheck, Sparkles, BellRing } from 'lucide-react';
+import { ChevronRight, Store, CreditCard, Info, RefreshCw, XCircle, PackageCheck, Sparkles, BellRing, Trophy } from 'lucide-react';
+import { useLeagueStore } from '@/stores/useLeagueStore';
+import { OrderLeagueEarnedCard } from '@/components/orders/OrderLeagueEarnedCard';
+import { OrderLeagueRewardPreview } from '@/components/orders/OrderLeagueRewardPreview';
+import { getOrderPointsDetails } from '@/lib/leagueHelper';
 
 function playReadyChime() {
   try {
@@ -41,11 +45,18 @@ export default function OrderTrackingPage() {
 
   const { getOrderById, startStudentTrackingPolling, cancelOrder } = useOrderStore();
   const order = getOrderById(orderId);
+  const { currentData, fetchCurrentLeaderboard } = useLeagueStore();
 
   const [isReadyModalOpen, setIsReadyModalOpen] = useState(false);
   const hasTriggeredReadyModalRef = useRef(false);
   const ratingSectionRef = useRef<HTMLDivElement>(null);
   const hasScrolledToRatingRef = useRef(false);
+
+  useEffect(() => {
+    if (!currentData) {
+      fetchCurrentLeaderboard(1, 5);
+    }
+  }, [currentData, fetchCurrentLeaderboard]);
 
   useEffect(() => {
     if (!orderId) return;
@@ -152,6 +163,11 @@ export default function OrderTrackingPage() {
         </div>
       )}
 
+      {/* 2. Gamification League Reward Preview (Image 3: You will get X points upon pickup) */}
+      {!isCompleted && !['REJECTED', 'CANCELLED', 'NO_SHOW', 'EXPIRED'].includes(order.status) && (
+        <OrderLeagueRewardPreview order={order} />
+      )}
+
       {/* Visual Ticket Component matching design reference */}
       <OrderTicket
         orderNumber={order.orderNumber}
@@ -172,6 +188,11 @@ export default function OrderTrackingPage() {
       <div className="bg-surface border border-line/80 rounded-3xl p-5 shadow-warm">
         <OrderTimeline status={order.status} />
       </div>
+
+      {/* Celebratory League Points Earned Card after Pickup (Image 2: Points earned after delivery) */}
+      {isCompleted && (
+        <OrderLeagueEarnedCard order={order} />
+      )}
 
       {/* Kiosk Star Rating Card after Delivery */}
       {isCompleted && (
@@ -269,6 +290,21 @@ export default function OrderTrackingPage() {
               <span>المبلغ المطلوب تحصيله:</span>
               <span className="font-mono text-primary-ink text-sm font-black">{formatEGP(order.total)}</span>
             </div>
+            {(() => {
+              const modalPoints = getOrderPointsDetails(order, currentData?.season, currentData?.studentStats);
+              if (modalPoints.dailyCapReached) return null;
+              return (
+                <div className="flex justify-between items-center text-primary-ink font-bold pt-1.5 border-t border-line/60">
+                  <span className="flex items-center gap-1.5 text-xs text-ink">
+                    <Trophy className="w-3.5 h-3.5 text-primary" />
+                    <span>نقاط الدوري عند الاستلام:</span>
+                  </span>
+                  <span className="font-mono text-primary text-xs font-black font-mono-nums bg-primary-soft px-2 py-0.5 rounded-md">
+                    +{modalPoints.points} {modalPoints.points === 1 ? 'نقطة' : 'نقاط'}
+                  </span>
+                </div>
+              );
+            })()}
             <p className="text-[11px] text-ink-soft pt-1 border-t border-line/60">
               الدفع متاح كاش أو محفظة إلكترونية مباشرة عند شباك الكشك.
             </p>

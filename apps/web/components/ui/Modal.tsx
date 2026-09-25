@@ -43,7 +43,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-ink/40 backdrop-blur-[2px] transition-opacity"
@@ -53,31 +53,47 @@ export const Modal: React.FC<ModalProps> = ({
       {/* Modal Dialog */}
       <div
         className={cn(
-          'relative w-full bg-surface border border-line rounded-3xl p-6 shadow-floating z-10 text-right animate-in fade-in zoom-in-95 duration-200',
+          'relative w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col bg-surface border border-line rounded-3xl shadow-floating z-10 text-right animate-in fade-in zoom-in-95 duration-200 my-auto overflow-hidden',
           maxWidths[maxWidth]
         )}
       >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute left-4 top-4 p-2 text-ink-soft hover:text-ink rounded-full hover:bg-line/40 transition-colors"
-          aria-label="إغلاق"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Modal Header */}
+        {title || description ? (
+          <div className="px-5 sm:px-6 pt-5 pb-3.5 border-b border-line/60 shrink-0 relative pr-12">
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="absolute left-4 top-4 p-2 text-ink-soft hover:text-ink rounded-full hover:bg-line/40 transition-colors cursor-pointer"
+              aria-label="إغلاق"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-        {title && (
-          <h3 className="font-display font-bold text-xl text-ink mb-1 pr-1">
-            {title}
-          </h3>
-        )}
-        {description && (
-          <p className="font-body text-xs text-ink-soft mb-5 pr-1">
-            {description}
-          </p>
+            {title && (
+              <h3 className="font-display font-bold text-lg sm:text-xl text-ink">
+                {title}
+              </h3>
+            )}
+            {description && (
+              <p className="font-body text-xs text-ink-soft mt-1">
+                {description}
+              </p>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={onClose}
+            className="absolute left-4 top-4 p-2 text-ink-soft hover:text-ink rounded-full hover:bg-line/40 transition-colors z-20 cursor-pointer"
+            aria-label="إغلاق"
+          >
+            <X className="w-5 h-5" />
+          </button>
         )}
 
-        <div>{children}</div>
+        {/* Modal Scrollable Body */}
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1 overscroll-contain">
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -67,7 +67,7 @@ export const AdminSidebar: React.FC = () => {
     },
     {
       href: '/admin/marketing',
-      label: 'الإشعارات التسويقية',
+      label: 'التسويق والإعلانات',
       icon: Megaphone,
       isActive: pathname.startsWith('/admin/marketing'),
     },

@@ -135,6 +135,17 @@ export interface Order {
   reviewTimeRemainingSeconds?: number;
   rating?: number | null;
   ratedAt?: string | null;
+  league?: OrderLeagueInfo | null;
+}
+
+export interface OrderLeagueInfo {
+  earnedPoints: number | null;
+  potentialPoints: number;
+  seasonName: string | null;
+  currentRank: number | null;
+  totalPoints?: number;
+  dailyCapReached?: boolean;
+  isFirstOrder?: boolean;
 }
 
 export type NotificationType = 'order_status' | 'kiosk_notice' | 'system' | 'warning';
@@ -219,5 +230,24 @@ export interface AdminAnalyticsResponse {
   kioskBreakdown: AdminKioskAnalytics[];
   paymentBreakdown: AdminPaymentAnalytics[];
   dailyTimeline: AdminDailyAnalytics[];
+}
+
+export type AppPromptLayoutMode = 'smart_fit' | 'full_poster' | 'banner';
+
+export interface AppPromptConfig {
+  id?: string;
+  isEnabled: boolean;
+  mode: 'auto' | 'custom';
+  title: string;
+  message: string;
+  subtext: string;
+  icon: string;
+  imageUrl?: string | null;
+  badgeText?: string | null;
+  layoutMode?: AppPromptLayoutMode;
+  actionText: string;
+  actionUrl: string;
+  durationSeconds: number;
+  frequencyHours: number;
 }
 

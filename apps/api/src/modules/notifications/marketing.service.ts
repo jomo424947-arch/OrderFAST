@@ -6,6 +6,7 @@ import {
   profiles,
   students,
   notifications,
+  appPrompts,
 } from '../../db/schema.js';
 import { pushService } from './push.service.js';
 import { AppError } from '../../shared/errors/index.js';
@@ -352,6 +353,97 @@ export class MarketingService {
         targetUsersCount: targetUserIds.length,
       },
     };
+  }
+
+  /**
+   * Get active In-App promotional prompt / motivational popup configuration
+   */
+  async getAppPrompt() {
+    try {
+      const [prompt] = await db
+        .select()
+        .from(appPrompts)
+        .where(eq(appPrompts.id, 'default'))
+        .limit(1);
+
+      if (prompt) return prompt;
+    } catch (err) {
+      console.warn('[MarketingService] Failed to read appPrompts, returning defaults:', err);
+    }
+
+    return {
+      id: 'default',
+      isEnabled: true,
+      mode: 'auto',
+      title: 'جدد طاقتك الجامعية',
+      message: 'يومك طويل في الكلية؟ اطلب مشروبك المفضل أو سناك خفيف بضغطة واحدة.',
+      subtext: 'استلم بالرقم من الكشك مباشرة وادفع كاش أو بمحفظتك الإلكترونية.',
+      icon: 'zap',
+      imageUrl: null,
+      badgeText: 'عرض خاص',
+      layoutMode: 'smart_fit',
+      actionText: 'تصفح الأكشاك واطلب الآن',
+      actionUrl: '/student/kiosks',
+      durationSeconds: 10,
+      frequencyHours: 4,
+    };
+  }
+
+  /**
+   * Update active In-App promotional prompt / motivational popup configuration
+   */
+  async updateAppPrompt(input: {
+    isEnabled?: boolean;
+    mode?: string;
+    title?: string;
+    message?: string;
+    subtext?: string;
+    icon?: string;
+    imageUrl?: string | null;
+    badgeText?: string | null;
+    layoutMode?: string;
+    actionText?: string;
+    actionUrl?: string;
+    durationSeconds?: number;
+    frequencyHours?: number;
+  }) {
+    const existing = await this.getAppPrompt();
+
+    const updateData = {
+      isEnabled: input.isEnabled !== undefined ? !!input.isEnabled : existing.isEnabled,
+      mode: input.mode || existing.mode || 'auto',
+      title: input.title !== undefined ? input.title.trim() : existing.title,
+      message: input.message !== undefined ? input.message.trim() : existing.message,
+      subtext: input.subtext !== undefined ? input.subtext.trim() : existing.subtext,
+      icon: input.icon || existing.icon || 'zap',
+      imageUrl: input.imageUrl !== undefined ? (input.imageUrl ? input.imageUrl.trim() : null) : existing.imageUrl,
+      badgeText: input.badgeText !== undefined ? (input.badgeText ? input.badgeText.trim() : null) : existing.badgeText,
+      layoutMode: input.layoutMode || (existing as any).layoutMode || 'smart_fit',
+      actionText: input.actionText !== undefined ? input.actionText.trim() : existing.actionText,
+      actionUrl: input.actionUrl !== undefined ? input.actionUrl.trim() : existing.actionUrl,
+      durationSeconds: input.durationSeconds !== undefined ? Math.max(3, Math.min(60, Number(input.durationSeconds))) : existing.durationSeconds,
+      frequencyHours: input.frequencyHours !== undefined ? Math.max(0, Math.min(72, Number(input.frequencyHours))) : existing.frequencyHours,
+      updatedAt: new Date(),
+    };
+
+    try {
+      const [updated] = await db
+        .insert(appPrompts)
+        .values({
+          id: 'default',
+          ...updateData,
+        })
+        .onConflictDoUpdate({
+          target: appPrompts.id,
+          set: updateData,
+        })
+        .returning();
+
+      return updated || updateData;
+    } catch (err) {
+      console.error('[MarketingService] Failed to update appPrompts in DB:', err);
+      return { id: 'default', ...updateData };
+    }
   }
 }
 

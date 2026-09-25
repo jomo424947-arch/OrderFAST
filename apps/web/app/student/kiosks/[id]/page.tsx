@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useKioskStore } from '@/stores/useKioskStore';
 import { useCartStore } from '@/stores/useCartStore';
 import { MenuItemRow } from '@/components/menu/MenuItemRow';
+import { KioskOffersCarousel } from '@/components/menu/KioskOffersCarousel';
 import { FloatingCartBill } from '@/components/menu/FloatingCartBill';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { Button } from '@/components/ui/Button';
@@ -85,7 +86,7 @@ export default function KioskDetailPage() {
   }, [categories, kiosk.id]);
 
   const offerItems = useMemo(() => {
-    return kioskItems.filter((i) => i.originalPrice && i.originalPrice > i.price);
+    return kioskItems.filter((i) => i.isCombo || (i.originalPrice && i.originalPrice > i.price));
   }, [kioskItems]);
 
   // Map category to main section ('food' = فطار وغدا, 'drinks' = مشروبات)
@@ -174,10 +175,11 @@ export default function KioskDetailPage() {
   }, [kioskCategories, activeSection]);
 
   const currentSectionOfferItems = useMemo(() => {
-    return offerItems.filter((i) => {
+    const filtered = offerItems.filter((i) => {
       const cat = kioskCategories.find((c) => c.id === i.categoryId);
       return getCategorySection(cat?.name || '') === activeSection;
     });
+    return filtered.length > 0 ? filtered : offerItems;
   }, [offerItems, kioskCategories, activeSection]);
 
   const handleSelectSection = (section: 'food' | 'drinks') => {
@@ -189,6 +191,14 @@ export default function KioskDetailPage() {
   const totalCartAmount = getSubtotal();
   const serviceFee = getServiceFeeEGP(totalCartAmount);
   const totalWithFees = totalCartAmount + serviceFee;
+
+  const cartQuantityMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const item of cartItems) {
+      map[item.menuItem.id] = item.quantity;
+    }
+    return map;
+  }, [cartItems]);
 
   // If cart has items from another kiosk
   const isDifferentKioskCart = cartKiosk && cartKiosk.id !== kiosk.id && totalCartCount > 0;
@@ -384,53 +394,17 @@ export default function KioskDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Menu Items List */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Special Offers Section if active and has offers */}
-          {currentSectionOfferItems.length > 0 &&
+          {/* Special Offers Carousel if active and has offers */}
+          {offerItems.length > 0 &&
             (activeCategoryFilter === 'offers' || activeCategoryFilter === 'all') && (
-              <div className="bg-gradient-to-br from-amber-500/10 via-surface to-accent-soft/20 border-2 border-accent/40 rounded-3xl p-5 shadow-warm space-y-3 relative overflow-hidden">
-                <div className="absolute -left-6 -top-6 text-accent/5 pointer-events-none select-none">
-                  <Tag className="w-32 h-32 stroke-[1]" />
-                </div>
-
-                <div className="flex items-center justify-between pb-3 border-b border-accent/20 relative z-10">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-2xl bg-accent text-white flex items-center justify-center shadow-xs">
-                      <Tag className="w-4 h-4 stroke-[2.5]" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-display font-black text-base sm:text-lg text-ink">
-                          عروض {activeSection === 'food' ? 'الفطار والغداء' : 'المشروبات'} الحصرية
-                        </h3>
-                        <span className="text-[10px] font-body font-bold bg-danger text-white px-2 py-0.5 rounded-full shadow-xs">
-                          خصومات خاصة
-                        </span>
-                      </div>
-                      <p className="font-body text-[11px] text-ink-soft">
-                        تخفيضات محدودة ومميزة على أصناف مختارة بالكشك
-                      </p>
-                    </div>
-                  </div>
-
-                  <span className="text-xs font-body font-bold text-accent bg-accent-soft px-2.5 py-1 rounded-xl border border-accent/30 font-mono-nums">
-                    {currentSectionOfferItems.length} عروض
-                  </span>
-                </div>
-
-                <div className="divide-y divide-line/60 relative z-10">
-                  {currentSectionOfferItems.map((item) => (
-                    <MenuItemRow
-                      key={`offer-${item.id}`}
-                      item={item}
-                      kioskWaitTime={kiosk.estimatedWaitMins}
-                      cartQuantity={getItemQuantity(item.id)}
-                      disabled={!kiosk.isOpen}
-                      onAdd={(it) => addItem(it, kiosk)}
-                      onUpdateQuantity={(itemId, q) => updateQuantity(itemId, q)}
-                    />
-                  ))}
-                </div>
-              </div>
+              <KioskOffersCarousel
+                offers={offerItems}
+                kiosk={kiosk}
+                cartQuantityMap={cartQuantityMap}
+                onAdd={(it) => addItem(it, kiosk)}
+                onUpdateQuantity={(itemId, q) => updateQuantity(itemId, q)}
+                activeSection={activeSection}
+              />
             )}
 
           {/* Subcategories belonging to active section */}

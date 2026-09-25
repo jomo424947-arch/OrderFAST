@@ -349,6 +349,28 @@ export const marketingCampaigns = pgTable('marketing_campaigns', {
 }));
 
 // ==========================================
+// 12d. In-App Promotional Prompts / Ads
+// ==========================================
+
+export const appPrompts = pgTable('app_prompts', {
+  id: text('id').primaryKey().default('default'),
+  isEnabled: boolean('is_enabled').notNull().default(true),
+  mode: text('mode').notNull().default('auto'), // 'auto' | 'custom'
+  title: text('title').notNull().default('جدد طاقتك الجامعية'),
+  message: text('message').notNull().default('يومك طويل في الكلية؟ اطلب مشروبك المفضل أو سناك خفيف بضغطة واحدة.'),
+  subtext: text('subtext').notNull().default('استلم بالرقم من الكشك مباشرة وادفع كاش أو بمحفظتك الإلكترونية.'),
+  icon: text('icon').notNull().default('zap'),
+  imageUrl: text('image_url'),
+  badgeText: text('badge_text').default('عرض خاص'),
+  layoutMode: text('layout_mode').notNull().default('smart_fit'), // 'full_poster' | 'smart_fit' | 'banner'
+  actionText: text('action_text').notNull().default('تصفح الأكشاك واطلب الآن'),
+  actionUrl: text('action_url').notNull().default('/student/kiosks'),
+  durationSeconds: integer('duration_seconds').notNull().default(10),
+  frequencyHours: integer('frequency_hours').notNull().default(4),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ==========================================
 // 13. League Enums
 // ==========================================
 

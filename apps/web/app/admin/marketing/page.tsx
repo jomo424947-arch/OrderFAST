@@ -24,7 +24,9 @@ import {
   FileText,
   UserCheck,
   Loader2,
+  Zap,
 } from 'lucide-react';
+import { AppPromptManager } from '@/components/admin/AppPromptManager';
 
 function formatRelativeArabic(dateStr: string): string {
   try {
@@ -107,6 +109,17 @@ export default function AdminMarketingPage() {
 
   // Confirmation Modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Marketing Section Tab: 'prompt' (In-App Popup Ads) vs 'push' (Push Campaigns)
+  const [marketingSection, setMarketingSection] = useState<'prompt' | 'push'>('prompt');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('tab');
+      if (p === 'push') setMarketingSection('push');
+      if (p === 'prompt') setMarketingSection('prompt');
+    }
+  }, []);
 
   // Quick Templates
   const templates = [
@@ -299,12 +312,45 @@ export default function AdminMarketingPage() {
           className="border border-line bg-canvas hover:bg-surface text-ink text-xs font-bold gap-1.5 self-start sm:self-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoadingStats ? 'animate-spin' : ''}`} />
-          <span>تحديث الإحصائيات</span>
+          <span>تحديث البيانات</span>
         </Button>
       </div>
 
-      {/* 2. Real-time Audience KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* 2. Marketing Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-line pb-3">
+        <button
+          type="button"
+          onClick={() => setMarketingSection('prompt')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
+            marketingSection === 'prompt'
+              ? 'bg-primary text-primary-ink shadow-warm'
+              : 'bg-surface text-ink-soft hover:text-ink border border-line'
+          }`}
+        >
+          <Zap className="w-4 h-4" />
+          <span>إعلانات التطبيق المنبثقة (In-App Popup)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMarketingSection('push')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all ${
+            marketingSection === 'push'
+              ? 'bg-primary text-primary-ink shadow-warm'
+              : 'bg-surface text-ink-soft hover:text-ink border border-line'
+          }`}
+        >
+          <Megaphone className="w-4 h-4" />
+          <span>حملات إشعارات Push الهاتف</span>
+        </button>
+      </div>
+
+      {marketingSection === 'prompt' ? (
+        <AppPromptManager />
+      ) : (
+        <>
+          {/* 3. Real-time Audience KPIs */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* KPI 1: Android Mobile Apps */}
         <div className="p-4 rounded-2xl bg-surface border border-line shadow-xs">
           <div className="flex items-center justify-between mb-2">
@@ -826,6 +872,8 @@ export default function AdminMarketingPage() {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Confirmation Modal */}
       {showConfirmModal && (

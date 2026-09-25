@@ -501,10 +501,23 @@ export class OrderService {
       liveOrdersAhead = queueCount?.count || 0;
     }
 
+    let league = null;
+    try {
+      league = await leagueService.getOrderLeaguePointsInfo({
+        id: order.id,
+        studentId: order.studentId,
+        total: order.total,
+        status: order.status,
+      });
+    } catch (err) {
+      console.warn('[Order] Failed to load league info:', err);
+    }
+
     return {
       ...order,
       items,
       liveOrdersAhead,
+      league,
     };
   }
 

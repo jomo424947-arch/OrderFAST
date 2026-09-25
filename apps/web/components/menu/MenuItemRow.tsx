@@ -18,7 +18,7 @@ export interface MenuItemRowProps {
 /**
  * Custom vector icon matching FastOrder's speed & cloche brand identity
  */
-const BrandFoodIcon: React.FC<{ item: MenuItem }> = ({ item }) => {
+export const BrandFoodIcon: React.FC<{ item: MenuItem }> = ({ item }) => {
   const name = (item.name || '').toLowerCase();
   const cat = (item.categoryId || '').toLowerCase();
 

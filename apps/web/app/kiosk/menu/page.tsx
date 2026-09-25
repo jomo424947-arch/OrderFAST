@@ -25,7 +25,9 @@ import {
   Layers,
   Percent,
   Minus,
+  ImageIcon,
 } from 'lucide-react';
+import { ImageUploadDropzone } from '@/components/ui/ImageUploadDropzone';
 
 export default function CashierMenuManagementPage() {
   const {
@@ -78,6 +80,7 @@ export default function CashierMenuManagementPage() {
   const [formHasOffer, setFormHasOffer] = useState(false);
   const [formOriginalPrice, setFormOriginalPrice] = useState('');
   const [formOfferTag, setFormOfferTag] = useState('');
+  const [formImageUrl, setFormImageUrl] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -92,6 +95,7 @@ export default function CashierMenuManagementPage() {
   const [comboSellingPrice, setComboSellingPrice] = useState('');
   const [comboOfferTag, setComboOfferTag] = useState('');
   const [comboPrepTime, setComboPrepTime] = useState('8');
+  const [comboImageUrl, setComboImageUrl] = useState<string | null>(null);
 
   const comboOriginalPrice = useMemo(() => {
     return selectedComboItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
@@ -105,6 +109,7 @@ export default function CashierMenuManagementPage() {
     setComboSellingPrice('');
     setComboOfferTag('كومبو توفير');
     setComboPrepTime('8');
+    setComboImageUrl(null);
     setIsComboModalOpen(true);
   };
 
@@ -125,6 +130,7 @@ export default function CashierMenuManagementPage() {
     setComboSellingPrice(item.price.toString());
     setComboOfferTag(item.offerTag || 'كومبو توفير');
     setComboPrepTime(item.preparationTimeMins?.toString() || '8');
+    setComboImageUrl(item.imageUrl || null);
     setIsComboModalOpen(true);
   };
 
@@ -175,6 +181,7 @@ export default function CashierMenuManagementPage() {
           price: sellPrice,
           originalPrice: comboOriginalPrice > sellPrice ? comboOriginalPrice : undefined,
           offerTag: comboOfferTag.trim() || (comboOriginalPrice > sellPrice ? `وفر ${comboOriginalPrice - sellPrice} ج.م` : 'عرض كومبو'),
+          imageUrl: comboImageUrl || undefined,
           isCombo: true,
           comboItems: selectedComboItems.map((it) => ({
             itemId: it.itemId,
@@ -192,6 +199,7 @@ export default function CashierMenuManagementPage() {
           price: sellPrice,
           originalPrice: comboOriginalPrice > sellPrice ? comboOriginalPrice : undefined,
           offerTag: comboOfferTag.trim() || (comboOriginalPrice > sellPrice ? `وفر ${comboOriginalPrice - sellPrice} ج.م` : 'عرض كومبو'),
+          imageUrl: comboImageUrl || undefined,
           isCombo: true,
           comboItems: selectedComboItems.map((it) => ({
             itemId: it.itemId,
@@ -227,6 +235,7 @@ export default function CashierMenuManagementPage() {
     setFormHasOffer(false);
     setFormOriginalPrice('');
     setFormOfferTag('');
+    setFormImageUrl(null);
     setIsModalOpen(true);
   };
 
@@ -242,6 +251,7 @@ export default function CashierMenuManagementPage() {
     setFormHasOffer(hasOffer);
     setFormOriginalPrice(item.originalPrice ? item.originalPrice.toString() : '');
     setFormOfferTag(item.offerTag || '');
+    setFormImageUrl(item.imageUrl || null);
     setIsModalOpen(true);
   };
 
@@ -294,6 +304,7 @@ export default function CashierMenuManagementPage() {
           price: currentPrice,
           originalPrice: validOrigPrice,
           offerTag: finalOfferTag,
+          imageUrl: formImageUrl || undefined,
           preparationTimeMins: Number(formPrepTime) || 5,
         });
         setToastMessage('تم تحديث بيانات الصنف بنجاح');
@@ -305,11 +316,12 @@ export default function CashierMenuManagementPage() {
           price: currentPrice,
           originalPrice: validOrigPrice,
           offerTag: finalOfferTag,
+          imageUrl: formImageUrl || undefined,
           preparationTimeMins: Number(formPrepTime) || 5,
           isAvailable: true,
-          isUnderReview: true,
+          isUnderReview: false,
         });
-        setToastMessage('تمت إضافة الصنف وإرساله للمراجعة بنجاح');
+        setToastMessage('تمت إضافة الصنف بنجاح');
       }
 
       await fetchMenu(currentKiosk.id, true);
@@ -391,8 +403,14 @@ export default function CashierMenuManagementPage() {
                   >
                     {/* Item Info */}
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-canvas border border-line flex items-center justify-center text-ink-soft flex-shrink-0">
-                        {item.isCombo ? (
+                      <div className="w-10 h-10 rounded-xl bg-canvas border border-line flex items-center justify-center text-ink-soft flex-shrink-0 overflow-hidden">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : item.isCombo ? (
                           <Package className="w-4 h-4 stroke-[1.8] text-accent" />
                         ) : item.categoryId.includes('drink') ? (
                           <Coffee className="w-4 h-4 stroke-[1.5]" />
@@ -514,6 +532,7 @@ export default function CashierMenuManagementPage() {
         onClose={() => setIsModalOpen(false)}
         title={editingItem ? 'تعديل بيانات الصنف' : 'إضافة صنف جديد للمنيو'}
         description="سيتم إرسال الأصناف الجديدة للمراجعة وتفعيلها مباشرة على التطبيق."
+        maxWidth="lg"
       >
         <form onSubmit={handleSaveItem} className="space-y-4 text-right">
           <Input
@@ -523,6 +542,19 @@ export default function CashierMenuManagementPage() {
             placeholder="مثال: شاي بالنعناع أو سندوتش رومي"
             required
           />
+
+          {/* Item Image Upload */}
+          <div>
+            <label className="block font-body text-xs font-medium text-ink-soft mb-1.5">
+              صورة الصنف (اختياري - تجعل الصنف جذاباً للطلب)
+            </label>
+            <ImageUploadDropzone
+              value={formImageUrl || ''}
+              onChange={(url) => setFormImageUrl(url)}
+              onClear={() => setFormImageUrl(null)}
+              aspectRatio={16 / 9}
+            />
+          </div>
 
           {/* Category Selector / Creator */}
           <div className="w-full text-right space-y-2">
@@ -704,6 +736,7 @@ export default function CashierMenuManagementPage() {
         onClose={() => setIsComboModalOpen(false)}
         title={editingCombo ? 'تعديل عرض الكومبو' : 'إنشاء عرض / باقة كومبو جديدة'}
         description="اختر الأصناف المشمولة في العرض والكميات وحدد سعر البيع المخفض."
+        maxWidth="lg"
       >
         <form onSubmit={handleSaveCombo} className="space-y-4 text-right">
           {/* Combo Name */}
@@ -714,6 +747,19 @@ export default function CashierMenuManagementPage() {
             placeholder="مثال: عرض الصحاب (2 بطاطس + كانز) أو كومبو التوفير"
             required
           />
+
+          {/* Combo Image Upload */}
+          <div>
+            <label className="block font-body text-xs font-bold text-ink mb-1.5">
+              صورة العرض / الباقة (اختياري - تجعل العرض بارزاً في السلايدر للطلاب)
+            </label>
+            <ImageUploadDropzone
+              value={comboImageUrl || ''}
+              onChange={(url) => setComboImageUrl(url)}
+              onClear={() => setComboImageUrl(null)}
+              aspectRatio={16 / 9}
+            />
+          </div>
 
           {/* Category */}
           {categories.length > 0 && (

@@ -56,6 +56,15 @@ export interface ApiOrderRaw {
   noShowAt?: string | null;
   rating?: number | null;
   ratedAt?: string | null;
+  league?: {
+    earnedPoints?: number | null;
+    potentialPoints?: number;
+    seasonName?: string | null;
+    currentRank?: number | null;
+    totalPoints?: number;
+    dailyCapReached?: boolean;
+    isFirstOrder?: boolean;
+  } | null;
   createdAt: string;
   updatedAt?: string;
   items?: ApiOrderItemRaw[];
@@ -122,5 +131,16 @@ export function adaptOrderFromApi(raw: ApiOrderRaw): Order {
     reviewTimeRemainingSeconds,
     rating: raw.rating ?? null,
     ratedAt: raw.ratedAt || undefined,
+    league: raw.league
+      ? {
+          earnedPoints: raw.league.earnedPoints ?? null,
+          potentialPoints: raw.league.potentialPoints ?? 0,
+          seasonName: raw.league.seasonName ?? null,
+          currentRank: raw.league.currentRank ?? null,
+          totalPoints: raw.league.totalPoints ?? 0,
+          dailyCapReached: !!raw.league.dailyCapReached,
+          isFirstOrder: !!raw.league.isFirstOrder,
+        }
+      : null,
   };
 }

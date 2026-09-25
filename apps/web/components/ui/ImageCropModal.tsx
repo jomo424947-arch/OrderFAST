@@ -20,32 +20,63 @@ export interface ImageCropModalProps {
   isOpen: boolean;
   imageSrc: string | null;
   fileName?: string;
-  aspectRatio?: number; // width / height, default 16 / 9
+  aspectRatio?: number; // default width / height, or undefined
   onClose: () => void;
   onConfirm: (blob: Blob, file: File) => void;
+  onUseOriginal?: () => void;
 }
 
 export const ImageCropModal: React.FC<ImageCropModalProps> = ({
   isOpen,
   imageSrc,
-  fileName = 'kiosk_cover.jpg',
-  aspectRatio = 16 / 9,
+  fileName = 'banner.jpg',
+  aspectRatio: initialRatio,
   onClose,
   onConfirm,
+  onUseOriginal,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const loadedImageRef = useRef<HTMLImageElement | null>(null);
+
+  // Available aspect ratios
+  const [selectedRatioType, setSelectedRatioType] = useState<
+    'story' | 'portrait' | 'landscape' | 'square' | 'original'
+  >('story');
 
   const [zoom, setZoom] = useState<number>(1.0);
   const [offset, setOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [naturalDimensions, setNaturalDimensions] = useState<{ width: number; height: number }>({
+    width: 800,
+    height: 450,
+  });
 
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const lastOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const baseScaleRef = useRef<number>(1);
+
+  // Calculate active ratio number
+  const currentRatio = React.useMemo(() => {
+    switch (selectedRatioType) {
+      case 'story':
+        return 9 / 16;
+      case 'portrait':
+        return 3 / 4;
+      case 'landscape':
+        return 16 / 9;
+      case 'square':
+        return 1 / 1;
+      case 'original':
+      default:
+        if (naturalDimensions.height > 0) {
+          return naturalDimensions.width / naturalDimensions.height;
+        }
+        return 9 / 16;
+    }
+  }, [selectedRatioType, naturalDimensions]);
 
   // Reset state when a new image source is supplied or modal opens
   useEffect(() => {
@@ -62,9 +93,27 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
     img.onload = () => {
       loadedImageRef.current = img;
+      setNaturalDimensions({ width: img.naturalWidth, height: img.naturalHeight });
       setIsImageLoaded(true);
       setZoom(1.0);
       setOffset({ x: 0, y: 0 });
+
+      // Automatically pick optimal aspect ratio based on natural image orientation
+      if (initialRatio) {
+        if (Math.abs(initialRatio - 9 / 16) < 0.05) setSelectedRatioType('story');
+        else if (Math.abs(initialRatio - 3 / 4) < 0.05) setSelectedRatioType('portrait');
+        else if (Math.abs(initialRatio - 1) < 0.05) setSelectedRatioType('square');
+        else setSelectedRatioType('landscape');
+      } else {
+        // Auto detect: if vertical flyer, pick story / original
+        if (img.naturalHeight > img.naturalWidth * 1.3) {
+          setSelectedRatioType('story');
+        } else if (img.naturalHeight > img.naturalWidth) {
+          setSelectedRatioType('portrait');
+        } else {
+          setSelectedRatioType('landscape');
+        }
+      }
     };
 
     img.onerror = () => {
@@ -76,9 +125,9 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
       img.onload = null;
       img.onerror = null;
     };
-  }, [isOpen, imageSrc]);
+  }, [isOpen, imageSrc, initialRatio]);
 
-  // Redraw canvas whenever zoom, offset, or image changes
+  // Redraw canvas whenever zoom, offset, or ratio changes
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     const img = loadedImageRef.current;
@@ -87,6 +136,22 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Set canvas internal resolution based on ratio
+    let canvasW = 800;
+    let canvasH = 450;
+    if (currentRatio < 1) {
+      canvasH = 800;
+      canvasW = Math.round(800 * currentRatio);
+    } else {
+      canvasW = 800;
+      canvasH = Math.round(800 / currentRatio);
+    }
+
+    if (canvas.width !== canvasW || canvas.height !== canvasH) {
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+    }
+
     const w = canvas.width;
     const h = canvas.height;
 
@@ -94,7 +159,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     ctx.clearRect(0, 0, w, h);
 
     // Background fill (dark slate)
-    ctx.fillStyle = '#1c1917';
+    ctx.fillStyle = '#18181b';
     ctx.fillRect(0, 0, w, h);
 
     // Calculate base scale to fill the crop area (cover fit)
@@ -144,7 +209,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     ctx.lineWidth = 2;
     ctx.strokeRect(1, 1, w - 2, h - 2);
     ctx.restore();
-  }, [isImageLoaded, zoom, offset]);
+  }, [isImageLoaded, zoom, offset, currentRatio]);
 
   useEffect(() => {
     draw();
@@ -216,8 +281,12 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     try {
       setIsProcessing(true);
 
-      const exportWidth = 1200;
-      const exportHeight = Math.round(1200 / aspectRatio); // 675 for 16:9
+      let exportWidth = 1200;
+      let exportHeight = Math.round(1200 / currentRatio);
+      if (currentRatio < 1) {
+        exportHeight = 1280;
+        exportWidth = Math.round(1280 * currentRatio);
+      }
 
       const exportCanvas = document.createElement('canvas');
       exportCanvas.width = exportWidth;
@@ -229,7 +298,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
       const scaleFactor = exportWidth / canvas.width;
 
       // Dark background fill
-      exportCtx.fillStyle = '#1c1917';
+      exportCtx.fillStyle = '#18181b';
       exportCtx.fillRect(0, 0, exportWidth, exportHeight);
 
       // Render transformed image
@@ -278,13 +347,13 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
       dir="rtl"
       role="dialog"
       aria-modal="true"
       aria-labelledby="crop-modal-title"
     >
-      <div className="bg-surface border border-line rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-surface border border-line rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden flex flex-col max-h-[94vh]">
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-line flex items-center justify-between text-right">
           <div className="flex items-center gap-2.5">
@@ -293,10 +362,10 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             </div>
             <div>
               <h3 id="crop-modal-title" className="font-display font-bold text-base sm:text-lg text-ink">
-                تعديل وضبط صورة غلاف الكشك
+                تعديل وضبط كادر الصورة
               </h3>
               <p className="font-body text-xs text-ink-soft">
-                اسحب الصورة للتحريك أو استخدم خيارات التكبير والتصغير للحصول على الكادر المثالي
+                اختر أبعاد الكادر المناسبة للبوستر أو ارفع الصورة كاملة كما هي
               </p>
             </div>
           </div>
@@ -313,21 +382,104 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
         {/* Modal Body / Canvas Viewport */}
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
+          {/* Aspect Ratio Selector Pills */}
+          <div>
+            <label className="block text-xs font-bold text-ink mb-1.5">
+              نسبة أبعاد الكادر (اختر بحسب نوع الصورة):
+            </label>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRatioType('story');
+                  handleReset();
+                }}
+                className={`px-2 py-1.5 rounded-xl border text-[11px] font-bold transition-all ${
+                  selectedRatioType === 'story'
+                    ? 'bg-primary text-primary-ink border-primary shadow-xs'
+                    : 'bg-canvas text-ink-soft hover:text-ink border-line'
+                }`}
+              >
+                ستوري (9:16)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRatioType('portrait');
+                  handleReset();
+                }}
+                className={`px-2 py-1.5 rounded-xl border text-[11px] font-bold transition-all ${
+                  selectedRatioType === 'portrait'
+                    ? 'bg-primary text-primary-ink border-primary shadow-xs'
+                    : 'bg-canvas text-ink-soft hover:text-ink border-line'
+                }`}
+              >
+                عمودي (3:4)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRatioType('landscape');
+                  handleReset();
+                }}
+                className={`px-2 py-1.5 rounded-xl border text-[11px] font-bold transition-all ${
+                  selectedRatioType === 'landscape'
+                    ? 'bg-primary text-primary-ink border-primary shadow-xs'
+                    : 'bg-canvas text-ink-soft hover:text-ink border-line'
+                }`}
+              >
+                بانر (16:9)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRatioType('square');
+                  handleReset();
+                }}
+                className={`px-2 py-1.5 rounded-xl border text-[11px] font-bold transition-all ${
+                  selectedRatioType === 'square'
+                    ? 'bg-primary text-primary-ink border-primary shadow-xs'
+                    : 'bg-canvas text-ink-soft hover:text-ink border-line'
+                }`}
+              >
+                مربع (1:1)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRatioType('original');
+                  handleReset();
+                }}
+                className={`px-2 py-1.5 rounded-xl border text-[11px] font-bold transition-all ${
+                  selectedRatioType === 'original'
+                    ? 'bg-primary text-primary-ink border-primary shadow-xs'
+                    : 'bg-canvas text-ink-soft hover:text-ink border-line'
+                }`}
+              >
+                حجم أصلي
+              </button>
+            </div>
+          </div>
+
           {/* Canvas Viewport Container */}
           <div
             ref={containerRef}
-            className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden bg-stone-900 border border-stone-700 shadow-inner flex items-center justify-center select-none"
+            className={`relative w-full rounded-2xl overflow-hidden bg-stone-950 border border-stone-800 shadow-inner flex items-center justify-center select-none ${
+              currentRatio < 0.75 ? 'h-[360px]' : currentRatio < 1 ? 'h-[320px]' : 'h-[250px]'
+            }`}
           >
             <canvas
               ref={canvasRef}
-              width={800}
-              height={450}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}
               onWheel={handleWheel}
-              className={`w-full h-full object-contain ${
+              className={`max-w-full max-h-full object-contain ${
                 isDragging ? 'cursor-grabbing' : 'cursor-grab'
               }`}
               style={{ touchAction: 'none' }}
@@ -335,14 +487,22 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             />
 
             {/* Hint overlay badge */}
-            <div className="absolute top-2.5 right-2.5 pointer-events-none bg-black/65 backdrop-blur-xs text-white/90 px-2.5 py-1 rounded-full text-[11px] font-body flex items-center gap-1.5 shadow-xs">
+            <div className="absolute top-2.5 right-2.5 pointer-events-none bg-black/70 backdrop-blur-xs text-white px-2.5 py-1 rounded-full text-[11px] font-body flex items-center gap-1.5 shadow-xs">
               <Move className="w-3 h-3 text-amber-400" />
               <span>اسحب للتحريك</span>
             </div>
 
             {/* Ratio badge */}
-            <div className="absolute bottom-2.5 right-2.5 pointer-events-none bg-black/65 backdrop-blur-xs text-white/80 px-2 py-0.5 rounded-md text-[10px] font-mono">
-              16:9
+            <div className="absolute bottom-2.5 right-2.5 pointer-events-none bg-black/70 backdrop-blur-xs text-white/90 px-2 py-0.5 rounded-md text-[10px] font-mono">
+              {selectedRatioType === 'story'
+                ? '9:16 ستوري'
+                : selectedRatioType === 'portrait'
+                ? '3:4 عمودي'
+                : selectedRatioType === 'landscape'
+                ? '16:9 بانر'
+                : selectedRatioType === 'square'
+                ? '1:1 مربع'
+                : 'أصلي'}
             </div>
           </div>
 
@@ -450,7 +610,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
         </div>
 
         {/* Modal Footer / Actions */}
-        <div className="p-4 sm:p-5 border-t border-line bg-canvas/60 flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 border-t border-line bg-canvas/60 flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}
@@ -460,17 +620,32 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
             إلغاء
           </button>
 
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={isProcessing || !isImageLoaded}
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-primary-ink font-body font-bold text-xs sm:text-sm shadow-warm transition-all disabled:opacity-50 active:scale-95"
-          >
-            <Check className="w-4 h-4" />
-            <span>{isProcessing ? 'جاري معالجة وقص الصورة...' : 'تأكيد وقص الصورة'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onUseOriginal && (
+              <button
+                type="button"
+                onClick={onUseOriginal}
+                disabled={isProcessing}
+                className="px-4 py-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 text-xs font-body font-bold transition-colors border border-amber-500/30"
+                title="استخدام الصورة بحجمها الأصلي وأبعادها بالكامل دون اقتطاع"
+              >
+                استخدام الصورة كاملة بدون قص
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleConfirm}
+              disabled={isProcessing || !isImageLoaded}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-primary-ink font-body font-bold text-xs sm:text-sm shadow-warm transition-all disabled:opacity-50 active:scale-95"
+            >
+              <Check className="w-4 h-4" />
+              <span>{isProcessing ? 'جاري المعالجة...' : 'تأكيد وحفظ الكادر'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
