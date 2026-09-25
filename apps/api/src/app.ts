@@ -16,6 +16,7 @@ import { catalogRoutes } from './modules/catalog/catalog.routes.js';
 import { orderRoutes } from './modules/orders/order.routes.js';
 import { notificationRoutes } from './modules/notifications/notification.routes.js';
 import { marketingRoutes } from './modules/notifications/marketing.routes.js';
+import { leagueRoutes } from './modules/league/league.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -225,6 +226,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await app.register(orderRoutes, { prefix: `${prefix}/orders` });
     await app.register(notificationRoutes, { prefix: `${prefix}/notifications` });
     await app.register(marketingRoutes, { prefix: `${prefix}/admin/marketing` });
+    await app.register(leagueRoutes, { prefix: `${prefix}/league` });
   }
 
   return app;

@@ -16,6 +16,7 @@ import { AppError } from '../../shared/errors/index.js';
 import { generateId } from '../../shared/id/index.js';
 import { cacheService } from '../../shared/cache/index.js';
 import { pushService } from '../notifications/push.service.js';
+import { leagueService } from '../league/league.service.js';
 import type {
   CreateOrderInput,
   AcceptOrderInput,
@@ -1004,6 +1005,22 @@ export class OrderService {
         url: `/orders/${orderId}`,
         type: 'order_completed',
       });
+
+      // Award league points (inside the same transaction)
+      try {
+        await leagueService.awardLeaguePoints(
+          {
+            id: updatedOrder.id,
+            studentId: updatedOrder.studentId,
+            total: updatedOrder.total,
+            completedAt: updatedOrder.completedAt,
+          },
+          tx
+        );
+      } catch (err) {
+        // League points are non-critical — log but don't fail the order
+        console.warn('[League] Failed to award points:', err);
+      }
 
       return updatedOrder;
     });

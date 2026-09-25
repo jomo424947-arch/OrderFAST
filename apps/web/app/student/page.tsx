@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { KioskCardSkeleton } from '@/components/ui/LoadingSkeleton';
 import { formatEGP } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { LeagueWidget } from '@/components/league/LeagueWidget';
 import {
   Clock,
   ArrowLeft,
@@ -165,6 +166,9 @@ export default function StudentDashboardPage() {
           </Link>
         </div>
       )}
+
+      {/* League Points Widget */}
+      <LeagueWidget />
 
       {/* 2. Hero Promotional Banner - Tight Cropped, Bold & Large */}
       <Link

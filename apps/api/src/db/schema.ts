@@ -349,7 +349,89 @@ export const marketingCampaigns = pgTable('marketing_campaigns', {
 }));
 
 // ==========================================
-// 13. Drizzle Relations Mapping
+// 13. League Enums
+// ==========================================
+
+export const leagueSeasonStatusEnum = pgEnum('league_season_status_enum', ['upcoming', 'active', 'ended']);
+export const leaguePointReasonEnum = pgEnum('league_point_reason_enum', ['tier_1', 'tier_2', 'tier_3', 'first_order', 'reversal']);
+
+// ==========================================
+// 14. League Seasons Table
+// ==========================================
+
+export const leagueSeasons = pgTable('league_seasons', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+  endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  status: leagueSeasonStatusEnum('status').notNull().default('upcoming'),
+  // Configurable point tier thresholds (in piasters)
+  tier1MaxPiasters: integer('tier1_max_piasters').notNull().default(10000),   // < 100 EGP → 1 point
+  tier2MaxPiasters: integer('tier2_max_piasters').notNull().default(20000),   // 100-199 EGP → 2 points
+  // >= tier2MaxPiasters → 3 points
+  firstOrderPoints: integer('first_order_points').notNull().default(5),
+  minOrdersForPrize: integer('min_orders_for_prize').notNull().default(5),
+  maxPointsOrdersPerDay: integer('max_points_orders_per_day').notNull().default(3),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  statusIdx: index('idx_league_seasons_status').on(table.status),
+  endsAtIdx: index('idx_league_seasons_ends_at').on(table.endsAt),
+}));
+
+// ==========================================
+// 15. League Points Log Table (Auditable)
+// ==========================================
+
+export const leaguePointsLog = pgTable('league_points_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  studentId: uuid('student_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  seasonId: uuid('season_id').notNull().references(() => leagueSeasons.id, { onDelete: 'cascade' }),
+  points: integer('points').notNull(),
+  reason: leaguePointReasonEnum('reason').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  studentSeasonIdx: index('idx_league_points_student_season').on(table.studentId, table.seasonId),
+  orderIdx: index('idx_league_points_order').on(table.orderId),
+  seasonIdx: index('idx_league_points_season').on(table.seasonId),
+}));
+
+// ==========================================
+// 16. League Standings Table (Incrementally Maintained)
+// ==========================================
+
+export const leagueStandings = pgTable('league_standings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  studentId: uuid('student_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  seasonId: uuid('season_id').notNull().references(() => leagueSeasons.id, { onDelete: 'cascade' }),
+  totalPoints: integer('total_points').notNull().default(0),
+  ordersCount: integer('orders_count').notNull().default(0),
+  lastPointAt: timestamp('last_point_at', { withTimezone: true }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  studentSeasonUnique: uniqueIndex('idx_league_standings_student_season').on(table.studentId, table.seasonId),
+  seasonRankIdx: index('idx_league_standings_season_rank').on(table.seasonId, table.totalPoints),
+}));
+
+// ==========================================
+// 17. League Prizes Table
+// ==========================================
+
+export const leaguePrizes = pgTable('league_prizes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  seasonId: uuid('season_id').notNull().references(() => leagueSeasons.id, { onDelete: 'cascade' }),
+  rank: integer('rank').notNull(),
+  description: text('description').notNull(),
+  sponsorKioskId: uuid('sponsor_kiosk_id').references(() => kiosks.id, { onDelete: 'set null' }),
+  claimedBy: uuid('claimed_by').references(() => profiles.id, { onDelete: 'set null' }),
+  claimedAt: timestamp('claimed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  seasonRankIdx: index('idx_league_prizes_season_rank').on(table.seasonId, table.rank),
+}));
+
+// ==========================================
+// 18. Drizzle Relations Mapping
 // ==========================================
 
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
@@ -361,6 +443,8 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   orders: many(orders),
   notifications: many(notifications),
   deviceTokens: many(userDeviceTokens),
+  leaguePointsLog: many(leaguePointsLog),
+  leagueStandings: many(leagueStandings),
 }));
 
 export const userDeviceTokensRelations = relations(userDeviceTokens, ({ one }) => ({
@@ -419,3 +503,55 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     references: [menuItems.id],
   }),
 }));
+
+// ==========================================
+// League Relations
+// ==========================================
+
+export const leagueSeasonsRelations = relations(leagueSeasons, ({ many }) => ({
+  pointsLog: many(leaguePointsLog),
+  standings: many(leagueStandings),
+  prizes: many(leaguePrizes),
+}));
+
+export const leaguePointsLogRelations = relations(leaguePointsLog, ({ one }) => ({
+  student: one(profiles, {
+    fields: [leaguePointsLog.studentId],
+    references: [profiles.id],
+  }),
+  order: one(orders, {
+    fields: [leaguePointsLog.orderId],
+    references: [orders.id],
+  }),
+  season: one(leagueSeasons, {
+    fields: [leaguePointsLog.seasonId],
+    references: [leagueSeasons.id],
+  }),
+}));
+
+export const leagueStandingsRelations = relations(leagueStandings, ({ one }) => ({
+  student: one(profiles, {
+    fields: [leagueStandings.studentId],
+    references: [profiles.id],
+  }),
+  season: one(leagueSeasons, {
+    fields: [leagueStandings.seasonId],
+    references: [leagueSeasons.id],
+  }),
+}));
+
+export const leaguePrizesRelations = relations(leaguePrizes, ({ one }) => ({
+  season: one(leagueSeasons, {
+    fields: [leaguePrizes.seasonId],
+    references: [leagueSeasons.id],
+  }),
+  sponsorKiosk: one(kiosks, {
+    fields: [leaguePrizes.sponsorKioskId],
+    references: [kiosks.id],
+  }),
+  winner: one(profiles, {
+    fields: [leaguePrizes.claimedBy],
+    references: [profiles.id],
+  }),
+}));
+

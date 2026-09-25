@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Megaphone,
   UserCheck,
+  Trophy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -69,6 +70,12 @@ export const AdminSidebar: React.FC = () => {
       label: 'الإشعارات التسويقية',
       icon: Megaphone,
       isActive: pathname.startsWith('/admin/marketing'),
+    },
+    {
+      href: '/admin/league',
+      label: 'FastOrder League والجوائز',
+      icon: Trophy,
+      isActive: pathname.startsWith('/admin/league'),
     },
   ];
 

@@ -16,6 +16,7 @@ import {
   Bell,
   User,
   LogOut,
+  Trophy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -71,6 +72,12 @@ export const StudentSidebar: React.FC = () => {
       icon: Bell,
       count: unreadNotificationsCount,
       isActive: pathname === '/student/notifications',
+    },
+    {
+      href: '/student/league',
+      label: 'FastOrder League',
+      icon: Trophy,
+      isActive: pathname.startsWith('/student/league'),
     },
     {
       href: '/student/profile',
