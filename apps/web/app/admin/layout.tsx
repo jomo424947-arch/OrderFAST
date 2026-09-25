@@ -7,7 +7,7 @@ import { AdminSidebar } from '@/components/layout/AdminSidebar';
 import { AdminHeader } from '@/components/layout/AdminHeader';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { useKioskStore } from '@/stores/useKioskStore';
-import { LayoutDashboard, Store, ClipboardCheck, Users, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Store, ClipboardCheck, Users, Megaphone, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function AdminLayout({
@@ -22,9 +22,9 @@ export default function AdminLayout({
   const mobileTabs = [
     { href: '/admin', label: 'الرئيسية', icon: LayoutDashboard },
     { href: '/admin/kiosks', label: 'الأكشاك', icon: Store },
+    { href: '/admin/testers', label: 'المختبرين', icon: UserCheck },
     { href: '/admin/menu-review', label: 'المراجعة', icon: ClipboardCheck, count: underReviewCount },
     { href: '/admin/students', label: 'الطلاب', icon: Users },
-    { href: '/admin/marketing', label: 'التسويق', icon: Megaphone },
   ];
 
   return (

@@ -14,6 +14,7 @@ import {
   LogOut,
   TrendingUp,
   Megaphone,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +51,12 @@ export const AdminSidebar: React.FC = () => {
       label: 'حسابات الطلاب',
       icon: Users,
       isActive: pathname.startsWith('/admin/students'),
+    },
+    {
+      href: '/admin/testers',
+      label: 'متابعة المختبرين (14 يوم)',
+      icon: UserCheck,
+      isActive: pathname.startsWith('/admin/testers'),
     },
     {
       href: '/admin/analytics',
