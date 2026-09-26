@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { formatEGP } from '@/lib/formatters';
 import { getServiceFeeEGP } from '@/lib/constants';
 import { compressImage } from '@/lib/utils/imageCompression';
-import { tokenStorage } from '@/lib/api/client';
+import { apiClient, tokenStorage } from '@/lib/api/client';
 import { trackPurchase } from '@/lib/utils/metaPixel';
 import { OtpVerificationModal } from '@/components/auth/OtpVerificationModal';
 import {
@@ -47,7 +47,7 @@ const QUICK_NOTES = [
 
 export default function CartPage() {
   const router = useRouter();
-  const { student, studentStatus, updateStudentPhone } = useAuthStore();
+  const { student, studentStatus, updateStudentPhone, isAuthenticated } = useAuthStore();
   const { items, kiosk, updateQuantity, removeItem, clearCart, getSubtotal } = useCartStore();
   const { placeOrder } = useOrderStore();
 
@@ -81,6 +81,20 @@ export default function CartPage() {
   // OTP Verification State
   const [showOtpModal, setShowOtpModal] = useState(false);
   const isPhoneVerified = student?.phoneVerified === true;
+
+  // Sync real-time phone verification status from backend on mount
+  useEffect(() => {
+    if (isAuthenticated && !isPhoneVerified) {
+      apiClient
+        .get<{ phone: string; phoneVerified: boolean }>('/auth/phone-status')
+        .then((res: any) => {
+          if (res?.phoneVerified) {
+            updateStudentPhone(res.phone || student?.phone || '', true);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAuthenticated, isPhoneVerified, student?.phone, updateStudentPhone]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 

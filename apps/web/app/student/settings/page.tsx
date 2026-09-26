@@ -12,10 +12,11 @@ import {
   requestNotificationPermission,
   showBrowserNotification,
 } from '@/lib/notifications/webNotification';
+import { apiClient } from '@/lib/api/client';
 
 export default function StudentSettingsPage() {
   const router = useRouter();
-  const { student, updateStudentUniversity, updateStudentCollege } = useAuthStore();
+  const { student, updateStudentUniversity, updateStudentCollege, updateStudentPhone } = useAuthStore();
 
   const [university, setUniversity] = useState<UniversityKey>(
     (student?.university as UniversityKey) || 'sphinx'
@@ -43,6 +44,20 @@ export default function StudentSettingsPage() {
       setPhone(student.phone);
     }
   }, [student?.university, student?.college, student?.phone]);
+
+  // Sync real-time phone verification status from backend
+  React.useEffect(() => {
+    if (!student?.phoneVerified) {
+      apiClient
+        .get<{ phone: string; phoneVerified: boolean }>('/auth/phone-status')
+        .then((res: any) => {
+          if (res?.phoneVerified) {
+            updateStudentPhone(res.phone || student?.phone || '', true);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [student?.phoneVerified, student?.phone, updateStudentPhone]);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {

@@ -121,7 +121,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
 
       // Wait a moment to show success, then callback
       setTimeout(() => {
-        onVerified(res.data?.phone || phone);
+        onVerified(res?.phone || res?.data?.phone || phone);
       }, 1500);
     } catch (err: any) {
       setError(err.message || 'كود التحقق غير صحيح');

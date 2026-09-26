@@ -12,6 +12,8 @@ export interface ApiAuthResponse {
     id: string;
     fullName: string;
     phone?: string | null;
+    phoneVerified?: boolean | null;
+    phoneVerifiedAt?: string | null;
     avatarUrl?: string | null;
     systemRole: 'student' | 'staff' | 'admin';
     isActive: boolean;
@@ -50,6 +52,8 @@ function mapApiUserToFrontendUser(user: ApiAuthResponse['user'], email: string):
     role,
     avatar: user.avatarUrl || undefined,
     phone: user.phone || undefined,
+    phoneVerified: Boolean(user.phoneVerified),
+    phoneVerifiedAt: user.phoneVerifiedAt || undefined,
     createdAt: user.createdAt || new Date().toISOString(),
   };
 
