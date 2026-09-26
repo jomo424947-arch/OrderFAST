@@ -15,8 +15,11 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  Phone,
+  Copy,
+  MessageCircle,
 } from 'lucide-react';
-import { formatSecondsTimer, formatEGP } from '@/lib/formatters';
+import { formatEGP } from '@/lib/formatters';
 import { Modal } from '@/components/ui/Modal';
 
 export interface CashierIncomingOrderCardProps {
@@ -30,9 +33,15 @@ export const CashierIncomingOrderCard: React.FC<CashierIncomingOrderCardProps> =
   onAccept,
   onReject,
 }) => {
-  const timeRemaining = order.reviewTimeRemainingSeconds ?? 240;
   const isOnline = order.paymentMethod === 'digital_wallet';
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState(false);
+
+  const handleCopyPhone = (phoneNum: string) => {
+    navigator.clipboard.writeText(phoneNum);
+    setCopiedPhone(true);
+    setTimeout(() => setCopiedPhone(false), 2000);
+  };
 
   return (
     <>
@@ -69,27 +78,58 @@ export const CashierIncomingOrderCard: React.FC<CashierIncomingOrderCardProps> =
                 </span>
               )}
             </div>
-
-            {/* Urgent Countdown Timer */}
-            <span
-              className={`flex items-center gap-1 font-mono text-xs font-bold font-mono-nums px-2.5 py-1 rounded-full ${
-                timeRemaining <= 60
-                  ? 'bg-danger text-white animate-pulse'
-                  : 'text-danger bg-danger-soft'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>باقي {formatSecondsTimer(timeRemaining)}</span>
-            </span>
           </div>
 
-          {/* Customer Info */}
-          <div className="flex items-center justify-between text-xs font-body text-ink-soft">
+          {/* Customer Info & Contact */}
+          <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-body">
             <div className="flex items-center gap-1.5 truncate">
               <User className="w-3.5 h-3.5 text-ink-soft flex-shrink-0" />
               <span className="font-bold text-ink truncate">{order.studentName}</span>
               <span className="text-ink-soft truncate">({order.studentCollege})</span>
             </div>
+
+            {/* Student Verified Phone with Copy & Quick WhatsApp */}
+            {order.studentPhone && (
+              <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-xl text-emerald-800 dark:text-emerald-300">
+                <Phone className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                <span className="font-mono text-xs font-bold font-mono-nums dir-ltr text-emerald-700 dark:text-emerald-300 tracking-wide" dir="ltr">
+                  {order.studentPhone}
+                </span>
+                {order.studentPhoneVerified && (
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/20 px-1.5 py-0.2 rounded-md">
+                    مؤكّد
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyPhone(order.studentPhone!);
+                  }}
+                  className="p-1 hover:bg-emerald-500/20 rounded-md text-emerald-700 dark:text-emerald-300 transition-colors flex items-center gap-1"
+                  title="نسخ رقم الطالب"
+                >
+                  {copiedPhone ? (
+                    <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                      <Check className="w-3 h-3" />
+                      <span>تم النسخ</span>
+                    </span>
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-emerald-600 hover:scale-110 transition-transform" />
+                  )}
+                </button>
+                <a
+                  href={`https://wa.me/2${order.studentPhone.replace(/\D/g, '').replace(/^2/, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1 hover:bg-emerald-500/20 rounded-md text-emerald-700 dark:text-emerald-300 transition-colors"
+                  title="مراسلة عبر واتساب"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600 hover:scale-110 transition-transform" />
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Student Order Notes (Highlighted Banner if present) */}

@@ -13,6 +13,8 @@ export interface User {
   university?: University;
   college?: string;
   phone?: string;
+  phoneVerified?: boolean;
+  phoneVerifiedAt?: string;
   createdAt: string;
 }
 
@@ -109,6 +111,8 @@ export interface Order {
   studentId: string;
   studentName: string;
   studentCollege: string;
+  studentPhone?: string;
+  studentPhoneVerified?: boolean;
   kioskId: string;
   kioskName: string;
   items: OrderItem[];

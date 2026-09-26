@@ -19,6 +19,10 @@ import {
   ExternalLink,
   Smartphone,
   Banknote,
+  Phone,
+  Copy,
+  Check,
+  MessageCircle,
 } from 'lucide-react';
 import { Order } from '@/types';
 
@@ -38,6 +42,13 @@ export default function CashierActiveOrdersPage() {
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
   const [previewReceiptOrder, setPreviewReceiptOrder] = useState<Order | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+  const [copiedPhoneOrder, setCopiedPhoneOrder] = useState<string | null>(null);
+
+  const handleCopyPhone = (orderId: string, phoneNum: string) => {
+    navigator.clipboard.writeText(phoneNum);
+    setCopiedPhoneOrder(orderId);
+    setTimeout(() => setCopiedPhoneOrder(null), 2000);
+  };
 
   const filteredOrders = activeOrders.filter((o) => {
     if (activeFilter === 'preparing') return o.status === 'ACCEPTED' || o.status === 'PREPARING';
@@ -140,6 +151,47 @@ export default function CashierActiveOrdersPage() {
                       <span className="font-body text-xs text-ink-soft">
                         ({order.studentName} - {order.studentCollege})
                       </span>
+                      {order.studentPhone && (
+                        <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-lg text-emerald-800 dark:text-emerald-300">
+                          <Phone className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                          <span className="font-mono text-xs font-bold font-mono-nums dir-ltr text-emerald-700 dark:text-emerald-300" dir="ltr">
+                            {order.studentPhone}
+                          </span>
+                          {order.studentPhoneVerified && (
+                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-500/20 px-1 py-0.2 rounded">
+                              مؤكّد
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyPhone(order.id, order.studentPhone!);
+                            }}
+                            className="p-0.5 hover:bg-emerald-500/20 rounded text-emerald-700 dark:text-emerald-300 transition-colors"
+                            title="نسخ رقم الطالب"
+                          >
+                            {copiedPhoneOrder === order.id ? (
+                              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                                <Check className="w-3 h-3" />
+                                <span>تم النسخ</span>
+                              </span>
+                            ) : (
+                              <Copy className="w-3 h-3 text-emerald-600 hover:scale-110 transition-transform" />
+                            )}
+                          </button>
+                          <a
+                            href={`https://wa.me/2${order.studentPhone.replace(/\D/g, '').replace(/^2/, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-0.5 hover:bg-emerald-500/20 rounded text-emerald-700 dark:text-emerald-300 transition-colors"
+                            title="مراسلة عبر واتساب"
+                          >
+                            <MessageCircle className="w-3 h-3 text-emerald-600 hover:scale-110 transition-transform" />
+                          </a>
+                        </div>
+                      )}
                       {isOnline ? (
                         isPaid ? (
                           <span className="text-[10px] font-body font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">

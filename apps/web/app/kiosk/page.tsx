@@ -401,7 +401,7 @@ export default function CashierDashboardPage() {
               تم الرد على جميع الأوردرات الواردة!
             </p>
             <p className="font-body text-xs text-ink-soft max-w-sm mx-auto">
-              أي أوردر جديد يطلبه الطلاب سيظهر هنا فوراً مع عد تنازلي وتنبيه صوتي.
+              أي أوردر جديد يطلبه الطلاب سيظهر هنا فوراً مع تنبيه صوتي.
             </p>
           </div>
         )}

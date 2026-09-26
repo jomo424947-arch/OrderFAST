@@ -258,6 +258,8 @@ export class AuthService {
 
       return {
         ...profile,
+        phoneVerified: profile.phoneVerified || false,
+        phoneVerifiedAt: profile.phoneVerifiedAt || null,
         student: studentData || null,
       };
     }

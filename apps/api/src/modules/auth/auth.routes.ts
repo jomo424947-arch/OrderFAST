@@ -244,4 +244,72 @@ export async function authRoutes(app: FastifyInstance) {
       });
     }
   );
+
+  // ==========================================
+  // OTP Phone Verification Routes
+  // ==========================================
+
+  const { otpService } = await import('./otp.service.js');
+
+  // Get Challenge (for Shield PoW/Turnstile)
+  app.get(
+    '/otp/challenge',
+    { preHandler: [authenticate], config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    async (_request, reply) => {
+      const data = await otpService.getChallenge();
+      return reply.status(200).send({ success: true, data });
+    }
+  );
+
+  // Send OTP to phone number
+  app.post(
+    '/otp/send',
+    { preHandler: [authenticate], config: { rateLimit: { max: 3, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const body = (request.body as {
+        phone?: string;
+        powSolution?: string;
+        turnstileToken?: string;
+      }) || {};
+
+      if (!body.phone) {
+        return reply.status(400).send({
+          success: false,
+          error: { message: 'رقم الهاتف مطلوب' },
+        });
+      }
+
+      const data = await otpService.sendOtp(body.phone, body.powSolution, body.turnstileToken);
+      return reply.status(200).send({ success: true, data });
+    }
+  );
+
+  // Verify OTP code
+  app.post(
+    '/otp/verify',
+    { preHandler: [authenticate], config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const body = (request.body as { phone?: string; otp?: string }) || {};
+
+      if (!body.phone || !body.otp) {
+        return reply.status(400).send({
+          success: false,
+          error: { message: 'رقم الهاتف وكود التحقق مطلوبين' },
+        });
+      }
+
+      const data = await otpService.verifyOtp(request.user!.id, body.phone, body.otp);
+      return reply.status(200).send({ success: true, data });
+    }
+  );
+
+  // Get phone verification status
+  app.get(
+    '/phone-status',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const data = await otpService.getPhoneStatus(request.user!.id);
+      return reply.status(200).send({ success: true, data });
+    }
+  );
 }

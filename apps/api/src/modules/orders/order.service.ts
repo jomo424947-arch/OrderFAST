@@ -327,9 +327,9 @@ export class OrderService {
           )
         );
 
-      const expiresAt = new Date(
-        Date.now() + kiosk.acceptanceTimeoutSecs * 1000
-      );
+      // Step 7: Calculate Orders Ahead Snapshot & Timeout
+      // Order acceptance timeout is cancelled across all kiosks and universities
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
       // Step 8: Insert Order Row
       // Digital wallet payments require cashier verification before marking as paid
@@ -550,8 +550,19 @@ export class OrderService {
       console.warn('[Order] Failed to load league info:', err);
     }
 
+    const [studentProfile] = await db
+      .select({
+        phone: profiles.phone,
+        phoneVerified: profiles.phoneVerified,
+      })
+      .from(profiles)
+      .where(eq(profiles.id, order.studentId))
+      .limit(1);
+
     return {
       ...order,
+      studentPhone: studentProfile?.phone || order.transferSenderPhone || null,
+      studentPhoneVerified: studentProfile?.phoneVerified ?? false,
       items,
       liveOrdersAhead,
       league,
@@ -562,7 +573,7 @@ export class OrderService {
    * Helper: Batched Order Items Populator (Eliminates N+1 DB Queries)
    * Fetches all items for a list of orders in 1 single batched database query.
    */
-  private async populateOrderItems<T extends { id: string }>(ordersList: T[]): Promise<Array<T & { items: any[] }>> {
+  private async populateOrderItems<T extends { id: string }>(ordersList: T[]): Promise<Array<T & { items: any[]; studentPhone?: string | null; studentPhoneVerified?: boolean }>> {
     if (!ordersList || ordersList.length === 0) {
       return [];
     }
@@ -580,10 +591,39 @@ export class OrderService {
       itemsMap.set(item.orderId, list);
     }
 
-    return ordersList.map((o) => ({
-      ...o,
-      items: itemsMap.get(o.id) || [],
-    }));
+    // Extract studentIds to populate verified phone
+    const studentIds = Array.from(
+      new Set(ordersList.map((o: any) => o.studentId).filter(Boolean))
+    );
+
+    const profilesMap = new Map<string, { phone: string | null; phoneVerified: boolean }>();
+    if (studentIds.length > 0) {
+      const studentProfiles = await db
+        .select({
+          id: profiles.id,
+          phone: profiles.phone,
+          phoneVerified: profiles.phoneVerified,
+        })
+        .from(profiles)
+        .where(inArray(profiles.id, studentIds as string[]));
+
+      for (const p of studentProfiles) {
+        profilesMap.set(p.id, {
+          phone: p.phone,
+          phoneVerified: p.phoneVerified || false,
+        });
+      }
+    }
+
+    return ordersList.map((o: any) => {
+      const p = profilesMap.get(o.studentId);
+      return {
+        ...o,
+        studentPhone: p?.phone || o.transferSenderPhone || null,
+        studentPhoneVerified: p?.phoneVerified ?? false,
+        items: itemsMap.get(o.id) || [],
+      };
+    });
   }
 
   /**
@@ -706,13 +746,7 @@ export class OrderService {
       // Check Staff Kiosk Ownership
       await this.verifyStaffKioskAccess(tx, existingOrder.kioskId, requestingUser);
 
-      // Verify timeout hasn't passed
-      if (new Date() > new Date(existingOrder.expiresAt)) {
-        throw AppError.conflict(
-          'انتهت مهلة قبول هذا الطلب وأصبح منتهي الصلاحية',
-          'ORDER_EXPIRED'
-        );
-      }
+      // Timeout check disabled: cashier can accept orders anytime without expiration
 
       const [kiosk] = await tx
         .select({
@@ -1413,10 +1447,7 @@ export class OrderService {
           continue;
         }
 
-        if (new Date() > new Date(existing.expiresAt)) {
-          failed.push({ id: orderId, reason: 'انتهت صلاحية وقت المراجعة', code: 'ORDER_EXPIRED' });
-          continue;
-        }
+        // Timeout check disabled: cashier can accept orders anytime
 
         // Transition
         const [updated] = await tx
@@ -1557,79 +1588,8 @@ export class OrderService {
    * Extra-4: Uses per-order transactions with Promise.allSettled to guarantee atomic consistency
    */
   async expirePendingOrders(): Promise<number> {
-    const candidateOrders = await db
-      .select({
-        id: orders.id,
-        studentId: orders.studentId,
-        orderNumber: orders.orderNumber,
-      })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.status, 'PENDING_KIOSK'),
-          sql`${orders.expiresAt} < now()`
-        )
-      )
-      .limit(100);
-
-    if (candidateOrders.length === 0) {
-      return 0;
-    }
-
-    let successCount = 0;
-    const results = await Promise.allSettled(
-      candidateOrders.map(async (candidate) => {
-        return await db.transaction(async (tx) => {
-          const [updated] = await tx
-            .update(orders)
-            .set({
-              status: 'EXPIRED',
-              expiredAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(
-              and(
-                eq(orders.id, candidate.id),
-                eq(orders.status, 'PENDING_KIOSK')
-              )
-            )
-            .returning({ id: orders.id });
-
-          if (!updated) {
-            return false;
-          }
-
-          await tx.insert(orderEvents).values({
-            id: generateId(),
-            orderId: candidate.id,
-            eventType: 'STATUS_CHANGED',
-            fromStatus: 'PENDING_KIOSK',
-            toStatus: 'EXPIRED',
-            actorType: 'system',
-            metadata: { autoExpired: true },
-          });
-
-          await tx.insert(notifications).values({
-            id: generateId(),
-            userId: candidate.studentId,
-            orderId: candidate.id,
-            type: 'order_status',
-            title: 'انتهت مهلة الطلب ⌛',
-            body: `نعتذر، لم يستجب الكشك خلال المهلة المحددة للطلب رقم ${candidate.orderNumber}. يمكنك إعادة الطلب أو اختيار كشك آخر.`,
-          });
-
-          return true;
-        });
-      })
-    );
-
-    for (const res of results) {
-      if (res.status === 'fulfilled' && res.value === true) {
-        successCount++;
-      }
-    }
-
-    return successCount;
+    // Order acceptance expiration cancelled across all kiosks and universities
+    return 0;
   }
 
   /**

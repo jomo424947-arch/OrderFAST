@@ -42,6 +42,8 @@ export interface ApiOrderRaw {
   studentName?: string;
   studentCollegeSnapshot?: string;
   studentCollege?: string;
+  studentPhone?: string | null;
+  studentPhoneVerified?: boolean;
   kioskNameSnapshot?: string;
   kioskName?: string;
   expiresAt?: string;
@@ -83,12 +85,8 @@ export function adaptOrderItemFromApi(raw: ApiOrderItemRaw): OrderItem {
 }
 
 export function adaptOrderFromApi(raw: ApiOrderRaw): Order {
-  // Calculate remaining review seconds if pending
-  let reviewTimeRemainingSeconds: number | undefined = undefined;
-  if (raw.status === 'PENDING_KIOSK' && raw.expiresAt) {
-    const diffMs = new Date(raw.expiresAt).getTime() - Date.now();
-    reviewTimeRemainingSeconds = Math.max(0, Math.floor(diffMs / 1000));
-  }
+  // Order review countdown timer cancelled across all kiosks and universities
+  const reviewTimeRemainingSeconds: number | undefined = undefined;
 
   // Calculate estimated wait mins from estimatedReadyAt if present
   let estimatedWaitMins = 15;
@@ -105,6 +103,8 @@ export function adaptOrderFromApi(raw: ApiOrderRaw): Order {
     studentId: raw.studentId,
     studentName: raw.studentNameSnapshot || raw.studentName || 'طالب',
     studentCollege: raw.studentCollegeSnapshot || raw.studentCollege || 'الجامعة',
+    studentPhone: raw.studentPhone || raw.transferSenderPhone || (raw as any).phone || undefined,
+    studentPhoneVerified: raw.studentPhoneVerified ?? (raw as any).phoneVerified ?? false,
     kioskId: raw.kioskId,
     kioskName: raw.kioskNameSnapshot || raw.kioskName || 'الكشك',
     items,

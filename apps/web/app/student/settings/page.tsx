@@ -24,7 +24,7 @@ export default function StudentSettingsPage() {
 
   const [name, setName] = useState(student?.name || '');
   const [college, setCollege] = useState(student?.college || availableColleges[0]);
-  const [phone, setPhone] = useState(student?.phone || '01012345678');
+  const [phone, setPhone] = useState(student?.phone || '');
   const [orderReadyAlerts, setOrderReadyAlerts] = useState(true);
   const [delayAlerts, setDelayAlerts] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
@@ -39,7 +39,10 @@ export default function StudentSettingsPage() {
     if (student?.college) {
       setCollege(student.college);
     }
-  }, [student?.university, student?.college]);
+    if (student?.phone) {
+      setPhone(student.phone);
+    }
+  }, [student?.university, student?.college, student?.phone]);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -153,12 +156,47 @@ export default function StudentSettingsPage() {
             </select>
           </div>
 
-          <Input
-            label="رقم الهاتف (للتواصل في حالة الطوارئ)"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            icon={<Phone className="w-4 h-4" />}
-          />
+          {/* Phone Field - Shows verified status */}
+          <div className="w-full text-right">
+            <label className="block font-body text-xs font-semibold text-ink mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-ink-soft" />
+                <span>رقم الهاتف المعتمد</span>
+              </span>
+              {student?.phoneVerified ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>مؤكّد لمرة واحدة فقط</span>
+                </span>
+              ) : (
+                <span className="text-[10px] font-medium text-amber-600 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                  غير مؤكّد
+                </span>
+              )}
+            </label>
+            <input
+              type="tel"
+              value={student?.phoneVerified ? (student?.phone || phone) : phone}
+              onChange={(e) => setPhone(e.target.value)}
+              disabled={student?.phoneVerified}
+              dir="ltr"
+              className={`w-full bg-surface border-[1.5px] rounded-xl px-4 py-3 font-body text-xs sm:text-sm text-ink text-left font-mono tracking-wide focus:outline-none ${
+                student?.phoneVerified
+                  ? 'opacity-80 bg-canvas cursor-not-allowed border-emerald-500/30'
+                  : 'border-line focus:border-primary'
+              }`}
+              placeholder={student?.phoneVerified ? '' : '01XXXXXXXXX (سيتم تأكيده عبر OTP عند أول طلب كاش)'}
+            />
+            {!student?.phoneVerified ? (
+              <p className="font-body text-[11px] text-amber-600 mt-1.5 leading-relaxed">
+                ℹ️ لم يتم تأكيد رقم هاتفك بعد. سيُطلب منك إدخال وتأكيد رقمك عبر كود OTP لمرة واحدة فقط عند اختيار وسيلة &quot;الدفع عند الاستلام (كاش)&quot;.
+              </p>
+            ) : (
+              <p className="font-body text-[11px] text-emerald-600 mt-1.5 leading-relaxed">
+                ✅ تم تأكيد هذا الرقم بنجاح عبر كود OTP — هذا التأكيد تم لمرة واحدة فقط ولن يُطلب منك مجدداً.
+              </p>
+            )}
+          </div>
 
           <Input
             label="البريد الإلكتروني (غير قابل للتعديل)"

@@ -51,6 +51,7 @@ interface AuthState {
   logout: () => void;
   setStudentStatus: (status: AccountStatus) => void;
   setNeedsCollegeSelection: (needs: boolean) => void;
+  updateStudentPhone: (phone: string, phoneVerified: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -400,6 +401,19 @@ export const useAuthStore = create<AuthState>()(
 
       setStudentStatus: (status) => set({ studentStatus: status }),
       setNeedsCollegeSelection: (needs) => set({ needsCollegeSelection: needs }),
+      updateStudentPhone: (phone: string, phoneVerified: boolean) => {
+        const currentStudent = get().student;
+        if (currentStudent) {
+          set({
+            student: {
+              ...currentStudent,
+              phone,
+              phoneVerified,
+              phoneVerifiedAt: new Date().toISOString(),
+            },
+          });
+        }
+      },
     }),
     {
       name: 'orderfast-auth',

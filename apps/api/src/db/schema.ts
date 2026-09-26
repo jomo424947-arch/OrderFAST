@@ -48,6 +48,8 @@ export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey(), // maps to auth.users.id
   fullName: text('full_name').notNull(),
   phone: text('phone'),
+  phoneVerified: boolean('phone_verified').notNull().default(false),
+  phoneVerifiedAt: timestamp('phone_verified_at', { withTimezone: true }),
   avatarUrl: text('avatar_url'),
   systemRole: systemRoleEnum('system_role').notNull().default('student'),
   isActive: boolean('is_active').notNull().default(true),

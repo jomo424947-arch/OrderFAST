@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ import { getServiceFeeEGP } from '@/lib/constants';
 import { compressImage } from '@/lib/utils/imageCompression';
 import { tokenStorage } from '@/lib/api/client';
 import { trackPurchase } from '@/lib/utils/metaPixel';
+import { OtpVerificationModal } from '@/components/auth/OtpVerificationModal';
 import {
   ChevronRight,
   Plus,
@@ -33,6 +34,7 @@ import {
   MessageSquareQuote,
   CheckCircle2,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 
 const QUICK_NOTES = [
@@ -45,7 +47,7 @@ const QUICK_NOTES = [
 
 export default function CartPage() {
   const router = useRouter();
-  const { student, studentStatus } = useAuthStore();
+  const { student, studentStatus, updateStudentPhone } = useAuthStore();
   const { items, kiosk, updateQuantity, removeItem, clearCart, getSubtotal } = useCartStore();
   const { placeOrder } = useOrderStore();
 
@@ -75,6 +77,10 @@ export default function CartPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedAccount, setCopiedAccount] = useState(false);
+
+  // OTP Verification State
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const isPhoneVerified = student?.phoneVerified === true;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -163,7 +169,7 @@ export default function CartPage() {
     }
   };
 
-  const handleConfirmOrder = async () => {
+  const handleConfirmOrder = async (bypassOtpCheck: boolean = false) => {
     if (items.length === 0 || !kiosk) return;
     if (!student) {
       setError('يرجى تسجيل الدخول بحساب طالب أولاً لتأكيد طلبك');
@@ -172,6 +178,12 @@ export default function CartPage() {
     }
     if (studentStatus === 'restricted') {
       alert('حسابك مقيد مؤقتاً لعدم استلام أوردر سابق. يرجى مراجعة إدارة الكشك.');
+      return;
+    }
+
+    // OTP Verification check for cash payment
+    if (paymentMethod === 'cash' && !isPhoneVerified && !bypassOtpCheck) {
+      setShowOtpModal(true);
       return;
     }
 
@@ -672,17 +684,42 @@ export default function CartPage() {
         </div>
       )}
 
+      {/* Cash OTP Notice (only when cash + not verified) */}
+      {paymentMethod === 'cash' && !isPhoneVerified && (
+        <div className="flex items-start gap-2.5 bg-primary-soft/40 border border-primary/20 rounded-2xl p-3.5 text-xs font-body text-primary-ink animate-in fade-in duration-200">
+          <ShieldCheck className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">تأكيد رقم الهاتف مطلوب (مرة واحدة فقط)</p>
+            <p className="text-[11px] mt-0.5 text-primary-ink/80">لضمان التواصل معك عند استلام الطلب، يرجى تأكيد رقمك أولاً. هذا التأكيد لن يُطلب مرة أخرى.</p>
+          </div>
+        </div>
+      )}
+
       {/* Confirm Order Button */}
       <Button
         variant="primary"
         size="lg"
         isLoading={isSubmitting}
         disabled={studentStatus === 'restricted' || isUploadingImage}
-        onClick={handleConfirmOrder}
+        onClick={() => handleConfirmOrder(false)}
         className="w-full shadow-warm"
       >
-        تأكيد الأوردر ({formatEGP(totalAmount)})
+        {paymentMethod === 'cash' && !isPhoneVerified
+          ? `أكّد رقمك وأتمم الطلب (${formatEGP(totalAmount)})`
+          : `تأكيد الأوردر (${formatEGP(totalAmount)})`}
       </Button>
+
+      {/* OTP Verification Modal */}
+      <OtpVerificationModal
+        isOpen={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
+        onVerified={(verifiedPhone) => {
+          setShowOtpModal(false);
+          updateStudentPhone(verifiedPhone, true);
+          // Auto-submit the order with OTP verified
+          handleConfirmOrder(true);
+        }}
+      />
     </div>
   );
 }

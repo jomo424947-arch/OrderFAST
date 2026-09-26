@@ -139,7 +139,7 @@ export default function CashierIncomingOrdersPage() {
         <EmptyState
           icon={<Inbox className="w-8 h-8" />}
           title="لا توجد أوردرات واردة جديدة"
-          description="أوردرات الطلاب الجدد ستظهر هنا تلقائياً مع عد تنازلي للرد والقبول."
+          description="أوردرات الطلاب الجدد ستظهر هنا تلقائياً وتنبيه صوتي للرد والقبول."
         />
       )}
 
