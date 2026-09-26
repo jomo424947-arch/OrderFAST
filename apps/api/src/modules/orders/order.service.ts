@@ -417,6 +417,43 @@ export class OrderService {
         );
       }
 
+      // Step 11.2: Notify Admins (In-App & Push Notification for all orders campus-wide)
+      const adminUsers = await tx
+        .select({ userId: profiles.id })
+        .from(profiles)
+        .where(
+          and(
+            eq(profiles.systemRole, 'admin'),
+            eq(profiles.isActive, true)
+          )
+        );
+
+      if (adminUsers.length > 0) {
+        const adminIds = adminUsers.map((a) => a.userId);
+        const orderTotalEgp = (total / 100).toFixed(0);
+
+        await tx.insert(notifications).values(
+          adminIds.map((adminId) => ({
+            id: generateId(),
+            userId: adminId,
+            orderId,
+            type: 'order_status' as const,
+            title: 'طلب جديد في الحرم! ⚡',
+            body: `أوردر جديد #${orderNumber} من الطالب ${studentProfile.fullName} (${kiosk.name} - ${kiosk.collegeLocation}). الإجمالي: ${orderTotalEgp} ج.م`,
+          }))
+        );
+
+        this.notifyPush(adminIds, {
+          title: 'طلب جديد في الحرم! ⚡',
+          body: `أوردر جديد #${orderNumber} من ${studentProfile.fullName} (${kiosk.name}). الإجمالي: ${orderTotalEgp} ج.م`,
+          channelId: 'fastorder_orders',
+          priority: 'high',
+          orderId,
+          url: '/admin',
+          type: 'new_order_admin',
+        });
+      }
+
       return {
         isDuplicate: false,
         order: {

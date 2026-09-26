@@ -210,16 +210,30 @@ export const useKioskStore = create<KioskState>((set, get) => ({
   },
 
   toggleKioskOpen: async (id: string) => {
-    const target = get().kiosks.find((k) => k.id === id);
+    const target =
+      get().kiosksWithStaff.find((k) => k.id === id) ||
+      get().kiosks.find((k) => k.id === id);
     const newOpenState = target ? !target.isOpen : true;
+
+    // 1. Optimistic update on both kiosks and kiosksWithStaff for instantaneous UI feedback
+    set((state) => ({
+      kiosks: state.kiosks.map((k) => (k.id === id ? { ...k, isOpen: newOpenState } : k)),
+      kiosksWithStaff: state.kiosksWithStaff.map((k) => (k.id === id ? { ...k, isOpen: newOpenState } : k)),
+    }));
 
     try {
       const updated = await kioskService.updateKioskStatus(id, newOpenState);
       set((state) => ({
-        kiosks: state.kiosks.map((k) => (k.id === id ? updated : k)),
+        kiosks: state.kiosks.map((k) => (k.id === id ? { ...k, isOpen: updated.isOpen } : k)),
+        kiosksWithStaff: state.kiosksWithStaff.map((k) => (k.id === id ? { ...k, isOpen: updated.isOpen } : k)),
       }));
     } catch (err: any) {
-      set({ error: err.message || 'فشل تغيير حالة الكشك' });
+      // Revert on error
+      set((state) => ({
+        kiosks: state.kiosks.map((k) => (k.id === id ? { ...k, isOpen: !newOpenState } : k)),
+        kiosksWithStaff: state.kiosksWithStaff.map((k) => (k.id === id ? { ...k, isOpen: !newOpenState } : k)),
+        error: err.message || 'فشل تغيير حالة الكشك',
+      }));
     }
   },
 

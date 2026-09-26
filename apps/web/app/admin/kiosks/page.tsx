@@ -418,12 +418,14 @@ export default function AdminKiosksPage() {
                     <button
                       type="button"
                       onClick={() => toggleKioskOpen(kiosk.id)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-body font-bold border transition-all ${kiosk.isOpen
-                        ? 'bg-accent-soft text-accent border-accent/30 hover:bg-accent-soft/80'
-                        : 'bg-danger-soft text-danger border-danger/30 hover:bg-danger-soft/80'
+                      title={kiosk.isOpen ? 'انقر لإغلاق الكشك مؤقتاً' : 'انقر لفتح الكشك واستقبال الطلبات'}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body font-bold border transition-all active:scale-95 ${kiosk.isOpen
+                        ? 'bg-accent-soft text-accent border-accent/40 hover:bg-accent/15 shadow-xs'
+                        : 'bg-danger-soft text-danger border-danger/40 hover:bg-danger/15 shadow-xs'
                         }`}
                     >
-                      {kiosk.isOpen ? 'مفتوح للطلب' : 'مغلق حالياً'}
+                      <span className={`w-2 h-2 rounded-full ${kiosk.isOpen ? 'bg-accent animate-pulse' : 'bg-danger'}`} />
+                      <span>{kiosk.isOpen ? 'مفتوح للطلب' : 'مغلق حالياً'}</span>
                     </button>
 
                     <button

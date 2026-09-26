@@ -3,7 +3,7 @@ import { Order, OrderStatus, CartItem, Kiosk, AdminAnalyticsResponse } from '@/t
 import { orderService } from '@/lib/services/orderService';
 import { ApiOrderService } from '@/lib/services/api/apiOrderService';
 import { isValidUUID } from '@/lib/utils';
-import { playNewOrderChime, playOrderPlacedSuccessSound } from '@/lib/utils/sound';
+import { playNewOrderChime, playOrderPlacedSuccessSound, playIntroBellRing } from '@/lib/utils/sound';
 import { useKioskStore } from './useKioskStore';
 
 interface OrderState {
@@ -17,7 +17,7 @@ interface OrderState {
 
   fetchStudentOrders: (studentId?: string, silent?: boolean) => Promise<Order[]>;
   fetchKioskOrders: (kioskId: string, silent?: boolean) => Promise<Order[]>;
-  fetchAdminOrders: () => Promise<Order[]>;
+  fetchAdminOrders: (silent?: boolean) => Promise<Order[]>;
   fetchAdminStats: () => Promise<any>;
   fetchAdminAnalytics: (timeframe?: 'all' | 'today' | 'week' | 'month') => Promise<AdminAnalyticsResponse | null>;
   fetchOrderById: (orderId: string, silent?: boolean) => Promise<Order | null>;
@@ -25,6 +25,7 @@ interface OrderState {
   startKioskPolling: (kioskId: string, intervalMs?: number) => () => void;
   startStudentTrackingPolling: (orderId: string, intervalMs?: number) => () => void;
   startStudentOrdersPolling: (studentId?: string, intervalMs?: number) => () => void;
+  startAdminOrdersPolling: (intervalMs?: number) => () => void;
 
   placeOrder: (params: {
     studentId: string;
@@ -106,9 +107,9 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     }
   },
 
-  fetchAdminOrders: async () => {
+  fetchAdminOrders: async (silent = false) => {
     try {
-      set({ isLoading: true, error: null });
+      if (!silent) set({ isLoading: true, error: null });
       if (orderService instanceof ApiOrderService) {
         const adminOrders = await (orderService as ApiOrderService).getAdminRecentOrders(50, 1);
         set({ adminOrders, isLoading: false, lastPolledAt: Date.now() });
@@ -118,7 +119,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       set({ adminOrders: all, isLoading: false });
       return all;
     } catch (err: any) {
-      set({ isLoading: false, error: err.message || 'فشل جلب أوردرات الحرم الجامعي' });
+      if (!silent) set({ isLoading: false, error: err.message || 'فشل جلب أوردرات الحرم الجامعي' });
       return [];
     }
   },
@@ -267,6 +268,28 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         window.removeEventListener('focus', onFocus);
       }
     };
+  },
+
+  startAdminOrdersPolling: (intervalMs = 8000) => {
+    // Initial fetch
+    get().fetchAdminOrders(false);
+    get().fetchAdminStats();
+
+    const intervalId = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+
+      const previousOrderIds = new Set(get().adminOrders.map((o) => o.id));
+      const latestOrders = await get().fetchAdminOrders(true);
+      await get().fetchAdminStats();
+
+      // If a brand new order arrived, trigger bell chime!
+      const hasNewOrder = latestOrders.some((o) => !previousOrderIds.has(o.id));
+      if (hasNewOrder && previousOrderIds.size > 0) {
+        playIntroBellRing();
+      }
+    }, intervalMs);
+
+    return () => clearInterval(intervalId);
   },
 
   placeOrder: async ({

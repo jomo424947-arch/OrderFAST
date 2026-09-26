@@ -83,7 +83,16 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           set({ isLoading: true });
-          const user = await authService.getCurrentUser();
+          // 3.5s timeout promise to guarantee auth check never hangs indefinitely
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('AUTH_TIMEOUT')), 3500)
+          );
+
+          const user = (await Promise.race([
+            authService.getCurrentUser(),
+            timeoutPromise,
+          ])) as User;
+
           if (user.role === 'student') {
             const s = user as Student;
             set({
@@ -121,17 +130,35 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
             });
           }
-        } catch {
-          tokenStorage.clearTokens();
-          set({
-            role: null,
-            isAuthenticated: false,
-            isAuthInitialized: true,
-            student: null,
-            cashier: null,
-            admin: null,
-            isLoading: false,
-          });
+        } catch (err: any) {
+          // If the token is genuinely invalid (401), clear it
+          const isExplicitAuthFailure =
+            err?.statusCode === 401 ||
+            err?.message?.includes('401') ||
+            err?.message?.includes('رمز الدخول غير صالح');
+
+          if (isExplicitAuthFailure) {
+            tokenStorage.clearTokens();
+            set({
+              role: null,
+              isAuthenticated: false,
+              isAuthInitialized: true,
+              student: null,
+              cashier: null,
+              admin: null,
+              isLoading: false,
+            });
+          } else {
+            // For temporary network glitches or timeouts, don't wipe active session if already authenticated
+            const current = get();
+            if (!current.isAuthenticated) {
+              tokenStorage.clearTokens();
+            }
+            set({
+              isAuthInitialized: true,
+              isLoading: false,
+            });
+          }
         }
       },
 

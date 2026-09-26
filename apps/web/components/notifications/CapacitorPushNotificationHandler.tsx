@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { apiClient } from '@/lib/api/client';
+import { playIntroBellRing } from '@/lib/utils/sound';
 
 const FCM_TOKEN_STORAGE_KEY = 'fastorder_fcm_token';
 
@@ -148,6 +149,11 @@ export function CapacitorPushNotificationHandler() {
           // Foreground Notification Received
           await pushPlugin.addListener('pushNotificationReceived', (notification: any) => {
             console.log('[Push] Received in foreground:', notification.title, notification.body);
+            try {
+              playIntroBellRing();
+            } catch {
+              // Ignore audio error
+            }
           });
 
           // Notification Tapped (Action Performed)
@@ -162,6 +168,8 @@ export function CapacitorPushNotificationHandler() {
               const role = useAuthStore.getState().role;
               if (role === 'cashier') {
                 router.push('/cashier');
+              } else if (role === 'admin') {
+                router.push('/admin');
               } else {
                 router.push(`/orders/${data.orderId}`);
               }
