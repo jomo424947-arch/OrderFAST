@@ -364,7 +364,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 </div>
                 <div>
                   <p className="font-display font-bold text-base text-ink">
-                    تم تأكيد رقم هاتفك بنجاح! ✅
+                    تم تأكيد رقم هاتفك بنجاح
                   </p>
                   <p className="font-body text-xs text-ink-soft mt-1">
                     يمكنك الآن إتمام طلبات الكاش عند الاستلام

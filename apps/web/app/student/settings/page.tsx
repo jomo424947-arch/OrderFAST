@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { COLLEGES_BY_UNIVERSITY, UNIVERSITIES, UniversityKey } from '@/lib/constants';
-import { ChevronRight, Save, BellRing, Phone, Mail, User, Smartphone, CheckCircle2, Bell, Send } from 'lucide-react';
+import { ChevronRight, Save, BellRing, Phone, Mail, User, Smartphone, CheckCircle2, Bell, Send, Info } from 'lucide-react';
 import {
   isNotificationSupported,
   requestNotificationPermission,
@@ -203,12 +203,18 @@ export default function StudentSettingsPage() {
               placeholder={student?.phoneVerified ? '' : '01XXXXXXXXX (سيتم تأكيده عبر OTP عند أول طلب كاش)'}
             />
             {!student?.phoneVerified ? (
-              <p className="font-body text-[11px] text-amber-600 mt-1.5 leading-relaxed">
-                ℹ️ لم يتم تأكيد رقم هاتفك بعد. سيُطلب منك إدخال وتأكيد رقمك عبر كود OTP لمرة واحدة فقط عند اختيار وسيلة &quot;الدفع عند الاستلام (كاش)&quot;.
+              <p className="font-body text-[11px] text-amber-600 mt-1.5 leading-relaxed flex items-start gap-1.5">
+                <Info className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <span>
+                  لم يتم تأكيد رقم هاتفك بعد. سيُطلب منك إدخال وتأكيد رقمك عبر كود OTP لمرة واحدة فقط عند اختيار وسيلة &quot;الدفع عند الاستلام (كاش)&quot;.
+                </span>
               </p>
             ) : (
-              <p className="font-body text-[11px] text-emerald-600 mt-1.5 leading-relaxed">
-                ✅ تم تأكيد هذا الرقم بنجاح عبر كود OTP — هذا التأكيد تم لمرة واحدة فقط ولن يُطلب منك مجدداً.
+              <p className="font-body text-[11px] text-emerald-600 mt-1.5 leading-relaxed flex items-start gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <span>
+                  تم تأكيد هذا الرقم بنجاح عبر كود OTP — هذا التأكيد تم لمرة واحدة فقط ولن يُطلب منك مجدداً.
+                </span>
               </p>
             )}
           </div>
