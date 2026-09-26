@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import {
@@ -14,8 +15,21 @@ import { Bell, X, Check } from 'lucide-react';
 const DISMISSED_BANNER_KEY = 'fastorder_push_banner_dismissed';
 
 export function WebPushNotificationHandler() {
+  const pathname = usePathname();
+  const role = useAuthStore((state) => state.role);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const notifications = useNotificationStore((state) => state.notifications);
+
+  // Web Push for student orders must NEVER be shown to Cashier or Admin or on kiosk routes
+  const isKioskOrAdmin =
+    role === 'cashier' ||
+    role === 'admin' ||
+    Boolean(
+      pathname &&
+        (pathname.startsWith('/kiosk') ||
+          pathname.startsWith('/admin') ||
+          pathname.startsWith('/cashier'))
+    );
 
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [showPromptBanner, setShowPromptBanner] = useState<boolean>(false);
@@ -28,6 +42,7 @@ export function WebPushNotificationHandler() {
   // 1. Initialize Service Worker & check permission state
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (isKioskOrAdmin) return;
 
     // Check if Capacitor native plugin is active (if so, Capacitor handles push natively)
     const isCapacitor = Boolean((window as any).Capacitor?.Plugins?.PushNotifications);
@@ -40,14 +55,19 @@ export function WebPushNotificationHandler() {
 
     setPermission(Notification.permission);
 
-    // Show prompt banner if user is logged in, permission is default, and not previously dismissed
+    // Show prompt banner only for student role, if permission is default, and not previously dismissed
     const isDismissed = sessionStorage.getItem(DISMISSED_BANNER_KEY);
-    if (Notification.permission === 'default' && !isDismissed && isAuthenticated) {
+    if (
+      Notification.permission === 'default' &&
+      !isDismissed &&
+      isAuthenticated &&
+      role === 'student'
+    ) {
       // Delay slightly for smooth page load
       const timer = setTimeout(() => setShowPromptBanner(true), 1500);
       return () => clearTimeout(timer);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isKioskOrAdmin, role]);
 
   // 2. Request Permission Handler
   const handleEnableNotifications = async () => {
@@ -109,6 +129,8 @@ export function WebPushNotificationHandler() {
     prevNotificationsCountRef.current = notifications.length;
   }, [notifications, permission]);
 
+  if (isKioskOrAdmin) return null;
+
   // Success toast when just activated
   if (justActivated) {
     return (
@@ -128,7 +150,7 @@ export function WebPushNotificationHandler() {
   if (!showPromptBanner) return null;
 
   return (
-    <div className="fixed bottom-20 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 max-w-md z-40 bg-surface border-2 border-primary/40 rounded-3xl p-4 shadow-floating animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed bottom-24 sm:bottom-4 left-3 right-3 sm:left-auto sm:right-4 max-w-md z-50 bg-surface border-2 border-primary/40 rounded-3xl p-4 shadow-floating animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-2xl bg-primary text-primary-ink flex items-center justify-center flex-shrink-0 shadow-xs mt-0.5">
           <Bell className="w-5 h-5" />
