@@ -71,7 +71,7 @@ export class MockOrderService implements IOrderService {
   async createOrder(orderData: CreateOrderPayload): Promise<Order> {
     const orderNumber = `0${Math.floor(100 + Math.random() * 900)}`;
     const subtotal = orderData.items.reduce((sum, it) => sum + (it.price || 10) * it.quantity, 0);
-    const fees = getServiceFeeEGP(subtotal);
+    const fees = getServiceFeeEGP(subtotal, orderData.paymentMethod || 'cash');
 
     const newOrder: Order = {
       id: `ord-${Date.now()}`,

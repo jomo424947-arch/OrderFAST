@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CartItem, Kiosk } from '@/types';
 import { formatEGP } from '@/lib/formatters';
 import { getServiceFeeEGP } from '@/lib/constants';
+import { cn } from '@/lib/utils';
 import {
   Receipt,
   ChevronUp,
@@ -147,9 +148,16 @@ export const FloatingCartBill: React.FC<FloatingCartBillProps> = ({
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs font-body text-ink-soft font-medium">
-                <span>رسوم الخدمة</span>
-                <span className="font-mono font-bold text-ink font-mono-nums">
-                  {formatEGP(serviceFee)}
+                <div className="flex items-center gap-1.5">
+                  <span>رسوم الخدمة</span>
+                  {serviceFee === 0 && (
+                    <span className="text-[10px] font-bold text-accent bg-accent-soft px-1.5 py-0.2 rounded-full border border-accent/20">
+                      مجاناً 🎉
+                    </span>
+                  )}
+                </div>
+                <span className={cn('font-mono font-bold font-mono-nums', serviceFee === 0 ? 'text-accent' : 'text-ink')}>
+                  {serviceFee === 0 ? '0 ج.م' : formatEGP(serviceFee)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm font-bold font-body text-ink pt-1.5 border-t border-line/60">

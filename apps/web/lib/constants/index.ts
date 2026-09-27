@@ -171,24 +171,50 @@ export const ACCOUNT_STATUS_DETAILS: Record<
   },
 };
 
+import { useServiceFeeStore } from '@/stores/useServiceFeeStore';
+
 /**
  * رسوم خدمة الطلب المتدرجة بالقروش (piasters)
- *   أقل من 100 ج.م → 3 ج.م (300 قرش)
- *   من 100 إلى 200 ج.م → 5 ج.م (500 قرش)
- *   أعلى من 200 ج.م → 10 ج.م (1000 قرش)
+ *   تُحسب ديناميكياً من إعدادات المنصة (useServiceFeeStore) مع مراعاة:
+ *   - شرائح قيمة الأوردر
+ *   - طريقة الدفع (كاش أم أونلاين)
+ *   - أيام الطلب المجاني
+ *   - إعفاء أول أوردر
+ *   - العروض والخصومات المئوية
  */
-export function getServiceFeePiasters(subtotalPiasters: number): number {
-  if (subtotalPiasters < 10000) return 300;
-  if (subtotalPiasters <= 20000) return 500;
-  return 1000;
+export function getServiceFeePiasters(
+  subtotalPiasters: number,
+  paymentMethod: 'cash' | 'digital_wallet' = 'cash',
+  isFirstOrder = false
+): number {
+  if (typeof window !== 'undefined') {
+    try {
+      const calc = useServiceFeeStore.getState().calculateServiceFee({
+        subtotalEGP: subtotalPiasters / 100,
+        paymentMethod,
+        isFirstOrder,
+      });
+      return calc.feePiasters;
+    } catch (e) {
+      // Fallback to static rule
+    }
+  }
+  const isOnline = paymentMethod === 'digital_wallet';
+  if (subtotalPiasters < 10000) return isOnline ? 200 : 300;
+  if (subtotalPiasters <= 20000) return isOnline ? 400 : 500;
+  return isOnline ? 800 : 1000;
 }
 
-/** Helper: returns fee in EGP for a subtotal in EGP */
-export function getServiceFeeEGP(subtotalEGP: number): number {
-  return getServiceFeePiasters(subtotalEGP * 100) / 100;
+/** Helper: returns fee in EGP for a subtotal in EGP with payment method awareness */
+export function getServiceFeeEGP(
+  subtotalEGP: number,
+  paymentMethod: 'cash' | 'digital_wallet' = 'cash',
+  isFirstOrder = false
+): number {
+  return getServiceFeePiasters(subtotalEGP * 100, paymentMethod, isFirstOrder) / 100;
 }
 
-/** Minimum fee displayed to the user before order is finalized */
+/** Default minimum fee displayed to the user before order is finalized */
 export const SERVICE_FEE_EGP = 3;
 export const SERVICE_FEE_PIASTERS = 300;
 

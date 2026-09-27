@@ -12,6 +12,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { Button } from '@/components/ui/Button';
 import { formatEGP, formatWaitTime } from '@/lib/formatters';
 import { getServiceFeeEGP, getKioskOfferingType } from '@/lib/constants';
+import { cn } from '@/lib/utils';
 import {
   ChevronRight,
   Clock,
@@ -528,8 +529,17 @@ export default function KioskDetailPage() {
                     <span className="font-mono font-semibold font-mono-nums">{formatEGP(totalCartAmount)}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs font-body text-ink-soft font-medium">
-                    <span>رسوم الخدمة</span>
-                    <span className="font-mono font-semibold font-mono-nums">{formatEGP(serviceFee)}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span>رسوم الخدمة</span>
+                      {serviceFee === 0 && (
+                        <span className="text-[10px] font-bold text-accent bg-accent-soft px-1.5 py-0.2 rounded-full border border-accent/20">
+                          مجاناً 🎉
+                        </span>
+                      )}
+                    </div>
+                    <span className={cn('font-mono font-semibold font-mono-nums', serviceFee === 0 && 'text-accent font-bold')}>
+                      {serviceFee === 0 ? '0 ج.م' : formatEGP(serviceFee)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-bold font-body text-ink pt-1.5 border-t border-line/40">
                     <span>المطلوب عند الاستلام</span>

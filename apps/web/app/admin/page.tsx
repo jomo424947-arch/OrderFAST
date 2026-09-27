@@ -19,6 +19,7 @@ import {
   Clock,
   ChevronLeft,
   Filter,
+  Receipt,
 } from 'lucide-react';
 import { formatEGP, formatArabicTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -124,12 +125,20 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <Link href="/admin/analytics" className="w-full sm:w-auto">
-              <Button variant="primary" size="sm" className="w-full sm:w-auto font-bold text-xs shadow-sm py-2">
-                <span>صفحة الإحصائيات الكاملة</span>
-                <ArrowLeft className="w-4 h-4 mr-1" />
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <Link href="/admin/service-fees" className="w-full sm:w-auto">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto font-bold text-xs bg-surface/90 border-amber-500/40 hover:bg-surface text-ink py-2">
+                  <Receipt className="w-3.5 h-3.5 ml-1.5 text-primary" />
+                  <span>إعدادات الرسوم</span>
+                </Button>
+              </Link>
+              <Link href="/admin/analytics" className="w-full sm:w-auto">
+                <Button variant="primary" size="sm" className="w-full sm:w-auto font-bold text-xs shadow-sm py-2">
+                  <span>صفحة الإحصائيات الكاملة</span>
+                  <ArrowLeft className="w-4 h-4 mr-1" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

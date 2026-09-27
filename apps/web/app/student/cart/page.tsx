@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { formatEGP } from '@/lib/formatters';
 import { getServiceFeeEGP } from '@/lib/constants';
 import { compressImage } from '@/lib/utils/imageCompression';
+import { cn } from '@/lib/utils';
 import { apiClient, tokenStorage } from '@/lib/api/client';
 import { trackPurchase } from '@/lib/utils/metaPixel';
 import { OtpVerificationModal } from '@/components/auth/OtpVerificationModal';
@@ -51,9 +52,17 @@ export default function CartPage() {
   const { items, kiosk, updateQuantity, removeItem, clearCart, getSubtotal } = useCartStore();
   const { placeOrder } = useOrderStore();
 
+  // Form States
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'digital_wallet'>('cash');
+  const [onlineType, setOnlineType] = useState<'wallet' | 'instapay'>('wallet');
+
   const subtotal = getSubtotal();
-  const serviceFee = getServiceFeeEGP(subtotal);
+  const serviceFee = getServiceFeeEGP(subtotal, paymentMethod);
   const totalAmount = subtotal + serviceFee;
+
+  const onlineServiceFee = getServiceFeeEGP(subtotal, 'digital_wallet');
+  const cashServiceFee = getServiceFeeEGP(subtotal, 'cash');
+  const onlineSavings = cashServiceFee - onlineServiceFee;
 
   // Kiosk Payment Rules
   const acceptsCash = kiosk?.acceptsCash !== false;
@@ -64,9 +73,6 @@ export default function CartPage() {
   const isOnlineOnly = policy === 'online_only' || (acceptsOnline && !acceptsCash);
   const canChoose = !isCashOnly && !isOnlineOnly && acceptsCash && acceptsOnline;
 
-  // Form States
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'digital_wallet'>('cash');
-  const [onlineType, setOnlineType] = useState<'wallet' | 'instapay'>('wallet');
   const [orderNotes, setOrderNotes] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
   const [transferredAmount, setTransferredAmount] = useState(String(totalAmount));
@@ -666,10 +672,30 @@ export default function CartPage() {
           <span className="font-mono font-semibold font-mono-nums">{formatEGP(subtotal)}</span>
         </div>
 
-        <div className="flex justify-between text-xs font-body text-ink-soft font-medium">
-          <span>رسوم الخدمة</span>
-          <span className="font-mono font-semibold font-mono-nums">{formatEGP(serviceFee)}</span>
+        <div className="flex justify-between items-center text-xs font-body text-ink-soft font-medium">
+          <div className="flex items-center gap-1.5">
+            <span>رسوم الخدمة</span>
+            {serviceFee === 0 && (
+              <span className="text-[10px] font-bold text-accent bg-accent-soft px-1.5 py-0.5 rounded-full border border-accent/20">
+                مجاناً 🎉
+              </span>
+            )}
+          </div>
+          <span className={cn('font-mono font-semibold font-mono-nums', serviceFee === 0 && 'text-accent font-bold')}>
+            {serviceFee === 0 ? '0 ج.م' : formatEGP(serviceFee)}
+          </span>
         </div>
+
+        {/* Online savings banner if cash is selected but online is cheaper */}
+        {paymentMethod === 'cash' && onlineSavings > 0 && canChoose && (
+          <div
+            onClick={() => setPaymentMethod('digital_wallet')}
+            className="cursor-pointer bg-accent/5 hover:bg-accent/10 border border-accent/30 rounded-xl p-2.5 flex items-center justify-between text-[11px] font-body text-accent font-bold transition-all"
+          >
+            <span>💡 وفر {formatEGP(onlineSavings)} بالدفع بمحفظتك أو انستاباي</span>
+            <span className="underline text-[10px]">تغيير للأونلاين</span>
+          </div>
+        )}
 
         <div className="flex justify-between font-body text-sm font-bold text-ink pt-2.5 border-t border-line/60">
           <span>{paymentMethod === 'digital_wallet' ? 'المطلوب تحويله الآن' : 'المطلوب عند الاستلام'}</span>

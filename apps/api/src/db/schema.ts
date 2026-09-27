@@ -373,6 +373,35 @@ export const appPrompts = pgTable('app_prompts', {
 });
 
 // ==========================================
+// 12e. Service Fee Configurations
+// ==========================================
+
+export const serviceFeeConfigs = pgTable('service_fee_configs', {
+  id: text('id').primaryKey().default('default'),
+  isEnabled: boolean('is_enabled').notNull().default(true),
+  tier1MaxEgp: integer('tier1_max_egp').notNull().default(100),
+  tier1FeeCash: integer('tier1_fee_cash').notNull().default(3),
+  tier1FeeOnline: integer('tier1_fee_online').notNull().default(2),
+  tier2MaxEgp: integer('tier2_max_egp').notNull().default(200),
+  tier2FeeCash: integer('tier2_fee_cash').notNull().default(5),
+  tier2FeeOnline: integer('tier2_fee_online').notNull().default(4),
+  tier3FeeCash: integer('tier3_fee_cash').notNull().default(10),
+  tier3FeeOnline: integer('tier3_fee_online').notNull().default(8),
+  freeDaysOfWeek: jsonb('free_days_of_week').$type<number[]>().notNull().default(sql`'[]'::jsonb`),
+  specialFreeDate: text('special_free_date'),
+  freeDayBannerText: text('free_day_banner_text').notNull().default('🎉 اليوم طلبك بدون أي رسوم خدمة في الحرم الجامعي!'),
+  firstOrderFree: boolean('first_order_free').notNull().default(true),
+  minFeeCap: integer('min_fee_cap').notNull().default(0),
+  maxFeeCap: integer('max_fee_cap').notNull().default(15),
+  promoDiscountPercent: integer('promo_discount_percent').notNull().default(0),
+  promoDiscountActive: boolean('promo_discount_active').notNull().default(false),
+  promoDiscountEndsAt: timestamp('promo_discount_ends_at', { withTimezone: true }),
+  promoBannerText: text('promo_banner_text').default('🔥 خصم خاص على رسوم الخدمة لفترة محدودة!'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedBy: text('updated_by').default('مدير النظام'),
+});
+
+// ==========================================
 // 13. League Enums
 // ==========================================
 

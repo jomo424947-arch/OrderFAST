@@ -17,6 +17,7 @@ import { generateId } from '../../shared/id/index.js';
 import { cacheService } from '../../shared/cache/index.js';
 import { pushService } from '../notifications/push.service.js';
 import { leagueService } from '../league/league.service.js';
+import { serviceFeeService } from './service-fee.service.js';
 import type {
   CreateOrderInput,
   AcceptOrderInput,
@@ -290,11 +291,13 @@ export class OrderService {
       }
 
       const discount = 0;
-      // Tiered service fee based on subtotal:
-      //   < 10000 piasters (100 EGP): 300 piasters (3 EGP)
-      //   100-200 EGP (10000-20000 piasters): 500 piasters (5 EGP)
-      //   > 200 EGP (20000+ piasters): 1000 piasters (10 EGP)
-      const fees = subtotal < 10000 ? 300 : subtotal <= 20000 ? 500 : 1000;
+      // Authoritative dynamic service fee calculation
+      const feeResult = await serviceFeeService.calculateFeePiasters({
+        subtotalPiasters: subtotal,
+        paymentMethod: (input as any).paymentMethod || 'cash',
+        studentId,
+      });
+      const fees = feeResult.feesPiasters;
       const total = subtotal - discount + fees;
 
       // Step 6: Atomic Order Number Generation (kiosk_daily_counters)

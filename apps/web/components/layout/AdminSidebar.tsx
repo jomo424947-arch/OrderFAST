@@ -16,6 +16,7 @@ import {
   Megaphone,
   UserCheck,
   Trophy,
+  Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +65,12 @@ export const AdminSidebar: React.FC = () => {
       label: 'الإحصائيات والأرباح',
       icon: TrendingUp,
       isActive: pathname.startsWith('/admin/analytics'),
+    },
+    {
+      href: '/admin/service-fees',
+      label: 'إدارة رسوم الخدمة',
+      icon: Receipt,
+      isActive: pathname.startsWith('/admin/service-fees'),
     },
     {
       href: '/admin/marketing',

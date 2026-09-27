@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Megaphone,
   Trophy,
+  Receipt,
   LogOut,
   X,
   ChevronLeft,
@@ -110,6 +111,13 @@ export const AdminDrawer: React.FC = () => {
       description: 'تقارير أرباح المنصة ورسوم الخدمة والمبيعات',
       icon: TrendingUp,
       isActive: pathname.startsWith('/admin/analytics'),
+    },
+    {
+      href: '/admin/service-fees',
+      label: 'إدارة رسوم الخدمة',
+      description: 'التحكم بشرائح الرسوم، الكاش والأونلاين، وأيام الطلب المجاني',
+      icon: Receipt,
+      isActive: pathname.startsWith('/admin/service-fees'),
     },
     {
       href: '/admin/marketing',
