@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/stores/useCartStore';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useServiceFeeStore } from '@/stores/useServiceFeeStore';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatEGP } from '@/lib/formatters';
@@ -51,6 +52,11 @@ export default function CartPage() {
   const { student, studentStatus, updateStudentPhone, isAuthenticated } = useAuthStore();
   const { items, kiosk, updateQuantity, removeItem, clearCart, getSubtotal } = useCartStore();
   const { placeOrder } = useOrderStore();
+  const { config: feeConfig, fetchConfig: fetchFeeConfig } = useServiceFeeStore();
+
+  useEffect(() => {
+    fetchFeeConfig();
+  }, [fetchFeeConfig]);
 
   // Form States
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'digital_wallet'>('cash');
@@ -685,6 +691,13 @@ export default function CartPage() {
             {serviceFee === 0 ? '0 ج.م' : formatEGP(serviceFee)}
           </span>
         </div>
+
+        {/* Fee promo or special announcement banner */}
+        {feeConfig.isEnabled && feeConfig.promoDiscountActive && feeConfig.promoBannerText && (
+          <div className="bg-primary-soft/60 border border-primary/20 rounded-2xl p-2.5 text-[11px] font-body text-primary-ink font-bold flex items-center gap-2">
+            <span>{feeConfig.promoBannerText}</span>
+          </div>
+        )}
 
         {/* Online savings banner if cash is selected but online is cheaper */}
         {paymentMethod === 'cash' && onlineSavings > 0 && canChoose && (

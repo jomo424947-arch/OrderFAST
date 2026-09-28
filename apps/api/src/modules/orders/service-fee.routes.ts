@@ -46,14 +46,14 @@ export async function serviceFeeRoutes(app: FastifyInstance) {
         tier3FeeOnline: 8,
         freeDaysOfWeek: [],
         specialFreeDate: null,
-        freeDayBannerText: '🎉 اليوم طلبك بدون أي رسوم خدمة في الحرم الجامعي!',
+        freeDayBannerText: 'اليوم طلبك بدون أي رسوم خدمة في الحرم الجامعي!',
         firstOrderFree: true,
         minFeeCap: 0,
         maxFeeCap: 15,
         promoDiscountPercent: 0,
         promoDiscountActive: false,
         promoDiscountEndsAt: null,
-        promoBannerText: '🔥 خصم خاص على رسوم الخدمة لفترة محدودة!',
+        promoBannerText: 'خصم خاص على رسوم الخدمة لفترة محدودة!',
       };
 
       const updated = await serviceFeeService.updateConfig(defaultConfig, adminName);

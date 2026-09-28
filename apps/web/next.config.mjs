@@ -28,6 +28,15 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      {
+        source: '/admin/service%20fees',
+        destination: '/admin/service-fees',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },

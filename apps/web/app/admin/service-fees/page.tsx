@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useServiceFeeStore, PresetKey, ServiceFeeConfig } from '@/stores/useServiceFeeStore';
+import { useServiceFeeStore, PresetKey, ServiceFeeConfig, computeServiceFee } from '@/stores/useServiceFeeStore';
 import { useOrderStore } from '@/stores/useOrderStore';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   Zap,
   Info,
+  Loader2,
 } from 'lucide-react';
 
 const DAYS_OF_WEEK = [
@@ -50,7 +51,6 @@ export default function AdminServiceFeesPage() {
     updateConfig,
     resetToDefaults,
     applyPreset,
-    calculateServiceFee,
   } = useServiceFeeStore();
 
   const { adminStats, fetchAdminStats } = useOrderStore();
@@ -105,15 +105,50 @@ export default function AdminServiceFeesPage() {
     });
   };
 
-  // Save changes
+  // Save changes with validation
   const handleSave = async () => {
     setFeedback(null);
+
+    // 1. Validation checks
+    if (form.tier1MaxEgp <= 0) {
+      setFeedback({ type: 'error', message: 'الحد الأقصى للشريحة الأولى يجب أن يكون أكبر من 0 ج.م' });
+      return;
+    }
+    if (form.tier2MaxEgp <= form.tier1MaxEgp) {
+      setFeedback({ type: 'error', message: 'الحد الأقصى للشريحة الثانية يجب أن يكون أكبر من الشريحة الأولى' });
+      return;
+    }
+    if (form.tier1FeeCash < 0 || form.tier1FeeOnline < 0) {
+      setFeedback({ type: 'error', message: 'رسوم الشريحة الأولى لا يمكن أن تكون سالبة' });
+      return;
+    }
+    if (form.tier2FeeCash < 0 || form.tier2FeeOnline < 0) {
+      setFeedback({ type: 'error', message: 'رسوم الشريحة الثانية لا يمكن أن تكون سالبة' });
+      return;
+    }
+    if (form.tier3FeeCash < 0 || form.tier3FeeOnline < 0) {
+      setFeedback({ type: 'error', message: 'رسوم الشريحة الثالثة لا يمكن أن تكون سالبة' });
+      return;
+    }
+    if (form.minFeeCap < 0) {
+      setFeedback({ type: 'error', message: 'الحد الأدنى للرسوم لا يمكن أن يكون سالباً' });
+      return;
+    }
+    if (form.maxFeeCap > 0 && form.maxFeeCap < form.minFeeCap) {
+      setFeedback({ type: 'error', message: 'الحد الأقصى للرسوم يجب أن يكون أكبر من أو يساوي الحد الأدنى' });
+      return;
+    }
+    if (form.promoDiscountPercent < 0 || form.promoDiscountPercent > 100) {
+      setFeedback({ type: 'error', message: 'نسبة الخصم الترويجي يجب أن تكون بين 0% و 100%' });
+      return;
+    }
+
     const success = await updateConfig(form);
     if (success) {
       setFeedback({ type: 'success', message: 'تم حفظ وتفعيل إعدادات رسوم الخدمة بنجاح!' });
       setTimeout(() => setFeedback(null), 4000);
     } else {
-      setFeedback({ type: 'error', message: 'تعذر حفظ الإعدادات، يرجى المحاولة مرة أخرى.' });
+      setFeedback({ type: 'error', message: 'تعذر حفظ الإعدادات على الخادم، يرجى المحاولة مرة أخرى.' });
     }
   };
 
@@ -121,19 +156,27 @@ export default function AdminServiceFeesPage() {
   const handleReset = async () => {
     if (!window.confirm('هل أنت متأكد من رغبتك في استعادة الإعدادات الافتراضية لرسوم الخدمة؟')) return;
     setFeedback(null);
-    await resetToDefaults();
-    setFeedback({ type: 'success', message: 'تمت استعادة الإعدادات الافتراضية بنجاح.' });
+    const success = await resetToDefaults();
+    if (success) {
+      setFeedback({ type: 'success', message: 'تمت استعادة الإعدادات الافتراضية بنجاح.' });
+    } else {
+      setFeedback({ type: 'error', message: 'تعذر استعادة الإعدادات الافتراضية من الخادم.' });
+    }
     setTimeout(() => setFeedback(null), 3000);
   };
 
   // Apply Preset
   const handlePreset = async (preset: PresetKey) => {
-    await applyPreset(preset);
-    setFeedback({ type: 'success', message: 'تم تطبيق القالب المحدد بنجاح.' });
+    const success = await applyPreset(preset);
+    if (success) {
+      setFeedback({ type: 'success', message: 'تم تطبيق القالب المحدد بنجاح.' });
+    } else {
+      setFeedback({ type: 'error', message: 'فشل تطبيق القالب على الخادم.' });
+    }
     setTimeout(() => setFeedback(null), 3000);
   };
 
-  // Calculate live simulator result using the current form values
+  // Calculate live simulator result directly from the current form values being edited
   const simulatedResult = useMemo(() => {
     // Construct dummy date matching simDayOfWeek
     const d = new Date();
@@ -141,14 +184,14 @@ export default function AdminServiceFeesPage() {
     const diff = simDayOfWeek - currentDay;
     d.setDate(d.getDate() + diff);
 
-    // Temporarily compute with form state
-    return calculateServiceFee({
+    // Compute live with current form state
+    return computeServiceFee(form, {
       subtotalEGP: simSubtotal,
       paymentMethod: simPaymentMethod,
       isFirstOrder: simIsFirstOrder,
       date: d,
     });
-  }, [simSubtotal, simPaymentMethod, simIsFirstOrder, simDayOfWeek, calculateServiceFee]);
+  }, [form, simSubtotal, simPaymentMethod, simIsFirstOrder, simDayOfWeek]);
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-16">
@@ -166,6 +209,12 @@ export default function AdminServiceFeesPage() {
             <h1 className="font-display font-black text-xl sm:text-2xl text-ink flex items-center gap-2">
               <Receipt className="w-6 h-6 text-primary" />
               <span>إدارة رسوم الخدمة وقواعد التسعير</span>
+              {isLoading && (
+                <span className="text-[11px] font-body font-normal text-ink-soft bg-canvas px-2.5 py-0.5 rounded-full border border-line flex items-center gap-1.5 mr-2">
+                  <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                  <span>جاري المزامنة...</span>
+                </span>
+              )}
             </h1>
           </div>
           <p className="font-body text-xs sm:text-sm text-ink-soft mt-1 mr-9">
@@ -298,6 +347,7 @@ export default function AdminServiceFeesPage() {
           {/* Interactive Switch */}
           <button
             type="button"
+            dir="ltr"
             onClick={() => handleToggle('isEnabled')}
             className={cn(
               'relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none shadow-inner',
@@ -307,7 +357,7 @@ export default function AdminServiceFeesPage() {
             <span
               className={cn(
                 'pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out',
-                form.isEnabled ? '-translate-x-7' : 'translate-x-0'
+                form.isEnabled ? 'translate-x-7' : 'translate-x-0'
               )}
             />
           </button>
@@ -316,7 +366,7 @@ export default function AdminServiceFeesPage() {
         {/* Presets Row */}
         <div>
           <span className="font-body text-xs font-bold text-ink-soft block mb-2.5">
-            ⚡ قوالب تسعير سريعة بنقرة واحدة:
+            قوالب تسعير سريعة بنقرة واحدة:
           </span>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
             <button
@@ -339,7 +389,7 @@ export default function AdminServiceFeesPage() {
             >
               <div className="flex items-center justify-between">
                 <span className="font-display font-bold text-xs text-ink block group-hover:text-accent">
-                  تشجيع الأونلاين 🚀
+                  تشجيع الأونلاين
                 </span>
               </div>
               <span className="text-[10px] font-body text-ink-soft block mt-0.5">
@@ -353,7 +403,7 @@ export default function AdminServiceFeesPage() {
               className="p-3 bg-canvas hover:bg-primary-soft/20 border border-line hover:border-primary/60 rounded-2xl text-right transition-all group"
             >
               <span className="font-display font-bold text-xs text-ink block group-hover:text-primary">
-                موسم الخصومات 🔥
+                موسم الخصومات
               </span>
               <span className="text-[10px] font-body text-ink-soft block mt-0.5">
                 خصم 50% على جميع الرسوم
@@ -479,7 +529,7 @@ export default function AdminServiceFeesPage() {
                 </div>
                 {form.tier1FeeCash > form.tier1FeeOnline && (
                   <p className="text-[10px] font-body text-accent font-semibold mt-1">
-                    ✨ الطالب يوفر {form.tier1FeeCash - form.tier1FeeOnline} ج.م عند الدفع أونلاين
+                    الطالب يوفر {form.tier1FeeCash - form.tier1FeeOnline} ج.م عند الدفع أونلاين
                   </p>
                 )}
               </div>
@@ -561,7 +611,7 @@ export default function AdminServiceFeesPage() {
                 </div>
                 {form.tier2FeeCash > form.tier2FeeOnline && (
                   <p className="text-[10px] font-body text-accent font-semibold mt-1">
-                    ✨ الطالب يوفر {form.tier2FeeCash - form.tier2FeeOnline} ج.م عند الدفع أونلاين
+                    الطالب يوفر {form.tier2FeeCash - form.tier2FeeOnline} ج.م عند الدفع أونلاين
                   </p>
                 )}
               </div>
@@ -633,7 +683,7 @@ export default function AdminServiceFeesPage() {
                 </div>
                 {form.tier3FeeCash > form.tier3FeeOnline && (
                   <p className="text-[10px] font-body text-accent font-semibold mt-1">
-                    ✨ الطالب يوفر {form.tier3FeeCash - form.tier3FeeOnline} ج.م عند الدفع أونلاين
+                    الطالب يوفر {form.tier3FeeCash - form.tier3FeeOnline} ج.م عند الدفع أونلاين
                   </p>
                 )}
               </div>
@@ -683,7 +733,7 @@ export default function AdminServiceFeesPage() {
                       isSelected ? 'bg-white/20 text-white' : 'text-ink-soft'
                     )}
                   >
-                    {isSelected ? 'مجاني 🎉' : 'عادي'}
+                    {isSelected ? 'مجاني' : 'عادي'}
                   </span>
                 </button>
               );
@@ -716,7 +766,7 @@ export default function AdminServiceFeesPage() {
               type="text"
               value={form.freeDayBannerText}
               onChange={(e) => setForm((prev) => ({ ...prev, freeDayBannerText: e.target.value }))}
-              placeholder="🎉 اليوم طلبك بدون أي رسوم خدمة في الحرم الجامعي!"
+              placeholder="اليوم طلبك بدون أي رسوم خدمة في الحرم الجامعي!"
               className="w-full bg-canvas border border-line rounded-xl px-3 py-2 text-xs font-body font-semibold text-ink focus:border-primary focus:outline-none"
             />
             <p className="text-[10px] font-body text-ink-soft mt-1">
@@ -746,6 +796,7 @@ export default function AdminServiceFeesPage() {
             </div>
             <button
               type="button"
+              dir="ltr"
               onClick={() => handleToggle('firstOrderFree')}
               className={cn(
                 'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
@@ -755,7 +806,7 @@ export default function AdminServiceFeesPage() {
               <span
                 className={cn(
                   'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
-                  form.firstOrderFree ? '-translate-x-5' : 'translate-x-0'
+                  form.firstOrderFree ? 'translate-x-5' : 'translate-x-0'
                 )}
               />
             </button>
@@ -783,6 +834,7 @@ export default function AdminServiceFeesPage() {
             </div>
             <button
               type="button"
+              dir="ltr"
               onClick={() => handleToggle('promoDiscountActive')}
               className={cn(
                 'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
@@ -792,7 +844,7 @@ export default function AdminServiceFeesPage() {
               <span
                 className={cn(
                   'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
-                  form.promoDiscountActive ? '-translate-x-5' : 'translate-x-0'
+                  form.promoDiscountActive ? 'translate-x-5' : 'translate-x-0'
                 )}
               />
             </button>
@@ -830,6 +882,20 @@ export default function AdminServiceFeesPage() {
                 className="w-full bg-canvas border border-line rounded-xl px-2 py-1.5 text-xs font-mono font-bold text-ink disabled:opacity-50"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-body font-bold text-ink-soft block mb-1">
+              نص بنر العرض الترويجي للطلاب
+            </label>
+            <input
+              type="text"
+              value={form.promoBannerText || ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, promoBannerText: e.target.value }))}
+              placeholder="خصم خاص على رسوم الخدمة لفترة محدودة!"
+              disabled={!form.promoDiscountActive}
+              className="w-full bg-canvas border border-line rounded-xl px-3 py-1.5 text-xs font-body text-ink placeholder:text-ink-soft/50 disabled:opacity-50"
+            />
           </div>
         </div>
 
@@ -1037,7 +1103,7 @@ export default function AdminServiceFeesPage() {
                   <span>رسوم الخدمة:</span>
                   {simulatedResult.isFree && (
                     <span className="text-[10px] font-bold text-accent bg-accent-soft px-1.5 py-0.2 rounded-full">
-                      مجاناً 🎉
+                      مجاناً
                     </span>
                   )}
                 </div>

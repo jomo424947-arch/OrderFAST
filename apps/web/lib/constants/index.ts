@@ -189,7 +189,11 @@ export function getServiceFeePiasters(
 ): number {
   if (typeof window !== 'undefined') {
     try {
-      const calc = useServiceFeeStore.getState().calculateServiceFee({
+      const store = useServiceFeeStore.getState();
+      if (!store.lastFetchedAt && !store.isLoading) {
+        store.fetchConfig().catch(() => {});
+      }
+      const calc = store.calculateServiceFee({
         subtotalEGP: subtotalPiasters / 100,
         paymentMethod,
         isFirstOrder,

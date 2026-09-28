@@ -41,14 +41,14 @@ export const DEFAULT_FEE_CONFIG: ServiceFeeConfig = {
   tier3FeeOnline: 8,
   freeDaysOfWeek: [],
   specialFreeDate: null,
-  freeDayBannerText: '🎉 اليوم طلبك بدون أي رسوم خدمة في الحرم الجامعي!',
+  freeDayBannerText: 'اليوم طلبك بدون أي رسوم خدمة في الحرم الجامعي!',
   firstOrderFree: true,
   minFeeCap: 0,
   maxFeeCap: 15,
   promoDiscountPercent: 0,
   promoDiscountActive: false,
   promoDiscountEndsAt: null,
-  promoBannerText: '🔥 خصم خاص على رسوم الخدمة لفترة محدودة!',
+  promoBannerText: 'خصم خاص على رسوم الخدمة لفترة محدودة!',
   updatedBy: 'مدير النظام',
 };
 
@@ -161,9 +161,11 @@ export const useServiceFeeStore = create<ServiceFeeState>((set, get) => ({
       set({ isSaving: false });
       return true;
     } catch (err: any) {
-      console.warn('[useServiceFeeStore] Server save failed, saved locally:', err);
-      set({ isSaving: false });
-      return true; // Still returns true because local state is preserved
+      console.error('[useServiceFeeStore] Server save failed:', err);
+      // Revert optimistic update to keep client consistent with server
+      set({ config: current, isSaving: false, error: err?.message || 'فشل حفظ الإعدادات على الخادم' });
+      persistConfig(current);
+      return false;
     }
   },
 
@@ -171,13 +173,15 @@ export const useServiceFeeStore = create<ServiceFeeState>((set, get) => ({
     set({ isSaving: true, error: null });
     try {
       await apiClient.post('/service-fee/admin/reset', {});
-    } catch (err) {
-      console.warn('[useServiceFeeStore] Server reset failed, resetting locally:', err);
+      const fresh = { ...DEFAULT_FEE_CONFIG, updatedAt: new Date().toISOString() };
+      persistConfig(fresh);
+      set({ config: fresh, isSaving: false });
+      return true;
+    } catch (err: any) {
+      console.error('[useServiceFeeStore] Server reset failed:', err);
+      set({ isSaving: false, error: err?.message || 'فشل إعادة التعيين على الخادم' });
+      return false;
     }
-    const fresh = { ...DEFAULT_FEE_CONFIG, updatedAt: new Date().toISOString() };
-    persistConfig(fresh);
-    set({ config: fresh, isSaving: false });
-    return true;
   },
 
   applyPreset: async (preset: PresetKey) => {
@@ -226,7 +230,7 @@ export const useServiceFeeStore = create<ServiceFeeState>((set, get) => ({
           isEnabled: true,
           promoDiscountActive: true,
           promoDiscountPercent: 50,
-          promoBannerText: '🔥 عرض خاص: خصم 50% على جميع رسوم الخدمة في الحرم الجامعي!',
+          promoBannerText: 'عرض خاص: خصم 50% على جميع رسوم الخدمة في الحرم الجامعي!',
         };
         break;
 
@@ -251,7 +255,7 @@ export const useServiceFeeStore = create<ServiceFeeState>((set, get) => ({
         presetChanges = {
           isEnabled: true,
           freeDaysOfWeek: [5, 6],
-          freeDayBannerText: '🎉 نهاية الأسبوع الجامعي: أوردراتك بدون أي رسوم خدمة!',
+          freeDayBannerText: 'نهاية الأسبوع الجامعي: أوردراتك بدون أي رسوم خدمة!',
         };
         break;
     }
@@ -259,119 +263,132 @@ export const useServiceFeeStore = create<ServiceFeeState>((set, get) => ({
     return get().updateConfig(presetChanges);
   },
 
-  calculateServiceFee: ({ subtotalEGP, paymentMethod = 'cash', isFirstOrder = false, date }) => {
-    const config = get().config;
+  calculateServiceFee: (params) => computeServiceFee(get().config, params),
+}));
 
-    // 1. Master toggle check
-    if (!config.isEnabled) {
-      return {
-        feeEGP: 0,
-        feePiasters: 0,
-        rawTierFeeEGP: 0,
-        discountAmountEGP: 0,
-        appliedTier: 1,
-        isFree: true,
-        isFreeDay: false,
-        isFirstOrderFree: false,
-        isPromoDiscount: false,
-        reason: 'رسوم الخدمة مجانية (معطلة في المنصة)',
-      };
-    }
+export interface FeeCalculationParams {
+  subtotalEGP: number;
+  paymentMethod?: 'cash' | 'digital_wallet';
+  isFirstOrder?: boolean;
+  date?: Date;
+}
 
-    const targetDate = date || new Date();
-    const dayOfWeek = targetDate.getDay();
-    const todayYmd = targetDate.toISOString().slice(0, 10);
-
-    // 2. Free Day check
-    const isFreeDay =
-      (Array.isArray(config.freeDaysOfWeek) && config.freeDaysOfWeek.includes(dayOfWeek)) ||
-      (Boolean(config.specialFreeDate) && config.specialFreeDate === todayYmd);
-
-    if (isFreeDay) {
-      return {
-        feeEGP: 0,
-        feePiasters: 0,
-        rawTierFeeEGP: 0,
-        discountAmountEGP: 0,
-        appliedTier: 1,
-        isFree: true,
-        isFreeDay: true,
-        isFirstOrderFree: false,
-        isPromoDiscount: false,
-        reason: config.freeDayBannerText || 'اليوم مجاني بالكامل 🎉',
-      };
-    }
-
-    // 3. First Order Free check
-    if (config.firstOrderFree && isFirstOrder) {
-      return {
-        feeEGP: 0,
-        feePiasters: 0,
-        rawTierFeeEGP: 0,
-        discountAmountEGP: 0,
-        appliedTier: 1,
-        isFree: true,
-        isFreeDay: false,
-        isFirstOrderFree: true,
-        isPromoDiscount: false,
-        reason: 'إعفاء أول أوردر لك مجاناً بالكامل 🎉',
-      };
-    }
-
-    // 4. Tier & Payment Method resolution
-    const isOnline = paymentMethod === 'digital_wallet';
-    let appliedTier: 1 | 2 | 3 = 1;
-    let baseFee = 0;
-
-    if (subtotalEGP < config.tier1MaxEgp) {
-      appliedTier = 1;
-      baseFee = isOnline ? config.tier1FeeOnline : config.tier1FeeCash;
-    } else if (subtotalEGP <= config.tier2MaxEgp) {
-      appliedTier = 2;
-      baseFee = isOnline ? config.tier2FeeOnline : config.tier2FeeCash;
-    } else {
-      appliedTier = 3;
-      baseFee = isOnline ? config.tier3FeeOnline : config.tier3FeeCash;
-    }
-
-    // 5. Promo Percentage Discount
-    let feeAfterDiscount = baseFee;
-    let discountAmount = 0;
-    let isPromoDiscount = false;
-
-    if (config.promoDiscountActive && config.promoDiscountPercent > 0) {
-      const isExpired =
-        config.promoDiscountEndsAt &&
-        new Date(config.promoDiscountEndsAt).getTime() < targetDate.getTime();
-
-      if (!isExpired) {
-        const fraction = Math.min(100, Math.max(0, config.promoDiscountPercent)) / 100;
-        discountAmount = Math.round(baseFee * fraction * 100) / 100;
-        feeAfterDiscount = Math.max(0, baseFee - discountAmount);
-        isPromoDiscount = true;
-      }
-    }
-
-    // 6. Safety Caps (Min / Max)
-    let finalFee = feeAfterDiscount;
-    if (config.minFeeCap > 0 && finalFee < config.minFeeCap) {
-      finalFee = config.minFeeCap;
-    }
-    if (config.maxFeeCap > 0 && finalFee > config.maxFeeCap) {
-      finalFee = config.maxFeeCap;
-    }
-
+/**
+ * Pure calculation function that accepts any config (e.g. form state in admin or active config in store)
+ */
+export function computeServiceFee(
+  config: ServiceFeeConfig,
+  { subtotalEGP, paymentMethod = 'cash', isFirstOrder = false, date }: FeeCalculationParams
+): CalculatedFeeResult {
+  // 1. Master toggle check
+  if (!config.isEnabled) {
     return {
-      feeEGP: finalFee,
-      feePiasters: Math.round(finalFee * 100),
-      rawTierFeeEGP: baseFee,
-      discountAmountEGP: discountAmount,
-      appliedTier,
-      isFree: finalFee === 0,
+      feeEGP: 0,
+      feePiasters: 0,
+      rawTierFeeEGP: 0,
+      discountAmountEGP: 0,
+      appliedTier: 1,
+      isFree: true,
       isFreeDay: false,
       isFirstOrderFree: false,
-      isPromoDiscount,
-      reason: isOnline ? 'رسم الدفع الإلكتروني' : 'رسم الدفع كاش',
+      isPromoDiscount: false,
+      reason: 'رسوم الخدمة مجانية (معطلة في المنصة)',
     };
-  },
-}));
+  }
+
+  const targetDate = date || new Date();
+  const dayOfWeek = targetDate.getDay();
+  const todayYmd = targetDate.toISOString().slice(0, 10);
+
+  // 2. Free Day check
+  const isFreeDay =
+    (Array.isArray(config.freeDaysOfWeek) && config.freeDaysOfWeek.includes(dayOfWeek)) ||
+    (Boolean(config.specialFreeDate) && config.specialFreeDate === todayYmd);
+
+  if (isFreeDay) {
+    return {
+      feeEGP: 0,
+      feePiasters: 0,
+      rawTierFeeEGP: 0,
+      discountAmountEGP: 0,
+      appliedTier: 1,
+      isFree: true,
+      isFreeDay: true,
+      isFirstOrderFree: false,
+      isPromoDiscount: false,
+      reason: config.freeDayBannerText || 'اليوم مجاني بالكامل',
+    };
+  }
+
+  // 3. First Order Free check
+  if (config.firstOrderFree && isFirstOrder) {
+    return {
+      feeEGP: 0,
+      feePiasters: 0,
+      rawTierFeeEGP: 0,
+      discountAmountEGP: 0,
+      appliedTier: 1,
+      isFree: true,
+      isFreeDay: false,
+      isFirstOrderFree: true,
+      isPromoDiscount: false,
+      reason: 'إعفاء أول أوردر لك مجاناً بالكامل',
+    };
+  }
+
+  // 4. Tier & Payment Method resolution
+  const isOnline = paymentMethod === 'digital_wallet';
+  let appliedTier: 1 | 2 | 3 = 1;
+  let baseFee = 0;
+
+  if (subtotalEGP < config.tier1MaxEgp) {
+    appliedTier = 1;
+    baseFee = isOnline ? config.tier1FeeOnline : config.tier1FeeCash;
+  } else if (subtotalEGP <= config.tier2MaxEgp) {
+    appliedTier = 2;
+    baseFee = isOnline ? config.tier2FeeOnline : config.tier2FeeCash;
+  } else {
+    appliedTier = 3;
+    baseFee = isOnline ? config.tier3FeeOnline : config.tier3FeeCash;
+  }
+
+  // 5. Promo Percentage Discount
+  let feeAfterDiscount = baseFee;
+  let discountAmount = 0;
+  let isPromoDiscount = false;
+
+  if (config.promoDiscountActive && config.promoDiscountPercent > 0) {
+    const isExpired =
+      config.promoDiscountEndsAt &&
+      new Date(config.promoDiscountEndsAt).getTime() < targetDate.getTime();
+
+    if (!isExpired) {
+      const fraction = Math.min(100, Math.max(0, config.promoDiscountPercent)) / 100;
+      discountAmount = Math.round(baseFee * fraction * 100) / 100;
+      feeAfterDiscount = Math.max(0, baseFee - discountAmount);
+      isPromoDiscount = true;
+    }
+  }
+
+  // 6. Safety Caps (Min / Max)
+  let finalFee = feeAfterDiscount;
+  if (config.minFeeCap > 0 && finalFee < config.minFeeCap) {
+    finalFee = config.minFeeCap;
+  }
+  if (config.maxFeeCap > 0 && finalFee > config.maxFeeCap) {
+    finalFee = config.maxFeeCap;
+  }
+
+  return {
+    feeEGP: finalFee,
+    feePiasters: Math.round(finalFee * 100),
+    rawTierFeeEGP: baseFee,
+    discountAmountEGP: discountAmount,
+    appliedTier,
+    isFree: finalFee === 0,
+    isFreeDay: false,
+    isFirstOrderFree: false,
+    isPromoDiscount,
+    reason: isOnline ? 'رسم الدفع الإلكتروني' : 'رسم الدفع كاش',
+  };
+}
