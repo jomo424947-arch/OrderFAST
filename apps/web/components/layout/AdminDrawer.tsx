@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ShieldCheck,
   Bell,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNotificationStore } from '@/stores/useNotificationStore';
@@ -132,6 +133,13 @@ export const AdminDrawer: React.FC = () => {
       description: 'دوري الكليات والمنافسات وتوزيع الجوائز',
       icon: Trophy,
       isActive: pathname.startsWith('/admin/league'),
+    },
+    {
+      href: '/admin/feedback',
+      label: 'الشكاوى والمقترحات',
+      description: 'متابعة بلاغات الطلاب والرد الفوري عليهم',
+      icon: MessageSquare,
+      isActive: pathname.startsWith('/admin/feedback'),
     },
   ];
 

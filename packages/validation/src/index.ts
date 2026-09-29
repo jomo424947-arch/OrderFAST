@@ -234,3 +234,58 @@ export type CreateMenuItemInput = z.infer<typeof createMenuItemSchema>;
 export type UpdateMenuItemInput = z.infer<typeof updateMenuItemSchema>;
 export type CreateKioskInput = z.infer<typeof createKioskSchema>;
 export type UpdateStudentUniversityInput = z.infer<typeof updateStudentUniversitySchema>;
+
+// ==========================================
+// 6. Support & Feedback Schemas
+// ==========================================
+
+export const supportCategorySchema = z.enum([
+  'order_issue',
+  'kiosk_issue',
+  'payment_issue',
+  'app_bug',
+  'suggestion',
+  'other',
+], {
+  errorMap: () => ({ message: 'نوع المشكلة أو الاقتراح غير صالح' }),
+});
+
+export const supportStatusSchema = z.enum(['pending', 'in_progress', 'resolved', 'closed'], {
+  errorMap: () => ({ message: 'حالة التذكرة غير صالحة' }),
+});
+
+export const supportPrioritySchema = z.enum(['low', 'normal', 'high', 'urgent'], {
+  errorMap: () => ({ message: 'أولوية التذكرة غير صالحة' }),
+});
+
+export const createSupportTicketSchema = z.object({
+  category: supportCategorySchema.default('other'),
+  subject: z
+    .string()
+    .min(3, { message: 'عنوان المشكلة أو الاقتراح مطلوب (3 أحرف على الأقل)' })
+    .max(150, { message: 'العنوان طويل جداً' }),
+  message: z
+    .string()
+    .min(10, { message: 'يرجى كتابة تفاصيل المشكلة أو الاقتراح بوضوح (10 أحرف على الأقل)' })
+    .max(3000, { message: 'الرسالة تتجاوز الحد الأقصى المسموح (3000 حرف)' }),
+  imageUrl: z.string().optional().nullable(),
+  senderName: z.string().min(2, { message: 'الاسم مطلوب' }),
+  senderPhone: z.string().min(10, { message: 'رقم الهاتف مطلوب للتواصل' }).max(16),
+  senderEmail: z.string().email({ message: 'البريد الإلكتروني غير صالح' }).optional().nullable().or(z.literal('')),
+  university: universitySchema.optional().nullable(),
+  college: z.string().optional().nullable(),
+  orderId: uuidSchema.optional().nullable(),
+  orderNumber: z.string().optional().nullable(),
+  kioskId: uuidSchema.optional().nullable(),
+  kioskName: z.string().optional().nullable(),
+});
+
+export const updateSupportTicketStatusSchema = z.object({
+  status: supportStatusSchema,
+  priority: supportPrioritySchema.optional(),
+  adminNotes: z.string().optional().nullable(),
+  adminReply: z.string().optional().nullable(),
+});
+
+export type CreateSupportTicketInput = z.infer<typeof createSupportTicketSchema>;
+export type UpdateSupportTicketStatusInput = z.infer<typeof updateSupportTicketStatusSchema>;

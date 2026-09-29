@@ -18,6 +18,7 @@ import {
   ShieldX,
   ShieldCheck,
   Store,
+  MessageSquare,
 } from 'lucide-react';
 import { AccountStatus } from '@/types';
 
@@ -82,6 +83,17 @@ export default function StudentProfilePage() {
           <div className="flex items-center gap-3 text-sm font-body font-semibold text-ink">
             <Bell className="w-4 h-4 stroke-[2.2] text-ink/75" />
             <span>الإشعارات</span>
+          </div>
+          <ChevronLeft className="w-4 h-4 stroke-[2.2] text-ink/60" />
+        </Link>
+
+        <Link
+          href="/student/feedback"
+          className="flex items-center justify-between p-3.5 hover:bg-canvas rounded-2xl transition-colors select-none"
+        >
+          <div className="flex items-center gap-3 text-sm font-body font-semibold text-ink">
+            <MessageSquare className="w-4 h-4 stroke-[2.2] text-ink/75" />
+            <span>الشكاوى والمقترحات</span>
           </div>
           <ChevronLeft className="w-4 h-4 stroke-[2.2] text-ink/60" />
         </Link>

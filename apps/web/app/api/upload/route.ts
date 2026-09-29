@@ -22,23 +22,6 @@ function validateImageMagicBytes(buffer: Buffer, ext: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Verify Authentication Token
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'غير مصرح بالوصول - يجب تسجيل الدخول أولاً' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '').trim();
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: 'رمز الدخول غير صالح' },
-        { status: 401 }
-      );
-    }
-
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
@@ -46,34 +29,30 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Verify token with Supabase Auth
-    const { data: userData, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !userData?.user) {
+    let uploaderRole: string = 'guest';
+
+    // 1. Verify Authentication Token if present
+    const authHeader = req.headers.get('authorization');
+    const uploadPurpose = req.headers.get('x-upload-purpose');
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '').trim();
+      const { data: userData, error: authError } = await supabaseAdmin.auth.getUser(token);
+      if (!authError && userData?.user) {
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('system_role, is_active')
+          .eq('id', userData.user.id)
+          .single();
+
+        if (profile && profile.is_active) {
+          uploaderRole = profile.system_role || 'student';
+        }
+      }
+    } else if (uploadPurpose !== 'support') {
       return NextResponse.json(
-        { success: false, error: 'جلسة تسجيل الدخول منتهية أو غير صالحة' },
+        { success: false, error: 'غير مصرح بالوصول - يجب تسجيل الدخول أولاً' },
         { status: 401 }
-      );
-    }
-
-    // Verify User Role (Must be staff or admin to upload kiosk/menu images)
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('system_role, is_active')
-      .eq('id', userData.user.id)
-      .single();
-
-    if (profileError || !profile || !profile.is_active) {
-      return NextResponse.json(
-        { success: false, error: 'الحساب غير موجود أو تم تعطيله' },
-        { status: 403 }
-      );
-    }
-
-    // Verify User Role (Active students, staff, and admins can upload)
-    if (!profile.system_role) {
-      return NextResponse.json(
-        { success: false, error: 'نوع الحساب غير محدد' },
-        { status: 403 }
       );
     }
 
@@ -122,7 +101,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const prefix = profile.system_role === 'student' ? 'receipt' : 'kiosk';
+    const prefix = uploaderRole === 'guest' ? 'support' : (uploaderRole === 'student' ? 'receipt' : 'kiosk');
     const fileName = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
     const { error: uploadError } = await supabaseAdmin.storage

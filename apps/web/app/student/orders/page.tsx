@@ -9,7 +9,7 @@ import { Tabs } from '@/components/ui/Tabs';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatEGP, formatArabicTime } from '@/lib/formatters';
-import { Clock, Store, ChevronLeft, ArrowLeft, ShoppingBag, CheckCircle2, AlertCircle, Star } from 'lucide-react';
+import { Clock, Store, ChevronLeft, ArrowLeft, ShoppingBag, CheckCircle2, AlertCircle, Star, MessageSquare } from 'lucide-react';
 
 export default function StudentOrdersPage() {
   const router = useRouter();
@@ -152,6 +152,30 @@ export default function StudentOrdersPage() {
             onAction={activeTab === 'active' ? () => router.push('/student/kiosks') : undefined}
           />
         )}
+      </div>
+
+      {/* Help & Support Banner */}
+      <div className="bg-surface border border-line rounded-2xl p-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-canvas border border-line flex items-center justify-center text-primary">
+            <MessageSquare className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="font-body font-bold text-xs text-ink">
+              هل واجهتك مشكلة في أي طلب؟
+            </p>
+            <p className="font-body text-[11px] text-ink-soft">
+              أبلغنا بالشكوى وسنتابعها مع الكشك فوراً
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/student/feedback"
+          className="px-3 py-1.5 rounded-xl bg-primary text-primary-ink font-body font-bold text-xs hover:bg-primary-hover transition-colors whitespace-nowrap"
+        >
+          تقديم شكوى
+        </Link>
       </div>
     </div>
   );

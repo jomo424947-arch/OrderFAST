@@ -20,7 +20,10 @@ import {
   ChevronLeft,
   Filter,
   Receipt,
+  Eye,
 } from 'lucide-react';
+import { Order } from '@/types';
+import { AdminOrderInvoiceModal } from '@/components/admin/AdminOrderInvoiceModal';
 import { formatEGP, formatArabicTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +41,7 @@ export default function AdminDashboardPage() {
 
   const [activeMobileSection, setActiveMobileSection] = useState<'both' | 'orders' | 'kiosks'>('both');
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'completed' | 'active' | 'cancelled'>('all');
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
 
   useEffect(() => {
     fetchKiosksWithStaff();
@@ -394,13 +398,38 @@ export default function AdminDashboardPage() {
                   return (
                     <div
                       key={order.id}
-                      className="py-3 flex items-center justify-between gap-3 first:pt-1 last:pb-1 hover:bg-canvas/50 px-1 rounded-xl transition-colors"
+                      onClick={() => setSelectedOrderForInvoice(order)}
+                      className="py-3 flex items-center justify-between gap-3 first:pt-1 last:pb-1 hover:bg-canvas/70 px-2 rounded-xl transition-all cursor-pointer group/order"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono font-bold text-xs text-ink bg-canvas px-1.5 py-0.5 rounded border border-line">
+                          {/* Order Number Badge / Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrderForInvoice(order);
+                            }}
+                            className="font-mono font-bold text-xs text-ink bg-canvas hover:bg-line/40 px-1.5 py-0.5 rounded border border-line transition-colors cursor-pointer"
+                            title="عرض تفاصيل وفاتورة الطلب"
+                          >
                             #{cleanOrderNumber}
-                          </span>
+                          </button>
+
+                          {/* Dedicated Invoice Button (Right next to order number) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrderForInvoice(order);
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-body font-bold text-primary-ink bg-primary-soft/90 hover:bg-primary-soft border border-primary/30 hover:border-primary/60 transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                            title="عرض تفاصيل الأوردر والفاتورة الكاملة"
+                          >
+                            <Receipt className="w-3 h-3 text-primary-ink" />
+                            <span>الفاتورة</span>
+                          </button>
+
                           <span className="font-body text-xs text-ink font-semibold truncate max-w-[130px] sm:max-w-none">
                             {order.studentName}
                           </span>
@@ -416,7 +445,22 @@ export default function AdminDashboardPage() {
                           <span className="font-mono font-bold text-ink">{formatEGP(order.total)}</span>
                         </p>
                       </div>
-                      <div className="flex-shrink-0">
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Quick View Button on Desktop */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedOrderForInvoice(order);
+                          }}
+                          className="p-1.5 rounded-lg text-ink-soft hover:text-ink hover:bg-surface border border-transparent hover:border-line transition-all hidden sm:flex items-center gap-1 text-[11px] font-body font-bold cursor-pointer"
+                          title="عرض تفاصيل الفاتورة"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-accent" />
+                          <span className="text-xs">تفاصيل</span>
+                        </button>
+
                         <StatusPill status={order.status as any} />
                       </div>
                     </div>
@@ -487,6 +531,13 @@ export default function AdminDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Order Full Invoice Details Modal */}
+      <AdminOrderInvoiceModal
+        order={selectedOrderForInvoice}
+        isOpen={!!selectedOrderForInvoice}
+        onClose={() => setSelectedOrderForInvoice(null)}
+      />
     </div>
   );
 }

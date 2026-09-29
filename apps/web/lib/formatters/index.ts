@@ -40,3 +40,27 @@ export function formatArabicTime(isoString: string): string {
     return 'الآن';
   }
 }
+
+/**
+ * Formats ISO date string to full Arabic friendly date and time
+ * @example "الثلاثاء، 29 سبتمبر 2026 · 01:16 م"
+ */
+export function formatArabicDateTime(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    const dateStr = date.toLocaleDateString('ar-EG', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const timeStr = date.toLocaleTimeString('ar-EG', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return `${dateStr} · ${timeStr}`;
+  } catch {
+    return isoString;
+  }
+}

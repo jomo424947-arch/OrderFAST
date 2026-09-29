@@ -17,6 +17,7 @@ import {
   User,
   LogOut,
   Trophy,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -78,6 +79,12 @@ export const StudentSidebar: React.FC = () => {
       label: 'FastOrder League',
       icon: Trophy,
       isActive: pathname.startsWith('/student/league'),
+    },
+    {
+      href: '/student/feedback',
+      label: 'الشكاوى والمقترحات',
+      icon: MessageSquare,
+      isActive: pathname.startsWith('/student/feedback'),
     },
     {
       href: '/student/profile',

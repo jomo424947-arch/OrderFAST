@@ -334,3 +334,54 @@ export interface AdminAnalyticsResponse {
   dailyTimeline: AdminDailyAnalytics[];
 }
 
+// ==========================================
+// Support & Feedback Types
+// ==========================================
+
+export type SupportCategory =
+  | 'order_issue'
+  | 'kiosk_issue'
+  | 'payment_issue'
+  | 'app_bug'
+  | 'suggestion'
+  | 'other';
+
+export type SupportTicketStatus = 'pending' | 'in_progress' | 'resolved' | 'closed';
+
+export type SupportTicketPriority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: string;
+  category: SupportCategory;
+  subject: string;
+  message: string;
+  imageUrl?: string | null;
+  userId?: string | null;
+  isGuest: boolean;
+  senderName: string;
+  senderPhone: string;
+  senderEmail?: string | null;
+  university?: University | null;
+  college?: string | null;
+  orderId?: string | null;
+  orderNumber?: string | null;
+  kioskId?: string | null;
+  kioskName?: string | null;
+  status: SupportTicketStatus;
+  priority: SupportTicketPriority;
+  adminNotes?: string | null;
+  adminReply?: string | null;
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportTicketStats {
+  totalCount: number;
+  pendingCount: number;
+  inProgressCount: number;
+  resolvedCount: number;
+  categoryDistribution: Record<string, number>;
+}
+

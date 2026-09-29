@@ -17,6 +17,7 @@ import {
   UserCheck,
   Trophy,
   Receipt,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -83,6 +84,12 @@ export const AdminSidebar: React.FC = () => {
       label: 'FastOrder League والجوائز',
       icon: Trophy,
       isActive: pathname.startsWith('/admin/league'),
+    },
+    {
+      href: '/admin/feedback',
+      label: 'الشكاوى والمقترحات',
+      icon: MessageSquare,
+      isActive: pathname.startsWith('/admin/feedback'),
     },
   ];
 

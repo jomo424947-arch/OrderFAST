@@ -10,6 +10,7 @@ import { useOrderStore } from '@/stores/useOrderStore';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import { StudentMotivationalPrompt } from '@/components/student/StudentMotivationalPrompt';
 import { CollegeSelectionModal } from '@/components/auth/CollegeSelectionModal';
+import { StudentSupportPopIcon } from '@/components/student/StudentSupportPopIcon';
 
 export default function StudentLayout({
   children,
@@ -44,6 +45,7 @@ export default function StudentLayout({
             {children}
           </main>
           <StudentMotivationalPrompt />
+          <StudentSupportPopIcon />
           <StudentBottomNav />
         </div>
 

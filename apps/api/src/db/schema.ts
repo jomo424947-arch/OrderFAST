@@ -608,3 +608,62 @@ export const leaguePrizesRelations = relations(leaguePrizes, ({ one }) => ({
   }),
 }));
 
+// ==========================================
+// 19. Support Tickets & Feedback Table
+// ==========================================
+
+export const supportTickets = pgTable('support_tickets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ticketNumber: text('ticket_number').notNull().unique(),
+  category: text('category').notNull().default('other'), // 'order_issue' | 'kiosk_issue' | 'payment_issue' | 'app_bug' | 'suggestion' | 'other'
+  subject: text('subject').notNull(),
+  message: text('message').notNull(),
+  imageUrl: text('image_url'),
+
+  // Submitter details
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'set null' }),
+  isGuest: boolean('is_guest').notNull().default(false),
+  senderName: text('sender_name').notNull(),
+  senderPhone: text('sender_phone').notNull(),
+  senderEmail: text('sender_email'),
+  university: text('university').default('sphinx'),
+  college: text('college'),
+
+  // References
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'set null' }),
+  orderNumber: text('order_number'),
+  kioskId: uuid('kiosk_id').references(() => kiosks.id, { onDelete: 'set null' }),
+  kioskName: text('kiosk_name'),
+
+  // Management
+  status: text('status').notNull().default('pending'), // 'pending' | 'in_progress' | 'resolved' | 'closed'
+  priority: text('priority').notNull().default('normal'), // 'low' | 'normal' | 'high' | 'urgent'
+  adminNotes: text('admin_notes'),
+  adminReply: text('admin_reply'),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  statusIdx: index('idx_support_tickets_status').on(table.status),
+  createdAtIdx: index('idx_support_tickets_created_at').on(table.createdAt),
+  userIdIdx: index('idx_support_tickets_user_id').on(table.userId),
+  categoryIdx: index('idx_support_tickets_category').on(table.category),
+  ticketNumIdx: index('idx_support_tickets_ticket_num').on(table.ticketNumber),
+}));
+
+export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
+  user: one(profiles, {
+    fields: [supportTickets.userId],
+    references: [profiles.id],
+  }),
+  order: one(orders, {
+    fields: [supportTickets.orderId],
+    references: [orders.id],
+  }),
+  kiosk: one(kiosks, {
+    fields: [supportTickets.kioskId],
+    references: [kiosks.id],
+  }),
+}));
+
