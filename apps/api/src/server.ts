@@ -3,6 +3,7 @@ import { buildApp } from './app.js';
 import { env } from './config/env.js';
 import { expiryWorker } from './modules/workers/expiry.worker.js';
 import { leagueWorker } from './modules/workers/league.worker.js';
+import { autoAcceptWorker } from './modules/workers/auto-accept.worker.js';
 import { pool } from './db/client.js';
 
 let app: FastifyInstance | null = null;
@@ -16,6 +17,7 @@ async function shutdown(signal: string) {
   try {
     expiryWorker.stop();
     leagueWorker.stop();
+    autoAcceptWorker.stop();
     if (app) {
       await app.close();
       console.log('Fastify server closed.');
@@ -47,6 +49,7 @@ async function start() {
     // Start background workers
     expiryWorker.start(20000); // Scans every 20s
     leagueWorker.start(60000); // Scans every 60s
+    autoAcceptWorker.start(5000); // Scans every 5s for auto-accept kiosks
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);

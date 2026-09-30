@@ -47,7 +47,7 @@ export default function CashierIncomingOrdersPage() {
       setIsAcceptingAll(true);
       const orderIds = incomingOrders.map((o) => o.id);
       await batchAcceptOrders(kioskId, orderIds);
-      setActionFeedback(`تم بنجاح قبول جميع الأوردرات (${orderIds.length}) ونقلها للمطبخ! 🎉`);
+      setActionFeedback(`تم بنجاح قبول جميع الأوردرات (${orderIds.length}) ونقلها للمطبخ!`);
       setTimeout(() => setActionFeedback(null), 3500);
     } catch (err: any) {
       setActionFeedback(err.message || 'حدث خطأ أثناء قبول الأوردرات');

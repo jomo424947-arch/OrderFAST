@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, asc, inArray } from 'drizzle-orm';
+import { eq, and, sql, desc, asc, inArray, lte } from 'drizzle-orm';
 import { db, pool } from '../../db/client.js';
 import {
   orders,
@@ -342,7 +342,8 @@ export class OrderService {
 
       // Step 8: Insert Order Row
       // Step 8: Insert Order Row (Always enters as PENDING_KIOSK to notify cashier and ring incoming order chime)
-      if (Boolean((kiosk as any).autoAcceptOrders)) {
+      const isAutoAccept = Boolean(kiosk.autoAcceptOrders ?? (kiosk as any).auto_accept_orders);
+      if (isAutoAccept) {
         autoAcceptJob = { orderId, kioskId: input.kioskId };
       }
 
@@ -893,7 +894,8 @@ export class OrderService {
         .where(eq(kiosks.id, kioskId))
         .limit(1);
 
-      if (!kiosk || !kiosk.autoAcceptOrders) {
+      const isKioskAutoAccept = Boolean(kiosk?.autoAcceptOrders ?? (kiosk as any)?.auto_accept_orders);
+      if (!kiosk || !isKioskAutoAccept) {
         return null;
       }
 
@@ -925,7 +927,7 @@ export class OrderService {
         eventType: 'STATUS_CHANGED',
         fromStatus: 'PENDING_KIOSK',
         toStatus: 'ACCEPTED',
-        actorId: 'system',
+        actorId: null,
         actorType: 'system',
         metadata: {
           autoAccepted: true,
@@ -980,6 +982,41 @@ export class OrderService {
 
       return updatedOrder;
     });
+  }
+
+  /**
+   * 6.2 SWEEP AUTO-ACCEPT ORDERS (Continuous background safeguard)
+   * Sweeps any orders that have been in PENDING_KIOSK for >= 5 seconds
+   * where the kiosk has autoAcceptOrders enabled.
+   */
+  async sweepAutoAcceptOrders(): Promise<number> {
+    try {
+      const fiveSecondsAgo = new Date(Date.now() - 5000);
+      const pendingOrders = await db
+        .select({
+          id: orders.id,
+          kioskId: orders.kioskId,
+        })
+        .from(orders)
+        .innerJoin(kiosks, eq(orders.kioskId, kiosks.id))
+        .where(
+          and(
+            eq(orders.status, 'PENDING_KIOSK'),
+            eq(kiosks.autoAcceptOrders, true),
+            lte(orders.createdAt, fiveSecondsAgo)
+          )
+        );
+
+      let processed = 0;
+      for (const ord of pendingOrders) {
+        const res = await this.autoAcceptOrder(ord.id, ord.kioskId);
+        if (res) processed++;
+      }
+      return processed;
+    } catch (err) {
+      console.warn('[AutoAcceptSweep] Error during sweep:', err);
+      return 0;
+    }
   }
 
   /**

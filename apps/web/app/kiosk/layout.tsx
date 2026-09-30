@@ -103,15 +103,15 @@ export default function CashierLayout({
 
   return (
     <RoleGuard allowedRole="cashier">
-      <div className="min-h-screen bg-canvas flex flex-col lg:flex-row">
+      <div className="min-h-screen bg-canvas flex flex-col lg:flex-row overflow-x-hidden w-full">
         {/* Desktop Sidebar */}
         <CashierSidebar />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden w-full">
           <CashierHeader />
 
-          <main className="flex-1 p-4 sm:p-6 max-w-5xl w-full mx-auto pb-24 lg:pb-12">
+          <main className="flex-1 p-4 sm:p-6 max-w-5xl w-full mx-auto pb-24 lg:pb-12 min-w-0">
             {children}
           </main>
 

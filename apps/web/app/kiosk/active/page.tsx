@@ -23,6 +23,7 @@ import {
   Copy,
   Check,
   MessageCircle,
+  User,
 } from 'lucide-react';
 import { Order } from '@/types';
 
@@ -150,59 +151,17 @@ export default function CashierActiveOrdersPage() {
             return (
               <div
                 key={order.id}
-                className="bg-surface rounded-2xl p-5 border border-line/80 shadow-warm space-y-3.5 flex flex-col justify-between"
+                className="bg-surface rounded-3xl p-4 sm:p-5 border border-line/80 shadow-warm space-y-3.5 flex flex-col justify-between w-full min-w-0 overflow-hidden text-right"
               >
-                <div className="space-y-3.5">
-                  {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-lg font-black text-ink font-mono-nums">
+                <div className="space-y-3.5 min-w-0">
+                  {/* Top Bar: Order Number, Payment Status & Status Pill */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap pb-2.5 border-b border-line/60">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-lg font-black text-ink font-mono-nums tracking-wide">
                         {order.orderNumber}
                       </span>
-                      <span className="font-body text-xs text-ink-soft">
-                        ({order.studentName} - {order.studentCollege})
-                      </span>
-                      {order.studentPhone && (
-                        <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-lg text-emerald-800 dark:text-emerald-300">
-                          <Phone className="w-3 h-3 text-emerald-600 flex-shrink-0" />
-                          <span className="font-mono text-xs font-bold font-mono-nums dir-ltr text-emerald-700 dark:text-emerald-300" dir="ltr">
-                            {order.studentPhone}
-                          </span>
-                          {order.studentPhoneVerified && (
-                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-500/20 px-1 py-0.2 rounded">
-                              مؤكّد
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCopyPhone(order.id, order.studentPhone!);
-                            }}
-                            className="p-0.5 hover:bg-emerald-500/20 rounded text-emerald-700 dark:text-emerald-300 transition-colors"
-                            title="نسخ رقم الطالب"
-                          >
-                            {copiedPhoneOrder === order.id ? (
-                              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
-                                <Check className="w-3 h-3" />
-                                <span>تم النسخ</span>
-                              </span>
-                            ) : (
-                              <Copy className="w-3 h-3 text-emerald-600 hover:scale-110 transition-transform" />
-                            )}
-                          </button>
-                          <a
-                            href={`https://wa.me/2${order.studentPhone.replace(/\D/g, '').replace(/^2/, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-0.5 hover:bg-emerald-500/20 rounded text-emerald-700 dark:text-emerald-300 transition-colors"
-                            title="مراسلة عبر واتساب"
-                          >
-                            <MessageCircle className="w-3 h-3 text-emerald-600 hover:scale-110 transition-transform" />
-                          </a>
-                        </div>
-                      )}
+
+                      {/* Payment Method Badge */}
                       {isOnline ? (
                         isPaid ? (
                           <span className="text-[10px] font-body font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
@@ -218,11 +177,64 @@ export default function CashierActiveOrdersPage() {
                       ) : (
                         <span className="text-[10px] font-body font-bold text-primary-ink bg-primary-soft px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 border border-primary/20">
                           <Banknote className="w-3 h-3" />
-                          <span>كاش</span>
+                          <span>كاش عند الاستلام</span>
                         </span>
                       )}
                     </div>
+
                     <StatusPill status={order.status} />
+                  </div>
+
+                  {/* Customer Info & Contact Row */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-body">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+                      <User className="w-3.5 h-3.5 text-ink-soft flex-shrink-0" />
+                      <span className="font-bold text-ink truncate">{order.studentName}</span>
+                      <span className="text-ink-soft truncate">({order.studentCollege})</span>
+                    </div>
+
+                    {/* Student Phone with Copy & Quick WhatsApp */}
+                    {order.studentPhone && (
+                      <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-lg text-emerald-800 dark:text-emerald-300 flex-shrink-0">
+                        <Phone className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                        <span className="font-mono text-xs font-bold font-mono-nums dir-ltr text-emerald-700 dark:text-emerald-300" dir="ltr">
+                          {order.studentPhone}
+                        </span>
+                        {order.studentPhoneVerified && (
+                          <span className="text-[9px] font-bold text-emerald-600 bg-emerald-500/20 px-1 py-0.2 rounded">
+                            مؤكّد
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyPhone(order.id, order.studentPhone!);
+                          }}
+                          className="p-0.5 hover:bg-emerald-500/20 rounded text-emerald-700 dark:text-emerald-300 transition-colors"
+                          title="نسخ رقم الطالب"
+                        >
+                          {copiedPhoneOrder === order.id ? (
+                            <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                              <Check className="w-3 h-3" />
+                              <span>تم</span>
+                            </span>
+                          ) : (
+                            <Copy className="w-3 h-3 text-emerald-600 hover:scale-110 transition-transform" />
+                          )}
+                        </button>
+                        <a
+                          href={`https://wa.me/2${order.studentPhone.replace(/\D/g, '').replace(/^2/, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-0.5 hover:bg-emerald-500/20 rounded text-emerald-700 dark:text-emerald-300 transition-colors"
+                          title="مراسلة عبر واتساب"
+                        >
+                          <MessageCircle className="w-3 h-3 text-emerald-600 hover:scale-110 transition-transform" />
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   {/* Student Order Notes */}
