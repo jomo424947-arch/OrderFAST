@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useNotificationStore } from '@/stores/useNotificationStore';
+import { stopCashierRepeatingAlarm } from '@/lib/utils/sound';
 
 export default function CashierLayout({
   children,
@@ -38,6 +39,21 @@ export default function CashierLayout({
       cleanupNotifs();
     };
   }, [activeKioskId, cashier?.id, startKioskPolling, startNotificationsPolling]);
+
+  // Silence active repeating alarm whenever cashier interacts with screen
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      stopCashierRepeatingAlarm();
+    };
+    window.addEventListener('click', handleUserInteraction);
+    window.addEventListener('touchstart', handleUserInteraction);
+
+    return () => {
+      stopCashierRepeatingAlarm();
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, []);
 
   // If cashier is not assigned to any kiosk yet
   if (cashier && !cashier.kioskId) {

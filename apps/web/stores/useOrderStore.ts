@@ -3,7 +3,13 @@ import { Order, OrderStatus, CartItem, Kiosk, AdminAnalyticsResponse } from '@/t
 import { orderService } from '@/lib/services/orderService';
 import { ApiOrderService } from '@/lib/services/api/apiOrderService';
 import { isValidUUID } from '@/lib/utils';
-import { playNewOrderChime, playOrderPlacedSuccessSound, playIntroBellRing } from '@/lib/utils/sound';
+import {
+  playNewOrderChime,
+  playOrderPlacedSuccessSound,
+  playIntroBellRing,
+  playCashierRepeatingAlarm,
+  stopCashierRepeatingAlarm,
+} from '@/lib/utils/sound';
 import { useKioskStore } from './useKioskStore';
 
 interface OrderState {
@@ -179,8 +185,15 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   startKioskPolling: (kioskId: string, intervalMs = 3000) => {
     if (!isValidUUID(kioskId)) return () => {};
 
+    let isFirstCycle = true;
+
     // Initial load
-    get().fetchKioskOrders(kioskId, false);
+    get().fetchKioskOrders(kioskId, false).finally(() => {
+      // Mark initial load finished after 1.5s so subsequent new orders chime properly
+      setTimeout(() => {
+        isFirstCycle = false;
+      }, 1500);
+    });
 
     const intervalId = setInterval(async () => {
       if (typeof document !== 'undefined' && document.hidden) return;
@@ -198,12 +211,20 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         (o) => o.status === 'PENDING_KIOSK' && !previousPendingIds.has(o.id)
       );
 
-      if (hasNewIncoming && previousPendingIds.size > 0) {
-        playNewOrderChime();
+      if (hasNewIncoming && !isFirstCycle) {
+        const kiosk = useKioskStore.getState().kiosks.find((k) => k.id === kioskId);
+        if (kiosk?.repeatingChimeEnabled) {
+          playCashierRepeatingAlarm(10000);
+        } else {
+          playNewOrderChime();
+        }
       }
     }, intervalMs);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      stopCashierRepeatingAlarm();
+      clearInterval(intervalId);
+    };
   },
 
   startStudentTrackingPolling: (orderId: string, intervalMs = 3000) => {
@@ -338,6 +359,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   },
 
   acceptOrder: async (orderId: string, customPrepTimeMins?: number) => {
+    stopCashierRepeatingAlarm();
     try {
       if (orderService instanceof ApiOrderService) {
         const updated = await orderService.acceptOrder(orderId, customPrepTimeMins);
@@ -357,6 +379,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   },
 
   batchAcceptOrders: async (kioskId: string, orderIds: string[]) => {
+    stopCashierRepeatingAlarm();
     if (!orderIds.length) return;
     try {
       if (orderService.batchAcceptOrders) {
@@ -374,6 +397,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   },
 
   rejectOrder: async (orderId: string, reason?: string) => {
+    stopCashierRepeatingAlarm();
     try {
       const rejectionReason = reason || 'الكشك غير قادر على استلام طلبات جديدة حالياً';
       const updated = await orderService.updateOrderStatus(orderId, 'REJECTED', rejectionReason);

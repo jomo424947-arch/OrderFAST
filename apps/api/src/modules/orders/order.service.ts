@@ -40,8 +40,9 @@ export class OrderService {
     payload: {
       title: string;
       body: string;
-      channelId?: 'fastorder_orders' | 'fastorder_status';
+      channelId?: 'fastorder_orders' | 'fastorder_status' | 'fastorder_cashier_chime_10s';
       priority?: 'high' | 'normal';
+      sound?: string;
       orderId?: string;
       url?: string;
       type?: string;
@@ -53,10 +54,13 @@ export class OrderService {
         body: payload.body,
         channelId: payload.channelId,
         priority: payload.priority,
+        sound: payload.sound,
         data: {
           ...(payload.orderId ? { orderId: payload.orderId } : {}),
           ...(payload.url ? { url: payload.url } : {}),
           ...(payload.type ? { type: payload.type } : {}),
+          ...(payload.sound ? { sound: payload.sound } : {}),
+          ...(payload.channelId ? { channelId: payload.channelId } : {}),
         },
       })
       .catch((err) => {
@@ -104,7 +108,9 @@ export class OrderService {
     idempotencyKey: string
   ) {
     try {
-      return await db.transaction(async (tx) => {
+      let autoAcceptJob: { orderId: string; kioskId: string } | null = null;
+
+      const result = await db.transaction(async (tx) => {
         // Step 1: Idempotency Check
       const [existingOrder] = await tx
         .select()
@@ -335,6 +341,11 @@ export class OrderService {
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
       // Step 8: Insert Order Row
+      // Step 8: Insert Order Row (Always enters as PENDING_KIOSK to notify cashier and ring incoming order chime)
+      if (Boolean((kiosk as any).autoAcceptOrders)) {
+        autoAcceptJob = { orderId, kioskId: input.kioskId };
+      }
+
       // Digital wallet payments require cashier verification before marking as paid
       const isOnline = input.paymentMethod === 'digital_wallet';
       const [newOrder] = await tx
@@ -345,6 +356,8 @@ export class OrderService {
           studentId,
           kioskId: input.kioskId,
           status: 'PENDING_KIOSK',
+          acceptedAt: null,
+          estimatedReadyAt: null,
           idempotencyKey,
           subtotal,
           discount,
@@ -383,6 +396,7 @@ export class OrderService {
           paymentMethod: input.paymentMethod || 'cash',
           orderNotes: input.orderNotes || null,
           transferAmount: input.transferAmount || null,
+          autoAcceptScheduled: Boolean((kiosk as any).autoAcceptOrders),
         },
       });
 
@@ -395,23 +409,28 @@ export class OrderService {
         );
 
       if (staffMembers.length > 0) {
+        const staffTitle = 'أوردر جديد وارد! 🔔';
+        const staffBody = `أوردر جديد رقم ${orderNumber} من الطالب ${studentProfile.fullName} (${studentProfile.college}).`;
+
         await tx.insert(notifications).values(
           staffMembers.map((staff) => ({
             id: generateId(),
             userId: staff.userId,
             orderId,
             type: 'order_status' as const,
-            title: 'أوردر جديد وارد! 🔔',
-            body: `أوردر جديد رقم ${orderNumber} من الطالب ${studentProfile.fullName} (${studentProfile.college}).`,
+            title: staffTitle,
+            body: staffBody,
           }))
         );
 
+        const use10sChime = Boolean((kiosk as any).repeatingChimeEnabled);
         this.notifyPush(
           staffMembers.map((s) => s.userId),
           {
-            title: 'أوردر جديد وارد! 🔔',
-            body: `أوردر جديد رقم #${orderNumber} من الطالب ${studentProfile.fullName}.`,
-            channelId: 'fastorder_orders',
+            title: staffTitle,
+            body: staffBody,
+            channelId: use10sChime ? 'fastorder_cashier_chime_10s' : 'fastorder_orders',
+            sound: use10sChime ? 'cashier_alarm_10s' : 'fastorder_bell',
             priority: 'high',
             orderId,
             url: '/cashier',
@@ -465,6 +484,17 @@ export class OrderService {
         },
       };
     });
+
+    if (!result.isDuplicate && autoAcceptJob) {
+      const { orderId: targetOrderId, kioskId: targetKioskId } = autoAcceptJob;
+      setTimeout(() => {
+        this.autoAcceptOrder(targetOrderId, targetKioskId).catch((err) => {
+          console.warn('[AutoAccept] 5s delayed accept error:', err);
+        });
+      }, 5000);
+    }
+
+    return result;
     } catch (error: any) {
       // Handle PostgreSQL 23505 Unique Violation race condition on idempotencyKey
       if (
@@ -821,6 +851,132 @@ export class OrderService {
         url: `/orders/${orderId}`,
         type: 'order_accepted',
       });
+
+      return updatedOrder;
+    });
+  }
+
+  /**
+   * 6.1 AUTO-ACCEPT ORDER (5-Second Grace Delay Execution)
+   * Automatically moves PENDING_KIOSK order to ACCEPTED if kiosk has autoAccept enabled
+   * and cashier has not manually accepted or rejected it within 5 seconds.
+   */
+  async autoAcceptOrder(orderId: string, kioskId: string) {
+    return await db.transaction(async (tx) => {
+      // 1. Get current Order and verify it is still PENDING_KIOSK
+      const [existingOrder] = await tx
+        .select({
+          id: orders.id,
+          status: orders.status,
+          kioskId: orders.kioskId,
+          studentId: orders.studentId,
+          orderNumber: orders.orderNumber,
+          kioskName: orders.kioskNameSnapshot,
+        })
+        .from(orders)
+        .where(eq(orders.id, orderId))
+        .for('update');
+
+      if (!existingOrder || existingOrder.status !== 'PENDING_KIOSK') {
+        // Order was already accepted, rejected, or cancelled during the 5s grace period
+        return null;
+      }
+
+      // 2. Verify kiosk still has autoAcceptOrders active
+      const [kiosk] = await tx
+        .select({
+          defaultPrepTimeMins: kiosks.defaultPrepTimeMins,
+          isRushMode: kiosks.isRushMode,
+          autoAcceptOrders: kiosks.autoAcceptOrders,
+        })
+        .from(kiosks)
+        .where(eq(kiosks.id, kioskId))
+        .limit(1);
+
+      if (!kiosk || !kiosk.autoAcceptOrders) {
+        return null;
+      }
+
+      const prepMins = kiosk.defaultPrepTimeMins + (kiosk.isRushMode ? 5 : 0) || 15;
+      const estimatedReadyAt = new Date(Date.now() + prepMins * 60 * 1000);
+
+      // 3. Conditional Atomic Transition to ACCEPTED
+      const [updatedOrder] = await tx
+        .update(orders)
+        .set({
+          status: 'ACCEPTED',
+          acceptedAt: new Date(),
+          estimatedReadyAt,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(eq(orders.id, orderId), eq(orders.status, 'PENDING_KIOSK'))
+        )
+        .returning();
+
+      if (!updatedOrder) {
+        return null;
+      }
+
+      // 4. Audit Event
+      await tx.insert(orderEvents).values({
+        id: generateId(),
+        orderId,
+        eventType: 'STATUS_CHANGED',
+        fromStatus: 'PENDING_KIOSK',
+        toStatus: 'ACCEPTED',
+        actorId: 'system',
+        actorType: 'system',
+        metadata: {
+          autoAccepted: true,
+          prepTimeMins: prepMins,
+          estimatedReadyAt: estimatedReadyAt.toISOString(),
+        },
+      });
+
+      // 5. Notify Student
+      await tx.insert(notifications).values({
+        id: generateId(),
+        userId: existingOrder.studentId,
+        orderId,
+        type: 'order_status',
+        title: 'تم قبول طلبك تلقائياً! ⚡',
+        body: `${existingOrder.kioskName} قبل طلبك رقم ${existingOrder.orderNumber}. الوقت المتوقع: ${prepMins} دقيقة.`,
+      });
+
+      this.notifyPush([existingOrder.studentId], {
+        title: 'تم قبول طلبك تلقائياً! ⚡',
+        body: `${existingOrder.kioskName} قبل طلبك رقم #${existingOrder.orderNumber}. الوقت المتوقع: ${prepMins} دقيقة.`,
+        channelId: 'fastorder_status',
+        priority: 'high',
+        orderId,
+        url: `/orders/${orderId}`,
+        type: 'order_accepted',
+      });
+
+      // 6. Notify Kiosk Staff that order was auto-accepted
+      const staffMembers = await tx
+        .select({ userId: kioskStaff.userId })
+        .from(kioskStaff)
+        .where(
+          and(eq(kioskStaff.kioskId, kioskId), eq(kioskStaff.isActive, true))
+        );
+
+      if (staffMembers.length > 0) {
+        const staffTitle = 'تم القبول التلقائي للطلب! ⚡';
+        const staffBody = `تم نقل الطلب رقم ${existingOrder.orderNumber} تلقائياً للمطبخ للتحضير.`;
+
+        await tx.insert(notifications).values(
+          staffMembers.map((staff) => ({
+            id: generateId(),
+            userId: staff.userId,
+            orderId,
+            type: 'order_status' as const,
+            title: staffTitle,
+            body: staffBody,
+          }))
+        );
+      }
 
       return updatedOrder;
     });

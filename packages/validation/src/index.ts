@@ -88,6 +88,8 @@ export const updateKioskSettingsSchema = z.object({
   acceptsInstapay: z.boolean().optional(),
   imageUrl: z.string().optional().nullable(),
   isHidden: z.boolean().optional(),
+  autoAcceptOrders: z.boolean().optional(),
+  repeatingChimeEnabled: z.boolean().optional(),
 });
 
 export const createKioskSchema = z.object({
@@ -101,6 +103,8 @@ export const createKioskSchema = z.object({
   acceptanceTimeoutSecs: z.number().int().min(60).max(1800).default(180),
   phone: z.string().optional(),
   isHidden: z.boolean().default(false),
+  autoAcceptOrders: z.boolean().default(false),
+  repeatingChimeEnabled: z.boolean().default(false),
   acceptsOnlineOrders: z.boolean().default(true),
   acceptsCash: z.boolean().default(true),
   acceptsOnline: z.boolean().default(false),

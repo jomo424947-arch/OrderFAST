@@ -39,13 +39,12 @@ export default function CashierSettingsPage() {
   } = useKioskStore();
 
   useEffect(() => {
-    if (kiosks.length === 0) {
-      fetchKiosks();
-    }
-  }, [kiosks.length, fetchKiosks]);
+    fetchKiosks();
+  }, [fetchKiosks]);
 
   const currentKiosk =
     kiosks.find((k) => k.id === activeKioskId) ||
+    kiosks.find((k) => k.id === (cashier as any)?.kioskId) ||
     kiosks[0] || {
       id: activeKioskId,
       name: 'الكشك',
@@ -62,6 +61,8 @@ export default function CashierSettingsPage() {
       instapayHandle: '',
       acceptsWallet: true,
       acceptsInstapay: true,
+      autoAcceptOrders: false,
+      repeatingChimeEnabled: false,
     };
 
   // Operational settings
@@ -82,6 +83,10 @@ export default function CashierSettingsPage() {
   const [acceptsWallet, setAcceptsWallet] = useState(currentKiosk.acceptsWallet !== false);
   const [acceptsInstapay, setAcceptsInstapay] = useState(currentKiosk.acceptsInstapay !== false);
 
+  // Peak Hours / Rush Automation Settings
+  const [autoAcceptOrders, setAutoAcceptOrders] = useState(currentKiosk.autoAcceptOrders === true);
+  const [repeatingChimeEnabled, setRepeatingChimeEnabled] = useState(currentKiosk.repeatingChimeEnabled === true);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -100,6 +105,8 @@ export default function CashierSettingsPage() {
       setInstapayHandle(currentKiosk.instapayHandle || '');
       setAcceptsWallet(currentKiosk.acceptsWallet !== false);
       setAcceptsInstapay(currentKiosk.acceptsInstapay !== false);
+      setAutoAcceptOrders(currentKiosk.autoAcceptOrders === true);
+      setRepeatingChimeEnabled(currentKiosk.repeatingChimeEnabled === true);
     }
   }, [
     currentKiosk.id,
@@ -115,11 +122,43 @@ export default function CashierSettingsPage() {
     currentKiosk.instapayHandle,
     currentKiosk.acceptsWallet,
     currentKiosk.acceptsInstapay,
+    currentKiosk.autoAcceptOrders,
+    currentKiosk.repeatingChimeEnabled,
   ]);
 
   const handleLogout = () => {
     logout();
     router.push('/auth/login');
+  };
+
+  const handleToggleAutoAccept = async (checked: boolean) => {
+    setAutoAcceptOrders(checked);
+    if (!currentKiosk?.id) return;
+    try {
+      await updateKioskSettings(currentKiosk.id, {
+        autoAcceptOrders: checked,
+      });
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2500);
+    } catch (err: any) {
+      setAutoAcceptOrders(!checked);
+      setErrorMessage(err.message || 'فشل تحديث إعداد القبول التلقائي');
+    }
+  };
+
+  const handleToggleRepeatingChime = async (checked: boolean) => {
+    setRepeatingChimeEnabled(checked);
+    if (!currentKiosk?.id) return;
+    try {
+      await updateKioskSettings(currentKiosk.id, {
+        repeatingChimeEnabled: checked,
+      });
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2500);
+    } catch (err: any) {
+      setRepeatingChimeEnabled(!checked);
+      setErrorMessage(err.message || 'فشل تحديث إعداد المنبه الصوتي');
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -164,6 +203,8 @@ export default function CashierSettingsPage() {
         instapayHandle: instapayHandle.trim() || null,
         acceptsWallet,
         acceptsInstapay,
+        autoAcceptOrders,
+        repeatingChimeEnabled,
       });
 
       setIsSaved(true);
@@ -317,6 +358,88 @@ export default function CashierSettingsPage() {
               onChange={(e) => setIsRushMode(e.target.checked)}
               className="w-5 h-5 accent-primary rounded cursor-pointer"
             />
+          </div>
+        </div>
+
+        {/* Peak Hours & Rush Automation Tools (أدوات مواجهة الزحمة والذروة) */}
+        <div className="bg-surface border border-line/80 rounded-3xl p-5 shadow-warm space-y-4 text-right">
+          <div className="pb-2 border-b border-line/60 flex items-center justify-between">
+            <h4 className="font-display font-bold text-base text-ink flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              <span>أدوات تخفيف الزحمة وأوقات الذروة</span>
+            </h4>
+            <span className="text-[11px] font-body bg-amber-500/10 text-amber-700 dark:text-amber-300 px-2.5 py-0.5 rounded-full font-bold">
+              اختيارية حسب رغبة الكاشير
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {/* 1. Auto-Accept Toggle */}
+            <label className={`flex items-start justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+              autoAcceptOrders 
+                ? 'bg-amber-500/10 border-amber-500/40 shadow-xs' 
+                : 'bg-canvas border-line hover:bg-line/20'
+            }`}>
+              <div className="space-y-1 pr-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-body text-sm font-bold text-ink flex items-center gap-1.5">
+                    <span>⚡ القبول التلقائي بعد 5 ثوانٍ (Auto-Accept)</span>
+                  </p>
+                  {autoAcceptOrders ? (
+                    <span className="text-[10px] font-bold bg-accent text-white px-2 py-0.2 rounded-full">
+                      مفعّل حالياً
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold bg-line text-ink-soft px-2 py-0.2 rounded-full">
+                      معطل (يدوي)
+                    </span>
+                  )}
+                </div>
+                <p className="font-body text-xs text-ink-soft leading-relaxed">
+                  قبول الطلبات الواردة تلقائياً بعد مهلة 5 ثوانٍ ونقلها للمطبخ ولائحة التحضير دون الحاجة للنقر على زر قبول (مع إمكانية الرفض السريع للطلب خلال فترة الـ 5 ثوانٍ).
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={autoAcceptOrders}
+                onChange={(e) => handleToggleAutoAccept(e.target.checked)}
+                className="w-5 h-5 accent-accent rounded cursor-pointer mt-1 flex-shrink-0"
+              />
+            </label>
+
+            {/* 2. 10s Repeating Alarm Toggle */}
+            <label className={`flex items-start justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+              repeatingChimeEnabled 
+                ? 'bg-primary-soft/60 border-primary/40 shadow-xs' 
+                : 'bg-canvas border-line hover:bg-line/20'
+            }`}>
+              <div className="space-y-1 pr-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-body text-sm font-bold text-ink flex items-center gap-1.5">
+                    <Bell className="w-4 h-4 text-primary" />
+                    <span>منبه صوتي متكرر لمدة 10 ثوانٍ</span>
+                  </p>
+                  {repeatingChimeEnabled ? (
+                    <span className="text-[10px] font-bold bg-primary text-primary-ink px-2 py-0.2 rounded-full">
+                      مفعّل حالياً
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold bg-line text-ink-soft px-2 py-0.2 rounded-full">
+                      رنة واحدة فقط
+                    </span>
+                  )}
+                </div>
+                <p className="font-body text-xs text-ink-soft leading-relaxed">
+                  رنين متواصل لجرس الكاشير كل 1.5 ثانية لمدة 10 ثوانٍ عند وصول طلب جديد حتى تنتبه للطلب وأنت مشغول (خاص بشاشة الكاشير فقط ولا يؤثر على هواتف الطلاب إطلاقاً).
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={repeatingChimeEnabled}
+                onChange={(e) => handleToggleRepeatingChime(e.target.checked)}
+                className="w-5 h-5 accent-primary rounded cursor-pointer mt-1 flex-shrink-0"
+              />
+            </label>
           </div>
         </div>
 

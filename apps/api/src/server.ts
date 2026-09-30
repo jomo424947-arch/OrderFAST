@@ -53,5 +53,5 @@ async function start() {
   }
 }
 
-// OrderFAST API Server
+// OrderFAST API Server - Rush Mode & Auto-Accept Enabled
 start();

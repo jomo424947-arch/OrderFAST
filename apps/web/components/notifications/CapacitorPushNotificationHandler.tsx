@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { apiClient } from '@/lib/api/client';
-import { playIntroBellRing } from '@/lib/utils/sound';
+import { playIntroBellRing, playCashierRepeatingAlarm } from '@/lib/utils/sound';
 
 const FCM_TOKEN_STORAGE_KEY = 'fastorder_fcm_token';
 
@@ -91,6 +91,18 @@ export function CapacitorPushNotificationHandler() {
               lights: true,
               lightColor: '#FFA41C',
             });
+
+            await pushPlugin.createChannel({
+              id: 'fastorder_cashier_urgent_v1',
+              name: 'منبه كاشير متكرر 10 ثوانٍ (الذروة)',
+              description: 'رنين متواصل لمدة 10 ثوانٍ للطلبات الجديدة في أوقات الذروة للكاشير فقط',
+              importance: 5, // High / Heads-up
+              visibility: 1, // Public
+              sound: 'cashier_alarm_10s',
+              vibration: true,
+              lights: true,
+              lightColor: '#FFA41C',
+            });
           }
         } catch (channelErr) {
           console.warn('[Push] Could not create notification channel:', channelErr);
@@ -150,7 +162,17 @@ export function CapacitorPushNotificationHandler() {
           await pushPlugin.addListener('pushNotificationReceived', (notification: any) => {
             console.log('[Push] Received in foreground:', notification.title, notification.body);
             try {
-              playIntroBellRing();
+              const isCashierAlarm =
+                notification?.sound === 'cashier_alarm_10s' ||
+                notification?.data?.sound === 'cashier_alarm_10s' ||
+                notification?.channelId === 'fastorder_cashier_urgent_v1' ||
+                notification?.data?.channelId === 'fastorder_cashier_chime_10s';
+
+              if (isCashierAlarm) {
+                playCashierRepeatingAlarm(10000);
+              } else {
+                playIntroBellRing();
+              }
             } catch {
               // Ignore audio error
             }

@@ -97,6 +97,8 @@ export const kiosks = pgTable('kiosks', {
   acceptsWallet: boolean('accepts_wallet').notNull().default(true),
   acceptsInstapay: boolean('accepts_instapay').notNull().default(true),
   isRushMode: boolean('is_rush_mode').notNull().default(false),
+  autoAcceptOrders: boolean('auto_accept_orders').notNull().default(false),
+  repeatingChimeEnabled: boolean('repeating_chime_enabled').notNull().default(false),
   openingHours: text('opening_hours').notNull().default('8:00 ص - 4:00 م'),
   phone: text('phone'),
   rating: numeric('rating', { precision: 3, scale: 2 }).notNull().default('0.00'),

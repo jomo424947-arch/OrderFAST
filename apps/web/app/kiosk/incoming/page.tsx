@@ -132,6 +132,7 @@ export default function CashierIncomingOrdersPage() {
               order={order}
               onAccept={handleAccept}
               onReject={handleOpenReject}
+              autoAcceptCountdownSecs={Boolean((currentKiosk as any)?.autoAcceptOrders) ? 5 : undefined}
             />
           ))}
         </div>

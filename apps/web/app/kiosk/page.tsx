@@ -45,6 +45,7 @@ export default function CashierDashboardPage() {
     rejectOrder,
     setOrderStatus,
     batchAcceptOrders,
+    confirmPayment,
   } = useOrderStore();
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -52,6 +53,7 @@ export default function CashierDashboardPage() {
   const [rejectReason, setRejectReason] = useState('نفاد بعض المكونات المطلوبة');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
   const [isAcceptingAll, setIsAcceptingAll] = useState(false);
+  const [verifyDeliveryOrder, setVerifyDeliveryOrder] = useState<any | null>(null);
 
   const isUnassigned = cashier && !cashier.kioskId && (!activeKioskId || !kiosks.some((k) => k.id === activeKioskId));
 
@@ -153,6 +155,16 @@ export default function CashierDashboardPage() {
     }
   };
 
+  const handleCompleteOrder = async (order: any) => {
+    if (order.paymentMethod === 'digital_wallet' && order.paymentStatus === 'pending_verification') {
+      setVerifyDeliveryOrder(order);
+      return;
+    }
+    await setOrderStatus(order.id, 'COMPLETED');
+    setActionFeedback(`تم بنجاح تسليم الطلب ${order.orderNumber}!`);
+    setTimeout(() => setActionFeedback(null), 3000);
+  };
+
   if (isUnassigned) {
     return (
       <div className="max-w-md mx-auto my-12 bg-surface border border-line rounded-3xl p-8 text-center space-y-4 shadow-floating animate-in fade-in duration-300">
@@ -194,6 +206,12 @@ export default function CashierDashboardPage() {
             >
               {currentKiosk.isOpen ? 'مفتوح لاستقبال الطلبات' : 'مغلق مؤقتاً'}
             </span>
+            {currentKiosk.autoAcceptOrders && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-body font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                <Zap className="w-3 h-3 text-amber-600" />
+                <span>القبول التلقائي مفعّل</span>
+              </span>
+            )}
           </div>
           <p className="font-body text-xs text-ink-soft mt-0.5">
             {currentKiosk.collegeLocation} · {currentKiosk.openingHours}
@@ -450,6 +468,11 @@ export default function CashierDashboardPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 flex-shrink-0">
+                    {order.paymentMethod === 'digital_wallet' && order.paymentStatus === 'pending_verification' && (
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-md inline-flex items-center gap-1 animate-pulse">
+                        <span>⚠️ بانتظار التحقق</span>
+                      </span>
+                    )}
                     <StatusPill status={order.status} />
 
                     {(order.status === 'ACCEPTED' || order.status === 'PREPARING') && (
@@ -466,13 +489,21 @@ export default function CashierDashboardPage() {
 
                     {order.status === 'READY' && (
                       <Button
-                        variant="primary"
+                        variant={order.paymentMethod === 'digital_wallet' && order.paymentStatus === 'pending_verification' ? 'accent' : 'primary'}
                         size="sm"
-                        onClick={() => setOrderStatus(order.id, 'COMPLETED')}
-                        className="text-[11px] py-1 px-2.5 h-auto shadow-sm"
+                        onClick={() => handleCompleteOrder(order)}
+                        className={`text-[11px] py-1 px-2.5 h-auto shadow-sm font-bold ${
+                          order.paymentMethod === 'digital_wallet' && order.paymentStatus === 'pending_verification'
+                            ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                            : ''
+                        }`}
                       >
                         <CheckCheck className="w-3.5 h-3.5 ml-1" />
-                        <span>تسليم الطلب</span>
+                        <span>
+                          {order.paymentMethod === 'digital_wallet' && order.paymentStatus === 'pending_verification'
+                            ? '⚠️ تحقق وسلّم'
+                            : 'تسليم الطلب'}
+                        </span>
                       </Button>
                     )}
                   </div>
@@ -673,6 +704,89 @@ export default function CashierDashboardPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Verify Online Payment Before Delivery In-App Modal */}
+      {verifyDeliveryOrder && (
+        <Modal
+          isOpen={!!verifyDeliveryOrder}
+          onClose={() => setVerifyDeliveryOrder(null)}
+          title="تنبيه تأكيد استلام الدفع الإلكتروني"
+          description={`طلب رقم ${verifyDeliveryOrder.orderNumber} مسجل كدفع إلكتروني`}
+          maxWidth="md"
+        >
+          <div className="space-y-4 text-right">
+            {/* Warning Alert Banner - OrderFAST Design System Harmonious Palette */}
+            <div className="bg-primary-soft/80 border border-primary/40 rounded-2xl p-4 space-y-2 text-right">
+              <div className="flex items-center gap-2 font-black text-sm text-primary-ink">
+                <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0" />
+                <span>طلب رقم {verifyDeliveryOrder.orderNumber} لم يتم تأكيد تحويله بعد</span>
+              </div>
+              <p className="text-xs leading-relaxed font-bold text-ink-soft">
+                هذا الأوردر مدفوع إلكترونياً ({verifyDeliveryOrder.onlinePaymentType === 'instapay' ? 'انستا باي' : 'محفظة كاش'}). يرجى التأكد من وصول الإشعار والمبلغ على هاتفك قبل تسليم الوجبة للطالب.
+              </p>
+            </div>
+
+            {/* Payment Details Card */}
+            <div className="bg-canvas border border-line rounded-2xl p-4 space-y-2.5 text-xs font-body">
+              <div className="flex justify-between items-center py-1.5 border-b border-line/60">
+                <span className="text-ink-soft">المبلغ المطلوب:</span>
+                <span className="font-mono text-base font-black text-ink font-mono-nums">
+                  {formatEGP(verifyDeliveryOrder.total)}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1.5 border-b border-line/60">
+                <span className="text-ink-soft">وسيلة الدفع:</span>
+                <span className="font-bold text-ink">
+                  {verifyDeliveryOrder.onlinePaymentType === 'instapay' ? 'انستا باي (InstaPay)' : 'محفظة إلكترونية (كاش)'}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1.5 border-b border-line/60">
+                <span className="text-ink-soft">الرقم/الحساب المحول منه:</span>
+                <span className="font-mono text-xs font-black text-ink font-mono-nums dir-ltr text-right">
+                  {verifyDeliveryOrder.transferSenderPhone || 'غير مسجل'}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs font-bold text-ink text-center pt-1 leading-relaxed">
+              هل تحققت من وصول المبلغ على هاتفك وتريد تأكيد الدفع وتسليم الأوردر للطالب الآن؟
+            </p>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="accent"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
+                onClick={async () => {
+                  const targetOrder = verifyDeliveryOrder;
+                  setVerifyDeliveryOrder(null);
+                  try {
+                    await confirmPayment(targetOrder.id);
+                  } catch (err) {
+                    console.warn('Payment auto-confirm error:', err);
+                  }
+                  await setOrderStatus(targetOrder.id, 'COMPLETED');
+                  setActionFeedback(`تم بنجاح تأكيد دفع وتسليم الطلب ${targetOrder.orderNumber}`);
+                  setTimeout(() => setActionFeedback(null), 3000);
+                }}
+              >
+                <CheckCircle2 className="w-4 h-4 ml-1" />
+                <span>تأكيد الاستلام وتسليم الأوردر</span>
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => setVerifyDeliveryOrder(null)}
+                className="px-4 py-3 bg-line/60 hover:bg-line text-ink rounded-xl text-xs font-body font-bold transition-colors cursor-pointer"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

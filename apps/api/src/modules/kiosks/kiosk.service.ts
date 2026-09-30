@@ -174,6 +174,8 @@ export class KioskService {
       acceptsInstapay?: boolean;
       imageUrl?: string | null;
       isHidden?: boolean;
+      autoAcceptOrders?: boolean;
+      repeatingChimeEnabled?: boolean;
     }
   ) {
     const [updated] = await db

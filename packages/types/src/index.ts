@@ -88,6 +88,8 @@ export interface Kiosk {
   acceptsWallet: boolean;
   acceptsInstapay: boolean;
   isRushMode: boolean;
+  autoAcceptOrders?: boolean;
+  repeatingChimeEnabled?: boolean;
   openingHours: string;
   phone?: string | null;
   rating: number;

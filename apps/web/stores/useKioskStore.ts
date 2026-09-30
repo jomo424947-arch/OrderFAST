@@ -58,7 +58,16 @@ export const useKioskStore = create<KioskState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  setActiveKioskId: (id: string) => set({ activeKioskId: id }),
+  setActiveKioskId: (id: string) => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('fastorder_active_kiosk', id);
+      }
+    } catch {
+      // ignore
+    }
+    set({ activeKioskId: id });
+  },
 
   fetchKiosks: async (university?: string) => {
     try {
@@ -80,9 +89,32 @@ export const useKioskStore = create<KioskState>((set, get) => ({
 
       const fetched = await kioskService.getAllKiosks(targetUniv);
       const currentActive = get().activeKioskId;
-      const validActiveId = isValidUUID(currentActive) && fetched.some((k) => k.id === currentActive)
-        ? currentActive
-        : '';
+      
+      let validActiveId = '';
+      if (isValidUUID(currentActive) && fetched.some((k) => k.id === currentActive)) {
+        validActiveId = currentActive;
+      } else {
+        try {
+          const savedActive = typeof window !== 'undefined' ? localStorage.getItem('fastorder_active_kiosk') : null;
+          if (savedActive && isValidUUID(savedActive) && fetched.some((k) => k.id === savedActive)) {
+            validActiveId = savedActive;
+          } else {
+            const authData = typeof window !== 'undefined' ? localStorage.getItem('orderfast-auth') : null;
+            if (authData) {
+              const parsed = JSON.parse(authData);
+              const cashierKiosk = parsed?.state?.cashier?.kioskId;
+              if (cashierKiosk && fetched.some((k) => k.id === cashierKiosk)) {
+                validActiveId = cashierKiosk;
+              }
+            }
+          }
+        } catch {
+          // ignore
+        }
+        if (!validActiveId && fetched[0]?.id) {
+          validActiveId = fetched[0].id;
+        }
+      }
 
       set({
         kiosks: fetched,

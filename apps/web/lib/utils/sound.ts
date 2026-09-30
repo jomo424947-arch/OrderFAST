@@ -345,3 +345,50 @@ export function playNewOrderChime() {
     // Graceful fallback
   }
 }
+
+// Global handle for active cashier repeating alarm timer
+let cashierAlarmIntervalId: any = null;
+let cashierAlarmTimeoutId: any = null;
+
+/**
+ * 8. Cashier 10-Second Repeating Alarm (للكاشير فقط):
+ * Repeatedly plays the urgent restaurant desk chime every 1.6 seconds for up to 10 seconds.
+ * Strictly used for cashier screens upon new incoming orders.
+ * Automatically clears after 10 seconds or when stopCashierRepeatingAlarm is called.
+ */
+export function playCashierRepeatingAlarm(durationMs = 10000): () => void {
+  // Clear any existing active alarm first
+  stopCashierRepeatingAlarm();
+
+  // Play immediately on arrival
+  playNewOrderChime();
+  triggerHaptic([100, 50, 100, 50, 150]);
+
+  // Repeat every 1600ms
+  cashierAlarmIntervalId = setInterval(() => {
+    playNewOrderChime();
+    triggerHaptic([60, 40, 80]);
+  }, 1600);
+
+  // Automatically terminate after durationMs (10 seconds)
+  cashierAlarmTimeoutId = setTimeout(() => {
+    stopCashierRepeatingAlarm();
+  }, durationMs);
+
+  return stopCashierRepeatingAlarm;
+}
+
+/**
+ * Immediately silences the cashier repeating alarm if user clicks anywhere or accepts order
+ */
+export function stopCashierRepeatingAlarm() {
+  if (cashierAlarmIntervalId) {
+    clearInterval(cashierAlarmIntervalId);
+    cashierAlarmIntervalId = null;
+  }
+  if (cashierAlarmTimeoutId) {
+    clearTimeout(cashierAlarmTimeoutId);
+    cashierAlarmTimeoutId = null;
+  }
+}
+

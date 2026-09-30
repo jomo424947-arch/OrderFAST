@@ -24,6 +24,8 @@ export interface ApiKioskRaw {
   acceptsWallet?: boolean;
   acceptsInstapay?: boolean;
   isRushMode?: boolean;
+  autoAcceptOrders?: boolean;
+  repeatingChimeEnabled?: boolean;
   defaultPrepTimeMins?: number;
   acceptanceTimeoutSecs?: number;
   ordersAheadCount?: number;
@@ -85,6 +87,8 @@ export function adaptKioskFromApi(raw: ApiKioskRaw): Kiosk {
     acceptsWallet: raw.acceptsWallet !== undefined ? raw.acceptsWallet : true,
     acceptsInstapay: raw.acceptsInstapay !== undefined ? raw.acceptsInstapay : true,
     isRushMode: !!raw.isRushMode,
+    autoAcceptOrders: Boolean(raw.autoAcceptOrders ?? (raw as any).auto_accept_orders ?? false),
+    repeatingChimeEnabled: Boolean(raw.repeatingChimeEnabled ?? (raw as any).repeating_chime_enabled ?? false),
     defaultPrepTimeMins: raw.defaultPrepTimeMins || 15,
     acceptanceTimeoutSecs: raw.acceptanceTimeoutSecs || 300,
     phone: raw.phone || undefined,

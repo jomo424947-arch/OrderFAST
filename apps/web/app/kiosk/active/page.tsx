@@ -41,6 +41,7 @@ export default function CashierActiveOrdersPage() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'preparing' | 'ready'>('all');
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
   const [previewReceiptOrder, setPreviewReceiptOrder] = useState<Order | null>(null);
+  const [verifyDeliveryOrder, setVerifyDeliveryOrder] = useState<Order | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
   const [copiedPhoneOrder, setCopiedPhoneOrder] = useState<string | null>(null);
 
@@ -67,6 +68,16 @@ export default function CashierActiveOrdersPage() {
     } finally {
       setConfirmingOrderId(null);
     }
+  };
+
+  const handleCompleteOrder = async (order: Order) => {
+    if (order.paymentMethod === 'digital_wallet' && order.paymentStatus === 'pending_verification') {
+      setVerifyDeliveryOrder(order);
+      return;
+    }
+    await setOrderStatus(order.id, 'COMPLETED');
+    setActionSuccessMessage(`تم بنجاح تسليم الطلب ${order.orderNumber}!`);
+    setTimeout(() => setActionSuccessMessage(null), 3000);
   };
 
   return (
@@ -319,13 +330,21 @@ export default function CashierActiveOrdersPage() {
 
                   {order.status === 'READY' && (
                     <Button
-                      variant="primary"
+                      variant={isPendingVerification ? 'accent' : 'primary'}
                       size="sm"
-                      onClick={() => setOrderStatus(order.id, 'COMPLETED')}
-                      className="flex-1 shadow-sm"
+                      onClick={() => handleCompleteOrder(order)}
+                      className={`flex-1 shadow-sm font-bold ${
+                        isPendingVerification
+                          ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                          : ''
+                      }`}
                     >
                       <CheckCheck className="w-4 h-4 ml-1.5" />
-                      <span>{isOnline ? 'تم تسليم الطلب للطالب' : 'تم تسليم الطلب وتحصيل المبلغ'}</span>
+                      <span>
+                        {isPendingVerification
+                          ? 'تحقق وسلّم الأوردر'
+                          : (isOnline ? 'تم تسليم الطلب للطالب' : 'تم تسليم الطلب وتحصيل المبلغ')}
+                      </span>
                     </Button>
                   )}
 
@@ -413,6 +432,107 @@ export default function CashierActiveOrdersPage() {
                   إغلاق
                 </button>
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Verify Online Payment Before Delivery In-App Modal */}
+      {verifyDeliveryOrder && (
+        <Modal
+          isOpen={!!verifyDeliveryOrder}
+          onClose={() => setVerifyDeliveryOrder(null)}
+          title="تنبيه تأكيد استلام الدفع الإلكتروني"
+          description={`طلب رقم ${verifyDeliveryOrder.orderNumber} مسجل كدفع إلكتروني`}
+          maxWidth="md"
+        >
+          <div className="space-y-4 text-right">
+            {/* Warning Alert Banner - OrderFAST Design System Harmonious Palette */}
+            <div className="bg-primary-soft/80 border border-primary/40 rounded-2xl p-4 space-y-2 text-right">
+              <div className="flex items-center gap-2 font-black text-sm text-primary-ink">
+                <AlertTriangle className="w-5 h-5 text-primary flex-shrink-0" />
+                <span>طلب رقم {verifyDeliveryOrder.orderNumber} لم يتم تأكيد تحويله بعد</span>
+              </div>
+              <p className="text-xs leading-relaxed font-bold text-ink-soft">
+                هذا الأوردر مدفوع إلكترونياً ({verifyDeliveryOrder.onlinePaymentType === 'instapay' ? 'انستا باي' : 'محفظة كاش'}). يرجى التأكد من وصول الإشعار والمبلغ على هاتفك قبل تسليم الوجبة للطالب.
+              </p>
+            </div>
+
+            {/* Payment Details Card */}
+            <div className="bg-canvas border border-line rounded-2xl p-4 space-y-2.5 text-xs font-body">
+              <div className="flex justify-between items-center py-1.5 border-b border-line/60">
+                <span className="text-ink-soft">المبلغ المطلوب:</span>
+                <span className="font-mono text-base font-black text-ink font-mono-nums">
+                  {formatEGP(verifyDeliveryOrder.total)}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1.5 border-b border-line/60">
+                <span className="text-ink-soft">وسيلة الدفع:</span>
+                <span className="font-bold text-ink">
+                  {verifyDeliveryOrder.onlinePaymentType === 'instapay' ? 'انستا باي (InstaPay)' : 'محفظة إلكترونية (كاش)'}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1.5 border-b border-line/60">
+                <span className="text-ink-soft">الرقم/الحساب المحول منه:</span>
+                <span className="font-mono text-xs font-black text-ink font-mono-nums dir-ltr text-right">
+                  {verifyDeliveryOrder.transferSenderPhone || 'غير مسجل'}
+                </span>
+              </div>
+
+              {verifyDeliveryOrder.transferImageUrl && (
+                <div className="pt-2 flex items-center justify-between">
+                  <span className="text-ink-soft">إثبات التحويل:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const o = verifyDeliveryOrder;
+                      setVerifyDeliveryOrder(null);
+                      setPreviewReceiptOrder(o);
+                    }}
+                    className="text-xs font-bold text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>معاينة وتكبير صورة الإيصال</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs font-bold text-ink text-center pt-1 leading-relaxed">
+              هل تحققت من وصول المبلغ على هاتفك وتريد تأكيد الدفع وتسليم الأوردر للطالب الآن؟
+            </p>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="accent"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
+                onClick={async () => {
+                  const targetOrder = verifyDeliveryOrder;
+                  setVerifyDeliveryOrder(null);
+                  try {
+                    await confirmPayment(targetOrder.id);
+                  } catch (err) {
+                    console.warn('Payment auto-confirm error:', err);
+                  }
+                  await setOrderStatus(targetOrder.id, 'COMPLETED');
+                  setActionSuccessMessage(`تم بنجاح تأكيد دفع وتسليم الطلب ${targetOrder.orderNumber}`);
+                  setTimeout(() => setActionSuccessMessage(null), 3000);
+                }}
+              >
+                <CheckCircle2 className="w-4 h-4 ml-1" />
+                <span>تأكيد الاستلام وتسليم الأوردر</span>
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => setVerifyDeliveryOrder(null)}
+                className="px-4 py-3 bg-line/60 hover:bg-line text-ink rounded-xl text-xs font-body font-bold transition-colors cursor-pointer"
+              >
+                إلغاء
+              </button>
             </div>
           </div>
         </Modal>

@@ -18,6 +18,7 @@ import {
   Phone,
   Copy,
   MessageCircle,
+  Zap,
 } from 'lucide-react';
 import { formatEGP } from '@/lib/formatters';
 import { Modal } from '@/components/ui/Modal';
@@ -26,16 +27,51 @@ export interface CashierIncomingOrderCardProps {
   order: Order;
   onAccept: (orderId: string) => void;
   onReject: (orderId: string) => void;
+  autoAcceptCountdownSecs?: number;
 }
 
 export const CashierIncomingOrderCard: React.FC<CashierIncomingOrderCardProps> = ({
   order,
   onAccept,
   onReject,
+  autoAcceptCountdownSecs,
 }) => {
   const isOnline = order.paymentMethod === 'digital_wallet';
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
+
+  // 5-second countdown timer for auto-acceptance
+  const [isCancelled, setIsCancelled] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(() => {
+    if (!autoAcceptCountdownSecs) return null;
+    const createdAtMs = new Date(order.createdAt).getTime();
+    if (isNaN(createdAtMs)) return autoAcceptCountdownSecs;
+    const elapsedSecs = Math.floor((Date.now() - createdAtMs) / 1000);
+    const remaining = autoAcceptCountdownSecs - elapsedSecs;
+    return remaining > 0 ? remaining : 0;
+  });
+
+  React.useEffect(() => {
+    if (secondsLeft === null || isCancelled) return;
+
+    if (secondsLeft <= 0) {
+      onAccept(order.id);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(timer);
+          onAccept(order.id);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [secondsLeft, isCancelled, onAccept, order.id]);
 
   const handleCopyPhone = (phoneNum: string) => {
     navigator.clipboard.writeText(phoneNum);
@@ -78,7 +114,30 @@ export const CashierIncomingOrderCard: React.FC<CashierIncomingOrderCardProps> =
                 </span>
               )}
             </div>
+
+            {/* Auto-Accept Grace Countdown Badge */}
+            {secondsLeft !== null && secondsLeft > 0 && !isCancelled && (
+              <span className="inline-flex items-center gap-1.5 font-body text-[11px] font-black text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-full animate-pulse">
+                <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+                <span>قبول تلقائي خلال: {secondsLeft}ث</span>
+              </span>
+            )}
           </div>
+
+          {/* Auto-Accept 5-Second Grace Banner */}
+          {secondsLeft !== null && secondsLeft > 0 && !isCancelled && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-2.5 flex items-center justify-between gap-2 text-amber-900 dark:text-amber-200 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span className="font-body text-xs font-bold">
+                  ⚡ ميزة القبول التلقائي مفعلة: سيتم التحويل للمطبخ خلال:
+                </span>
+              </div>
+              <span className="font-mono text-xs font-black bg-amber-500/20 px-2 py-0.5 rounded-lg font-mono-nums">
+                {secondsLeft} ثوانٍ
+              </span>
+            </div>
+          )}
 
           {/* Customer Info & Contact */}
           <div className="flex items-center justify-between gap-2 flex-wrap text-xs font-body">
@@ -237,15 +296,25 @@ export const CashierIncomingOrderCard: React.FC<CashierIncomingOrderCardProps> =
           <div className="flex items-center gap-2 flex-1 max-w-[220px]">
             <button
               type="button"
-              onClick={() => onAccept(order.id)}
+              onClick={() => {
+                setIsCancelled(true);
+                onAccept(order.id);
+              }}
               className="flex-1 bg-accent hover:bg-accent-hover text-white text-xs font-body font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
             >
               <Check className="w-4 h-4 stroke-[2.5]" />
-              <span>قبول</span>
+              <span>
+                {secondsLeft !== null && secondsLeft > 0 && !isCancelled
+                  ? `قبول (${secondsLeft}ث)`
+                  : 'قبول'}
+              </span>
             </button>
             <button
               type="button"
-              onClick={() => onReject(order.id)}
+              onClick={() => {
+                setIsCancelled(true);
+                onReject(order.id);
+              }}
               className="flex-1 border-[1.5px] border-danger text-danger hover:bg-danger-soft text-xs font-body font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95"
             >
               <X className="w-4 h-4 stroke-[2.5]" />

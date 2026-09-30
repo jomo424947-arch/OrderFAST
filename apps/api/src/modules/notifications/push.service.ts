@@ -8,8 +8,9 @@ export interface PushPayload {
   title: string;
   body: string;
   data?: Record<string, string>;
-  channelId?: 'fastorder_orders' | 'fastorder_status';
+  channelId?: 'fastorder_orders' | 'fastorder_status' | 'fastorder_cashier_chime_10s';
   priority?: 'high' | 'normal';
+  sound?: string;
 }
 
 export class PushService {
@@ -34,7 +35,15 @@ export class PushService {
 
     const uniqueTokens = Array.from(new Set(tokens.filter(Boolean)));
     const baseChannel = payload.channelId || 'fastorder_status';
-    const channelId = baseChannel.includes('orders') ? 'fastorder_orders_v3' : 'fastorder_status_v3';
+    let channelId = 'fastorder_status_v3';
+    if (baseChannel === 'fastorder_cashier_chime_10s' || payload.sound === 'cashier_alarm_10s') {
+      channelId = 'fastorder_cashier_urgent_v1';
+    } else if (baseChannel.includes('orders')) {
+      channelId = 'fastorder_orders_v3';
+    }
+
+    const sound = payload.sound || 'fastorder_bell';
+    const apnsSound = payload.sound ? `${payload.sound}.wav` : 'fastorder_bell.wav';
 
     let totalSuccess = 0;
     let totalFailure = 0;
@@ -61,7 +70,7 @@ export class PushService {
           priority: 'high',
           notification: {
             channelId,
-            sound: 'fastorder_bell',
+            sound,
             priority: 'high',
             defaultSound: false,
             defaultVibrateTimings: true,
@@ -71,7 +80,7 @@ export class PushService {
         apns: {
           payload: {
             aps: {
-              sound: 'fastorder_bell.wav',
+              sound: apnsSound,
             },
           },
         },
